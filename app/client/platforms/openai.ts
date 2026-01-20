@@ -39,6 +39,12 @@ import {
 import Locale from "../../locales";
 import { getClientConfig } from "@/app/config/client";
 import {
+  getRouterAudience,
+  getRouterCapabilities,
+  UCAN_SESSION_ID,
+} from "@/app/plugins/ucan";
+import { createInvocationUcan } from "@yeying-community/web3-bs";
+import {
   getMessageTextContent,
   isVisionModel,
   isDalle3 as _isDalle3,
@@ -81,22 +87,15 @@ export interface DalleRequestPayload {
 }
 
 const ROUTER_HOST = "llm.yeying.pub";
-
-function isJwtValid(token: string | undefined | null): boolean {
+const ROUTER_BACKEND_HOST = (() => {
   try {
-    if (token === undefined || token === null) return false;
-    const payloadBase64 = token.split(".")[1];
-    if (!payloadBase64) return false;
-    const payloadJson = atob(
-      payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
-    );
-    const payload = JSON.parse(payloadJson);
-    const currentTime = Math.floor(Date.now() / 1000);
-    return payload.exp > currentTime;
+    const url = getClientConfig()?.routerBackendUrl;
+    if (!url) return "";
+    return new URL(url).host;
   } catch {
-    return false;
+    return "";
   }
-}
+})();
 
 function isRouterUrl(url: string): boolean {
   try {
@@ -105,27 +104,49 @@ function isRouterUrl(url: string): boolean {
         ? "http://localhost"
         : window.location.origin;
     const parsed = new URL(url, base);
-    return parsed.host.includes(ROUTER_HOST);
+    return (
+      parsed.host.includes(ROUTER_HOST) ||
+      (ROUTER_BACKEND_HOST && parsed.host === ROUTER_BACKEND_HOST)
+    );
   } catch {
     return false;
   }
 }
 
-function getHeadersWithRouterJwt(url: string) {
+function isUcanMetaValid(): boolean {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    const expRaw = localStorage.getItem("ucanRootExp");
+    const iss = localStorage.getItem("ucanRootIss");
+    const account = localStorage.getItem("currentAccount") || "";
+    if (!expRaw || !iss || !account) return false;
+    const exp = Number(expRaw);
+    if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+    return iss === `did:pkh:eth:${account.toLowerCase()}`;
+  } catch {
+    return false;
+  }
+}
+
+async function getHeadersWithRouterUcan(url: string) {
   const headers = getHeaders();
   if (!isRouterUrl(url)) return headers;
+  if (!isUcanMetaValid()) return headers;
 
-  let token: string | null = null;
+  const audience = getRouterAudience();
+  const capabilities = getRouterCapabilities();
+  if (!audience || !capabilities.length) return headers;
+
   try {
-    token = localStorage.getItem("authToken");
-  } catch {
-    return headers;
+    const ucan = await createInvocationUcan({
+      audience,
+      capabilities,
+      sessionId: UCAN_SESSION_ID,
+    });
+    headers["Authorization"] = `Bearer ${ucan}`;
+  } catch (error) {
+    console.warn("[UCAN] Failed to create invocation", error);
   }
-
-  if (isJwtValid(token)) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
   return headers;
 }
 
@@ -225,11 +246,12 @@ export class ChatGPTApi implements LLMApi {
 
     try {
       const speechPath = this.path(OpenaiPath.SpeechPath);
+      const speechHeaders = await getHeadersWithRouterUcan(speechPath);
       const speechPayload = {
         method: "POST",
         body: JSON.stringify(requestPayload),
         signal: controller.signal,
-        headers: getHeadersWithRouterJwt(speechPath),
+        headers: speechHeaders,
       };
 
       // make a fetch request
@@ -375,10 +397,11 @@ export class ChatGPTApi implements LLMApi {
             useChatStore.getState().currentSession().mask?.plugin || [],
           );
         // console.log("getAsTools", tools, funcs);
+        const chatHeaders = await getHeadersWithRouterUcan(chatPath);
         streamWithThink(
           chatPath,
           requestPayload,
-          getHeadersWithRouterJwt(chatPath),
+          chatHeaders,
           tools as any,
           funcs,
           controller,
@@ -467,11 +490,12 @@ export class ChatGPTApi implements LLMApi {
           options,
         );
       } else {
+        const chatHeaders = await getHeadersWithRouterUcan(chatPath);
         const chatPayload = {
           method: "POST",
           body: JSON.stringify(requestPayload),
           signal: controller.signal,
-          headers: getHeadersWithRouterJwt(chatPath),
+          headers: chatHeaders,
         };
 
         // make a fetch request
@@ -508,14 +532,18 @@ export class ChatGPTApi implements LLMApi {
       `${OpenaiPath.UsagePath}?start_date=${startDate}&end_date=${endDate}`,
     );
     const subsPath = this.path(OpenaiPath.SubsPath);
+    const [usageHeaders, subsHeaders] = await Promise.all([
+      getHeadersWithRouterUcan(usagePath),
+      getHeadersWithRouterUcan(subsPath),
+    ]);
     const [used, subs] = await Promise.all([
       fetch(usagePath, {
         method: "GET",
-        headers: getHeadersWithRouterJwt(usagePath),
+        headers: usageHeaders,
       }),
       fetch(subsPath, {
         method: "GET",
-        headers: getHeadersWithRouterJwt(subsPath),
+        headers: subsHeaders,
       }),
     ]);
 
@@ -560,10 +588,11 @@ export class ChatGPTApi implements LLMApi {
   async models(): Promise<LLMModel[]> {
     const fetchFromApi = async () => {
       const listPath = this.path(OpenaiPath.ListModelPath);
+      const listHeaders = await getHeadersWithRouterUcan(listPath);
       const res = await fetch(listPath, {
         method: "GET",
         headers: {
-          ...getHeadersWithRouterJwt(listPath),
+          ...listHeaders,
         },
       });
 

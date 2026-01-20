@@ -77,7 +77,7 @@ import { RealtimeConfigList } from "./realtime-chat/realtime-config";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
-  getClientConfig()?.routerBaseUrl || "https://llm.yeying.pub/";
+  getClientConfig()?.routerBackendUrl || "https://llm.yeying.pub/";
 const ROUTER_BASE_URL_NORMALIZED = normalizeUrl(ROUTER_BASE_URL);
 const ROUTER_PROVIDERS = [ServiceProvider.OpenAI];
 

@@ -28,6 +28,18 @@ function getUcanIssuer(address: string) {
   return `did:pkh:eth:${address.toLowerCase()}`;
 }
 
+function storeUcanMeta(root: UcanRootProof) {
+  if (typeof localStorage === "undefined") return;
+  localStorage.setItem("ucanRootExp", String(root.exp));
+  localStorage.setItem("ucanRootIss", root.iss);
+}
+
+function clearUcanMeta() {
+  if (typeof localStorage === "undefined") return;
+  localStorage.removeItem("ucanRootExp");
+  localStorage.removeItem("ucanRootIss");
+}
+
 async function getStoredRoot(): Promise<UcanRootProof | null> {
   return await getStoredUcanRoot(UCAN_SESSION_ID);
 }
@@ -79,6 +91,7 @@ export async function initWalletListeners() {
       localStorage.removeItem("currentAccount");
       await clearUcanSession(UCAN_SESSION_ID);
       localStorage.removeItem("authToken");
+      clearUcanMeta();
       notifyError("❌钱包已断开，请重新连接");
       return;
     }
@@ -89,6 +102,7 @@ export async function initWalletListeners() {
       localStorage.setItem("currentAccount", nextAccount);
       await clearUcanSession(UCAN_SESSION_ID);
       localStorage.removeItem("authToken");
+      clearUcanMeta();
       await loginWithUcan(provider, nextAccount);
     }
   };
@@ -264,6 +278,7 @@ export async function loginWithUcan(
       existing.exp > Date.now() &&
       existing.iss === expectedIssuer
     ) {
+      storeUcanMeta(existing);
       notifySuccess(`✅已完成授权`);
       window.location.reload();
       return;
@@ -274,14 +289,16 @@ export async function loginWithUcan(
       existing.exp <= Date.now()
     ) {
       await clearUcanSession(UCAN_SESSION_ID);
+      clearUcanMeta();
     }
 
-    await createRootUcan({
+    const root = await createRootUcan({
       provider: providerInstance,
       address: currentAccount,
       sessionId: UCAN_SESSION_ID,
       capabilities: getUcanRootCapabilities(),
     });
+    storeUcanMeta(root);
     localStorage.removeItem("authToken");
     notifySuccess(`✅授权成功`);
     window.location.reload();
@@ -297,6 +314,7 @@ export async function logoutWallet() {
   localStorage.removeItem("currentAccount");
   localStorage.removeItem("authToken");
   await clearUcanSession(UCAN_SESSION_ID);
+  clearUcanMeta();
   notifySuccess("✅已退出");
   window.location.reload();
 }

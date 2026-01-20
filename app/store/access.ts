@@ -33,22 +33,30 @@ const isApp = getClientConfig()?.buildMode === "export";
 // Default router endpoint for OpenAI-compatible requests
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
-  getClientConfig()?.routerBaseUrl?.trim() || "https://llm.yeying.pub";
+  getClientConfig()?.routerBackendUrl?.trim() || "https://llm.yeying.pub";
 const DEFAULT_OPENAI_URL = normalizeUrl(ROUTER_BASE_URL);
 const LEGACY_OPENAI_URL = "https://shengnw.win";
 const ROUTER_HOST = "llm.yeying.pub";
-
-const isValidJwt = (token: string | null | undefined): boolean => {
+const ROUTER_BACKEND_HOST = (() => {
   try {
-    if (!token) return false;
-    const payloadBase64 = token.split(".")[1];
-    if (!payloadBase64) return false;
-    const payloadJson = atob(
-      payloadBase64.replace(/-/g, "+").replace(/_/g, "/"),
-    );
-    const payload = JSON.parse(payloadJson);
-    const currentTime = Math.floor(Date.now() / 1000);
-    return payload.exp > currentTime;
+    const url = getClientConfig()?.routerBackendUrl;
+    if (!url) return "";
+    return new URL(url).host;
+  } catch {
+    return "";
+  }
+})();
+
+const isValidUcanMeta = (): boolean => {
+  try {
+    if (typeof localStorage === "undefined") return false;
+    const expRaw = localStorage.getItem("ucanRootExp");
+    const iss = localStorage.getItem("ucanRootIss");
+    const account = localStorage.getItem("currentAccount") || "";
+    if (!expRaw || !iss || !account) return false;
+    const exp = Number(expRaw);
+    if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+    return iss === `did:pkh:eth:${account.toLowerCase()}`;
   } catch {
     return false;
   }
@@ -62,7 +70,10 @@ const isRouterEndpoint = (url: string | undefined): boolean => {
         ? "http://localhost"
         : window.location.origin;
     const parsed = new URL(url, base);
-    return parsed.host.includes(ROUTER_HOST);
+    return (
+      parsed.host.includes(ROUTER_HOST) ||
+      (ROUTER_BACKEND_HOST && parsed.host === ROUTER_BACKEND_HOST)
+    );
   } catch {
     return false;
   }
@@ -269,7 +280,7 @@ export const useAccessStore = createPersistStore(
       const routerJwtOk =
         typeof window !== "undefined" &&
         isRouterEndpoint(get().openaiUrl) &&
-        isValidJwt(localStorage.getItem("authToken"));
+        isValidUcanMeta();
 
       return (
         this.isValidOpenAI() ||
