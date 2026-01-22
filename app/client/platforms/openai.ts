@@ -106,7 +106,7 @@ function isRouterUrl(url: string): boolean {
     const parsed = new URL(url, base);
     return (
       parsed.host.includes(ROUTER_HOST) ||
-      (ROUTER_BACKEND_HOST && parsed.host === ROUTER_BACKEND_HOST)
+      (ROUTER_BACKEND_HOST !== "" && parsed.host === ROUTER_BACKEND_HOST)
     );
   } catch {
     return false;
