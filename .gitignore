@@ -3,7 +3,7 @@ next-start.log
 nextjs-ucan.log
 
 AGENTS.md
-CodexDev/*
+/CodexDev/
 # dependencies
 /node_modules
 /.pnp
