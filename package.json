@@ -43,7 +43,7 @@
     "jsonwebtoken": "^9.0.3",
     "lodash-es": "^4.17.21",
     "markdown-to-txt": "^2.0.1",
-    "mermaid": "^10.6.1",
+    "mermaid": "^11.12.2",
     "nanoid": "^5.0.3",
     "next": "^16.1.6",
     "openapi-client-axios": "^7.5.5",
