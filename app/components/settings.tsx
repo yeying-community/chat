@@ -62,7 +62,7 @@ import {
   UPDATE_URL,
   SAAS_CHAT_URL,
 } from "../constant";
-import { Prompt, SearchService, usePromptStore } from "../store/prompt";
+import { SearchService, usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
 import { InputRange } from "./input-range";
 import { useNavigate } from "react-router-dom";
@@ -136,19 +136,10 @@ function UserPromptModal(props: { onClose?: () => void }) {
   const builtinPrompts = SearchService.builtinPrompts;
   const allPrompts = userPrompts.concat(builtinPrompts);
   const [searchInput, setSearchInput] = useState("");
-  const [searchPrompts, setSearchPrompts] = useState<Prompt[]>([]);
-  const prompts = searchInput.length > 0 ? searchPrompts : allPrompts;
+  const prompts =
+    searchInput.length > 0 ? SearchService.search(searchInput) : allPrompts;
 
   const [editingPromptId, setEditingPromptId] = useState<string>();
-
-  useEffect(() => {
-    if (searchInput.length > 0) {
-      const searchResult = SearchService.search(searchInput);
-      setSearchPrompts(searchResult);
-    } else {
-      setSearchPrompts([]);
-    }
-  }, [searchInput]);
 
   return (
     <div className="modal-mask">
@@ -384,7 +375,8 @@ function SyncConfigModal(props: { onClose?: () => void }) {
                   if (!Number.isFinite(minutes)) return;
                   syncStore.update(
                     (config) =>
-                      (config.autoSyncIntervalMs = Math.max(1, minutes) * 60000),
+                      (config.autoSyncIntervalMs =
+                        Math.max(1, minutes) * 60000),
                   );
                 }}
               ></input>
@@ -432,8 +424,8 @@ function SyncConfigModal(props: { onClose?: () => void }) {
                   onChange={(e) => {
                     syncStore.update(
                       (config) =>
-                        (config.webdav.authType =
-                          e.target.value as typeof config.webdav.authType),
+                        (config.webdav.authType = e.target
+                          .value as typeof config.webdav.authType),
                     );
                   }}
                 >
@@ -591,7 +583,7 @@ function SyncItems() {
                 text={Locale.UI.Sync}
                 onClick={async () => {
                   try {
-                    await syncStore.sync();
+                    await syncStore.sync({ interactive: true });
                     showToast(Locale.Settings.Sync.Success);
                   } catch (e) {
                     showToast(Locale.Settings.Sync.Fail);
@@ -889,8 +881,8 @@ export function Settings() {
                 checkingUpdate
                   ? Locale.Settings.Update.IsChecking
                   : hasNewVersion
-                  ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
-                  : Locale.Settings.Update.IsLatest
+                    ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
+                    : Locale.Settings.Update.IsLatest
               }
             >
               {checkingUpdate ? (

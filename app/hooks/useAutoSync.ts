@@ -55,7 +55,7 @@ export function useAutoSync() {
       }
       inFlightRef.current = true;
       try {
-        await syncStore.sync();
+        await syncStore.sync({ interactive: false });
       } catch (e) {
         if (isUcanSignPendingError(e)) {
           return;

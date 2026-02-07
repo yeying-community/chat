@@ -29,9 +29,14 @@ function isSessionFresh(session: UcanSessionKey | null) {
 
 export async function getCachedUcanSession(
   provider?: Eip1193Provider,
+  options?: { refresh?: boolean },
 ): Promise<UcanSessionKey | null> {
   if (isSessionFresh(cachedSession)) {
     return cachedSession;
+  }
+  const shouldRefresh = options?.refresh ?? Boolean(provider);
+  if (!shouldRefresh) {
+    return null;
   }
   if (sessionPromise) {
     return await sessionPromise;
@@ -66,4 +71,11 @@ export function clearCachedUcanSession() {
   cachedAt = 0;
   sessionPromise = null;
   lastAttemptAt = 0;
+}
+
+export async function refreshUcanSession(
+  provider?: Eip1193Provider,
+): Promise<UcanSessionKey | null> {
+  clearCachedUcanSession();
+  return await getCachedUcanSession(provider, { refresh: true });
 }

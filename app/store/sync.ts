@@ -13,6 +13,10 @@ import { downloadAs, readFromFile } from "../utils";
 import { showToast } from "../components/ui-lib";
 import Locale from "../locales";
 import { createSyncClient, ProviderType } from "../utils/cloud";
+import {
+  getCachedUcanSession,
+  refreshUcanSession,
+} from "../plugins/ucan-session";
 import { getUcanRootCapsKey, getWebdavAudience } from "../plugins/ucan";
 
 export type WebDavAuthType = "basic" | "ucan";
@@ -127,9 +131,28 @@ export const useSyncStore = createPersistStore(
       return client;
     },
 
-    async sync() {
+    async sync(options?: { interactive?: boolean }) {
       const provider = get().provider;
       const config = get()[provider];
+      const interactive = options?.interactive ?? false;
+
+      if (
+        provider === ProviderType.WebDAV &&
+        get().webdav.authType === "ucan" &&
+        interactive
+      ) {
+        await refreshUcanSession();
+      } else if (
+        provider === ProviderType.WebDAV &&
+        get().webdav.authType === "ucan" &&
+        !interactive
+      ) {
+        const session = await getCachedUcanSession();
+        if (!session) {
+          return;
+        }
+      }
+
       const client = this.getClient();
 
       try {
@@ -159,8 +182,20 @@ export const useSyncStore = createPersistStore(
     },
 
     async check() {
-      const client = this.getClient();
-      return await client.check();
+      try {
+        const provider = get().provider;
+        if (
+          provider === ProviderType.WebDAV &&
+          get().webdav.authType === "ucan"
+        ) {
+          await refreshUcanSession();
+        }
+        const client = this.getClient();
+        return await client.check();
+      } catch (e) {
+        console.error("[Sync] failed to check", e);
+        return false;
+      }
     },
   }),
   {

@@ -8,7 +8,6 @@ import RemarkGfm from "remark-gfm";
 import RehypeHighlight from "rehype-highlight";
 import { useRef, useState, RefObject, useEffect, useMemo } from "react";
 import { copyToClipboard, useWindowSize } from "../utils";
-import mermaid from "mermaid";
 import Locale from "../locales";
 import LoadingIcon from "../icons/three-dots.svg";
 import ReloadButtonIcon from "../icons/reload.svg";
@@ -27,6 +26,17 @@ import { useAppConfig } from "../store/config";
 import clsx from "clsx";
 import type { PluggableList } from "unified";
 
+type MermaidApi = (typeof import("mermaid"))["default"];
+
+let mermaidPromise: Promise<MermaidApi> | null = null;
+
+async function loadMermaid(): Promise<MermaidApi> {
+  if (!mermaidPromise) {
+    mermaidPromise = import("mermaid").then((mod) => mod.default);
+  }
+  return mermaidPromise;
+}
+
 const remarkPlugins: PluggableList = [RemarkMath, RemarkGfm, RemarkBreaks];
 const rehypePlugins: PluggableList = [
   RehypeKatex,
@@ -41,20 +51,32 @@ const rehypePlugins: PluggableList = [
 
 export function Mermaid(props: { code: string }) {
   const ref = useRef<HTMLDivElement>(null);
+  const mermaidRef = useRef<MermaidApi | null>(null);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    if (props.code && ref.current) {
-      mermaid
-        .run({
+    let cancelled = false;
+    const runMermaid = async () => {
+      if (!props.code || !ref.current) return;
+      try {
+        if (!mermaidRef.current) {
+          mermaidRef.current = await loadMermaid();
+        }
+        if (cancelled || !ref.current) return;
+        await mermaidRef.current.run({
           nodes: [ref.current],
           suppressErrors: true,
-        })
-        .catch((e) => {
-          setHasError(true);
-          console.error("[Mermaid] ", e.message);
         });
-    }
+      } catch (e) {
+        setHasError(true);
+        const message = e instanceof Error ? e.message : String(e);
+        console.error("[Mermaid] ", message);
+      }
+    };
+    runMermaid();
+    return () => {
+      cancelled = true;
+    };
   }, [props.code]);
 
   function viewSvgInNewWindow() {

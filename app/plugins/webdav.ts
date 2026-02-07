@@ -21,6 +21,9 @@ export async function fetchQuota(): Promise<WebDAVQuota | undefined> {
       throw new Error("WebDAV UCAN audience is not configured");
     }
     const issuer = await getCachedUcanSession();
+    if (!issuer) {
+      return;
+    }
     const response = await authUcanFetch(
       "/api/v1/public/webdav/quota",
       {

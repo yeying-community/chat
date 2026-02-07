@@ -32,10 +32,18 @@ const providerOptions = {
 };
 
 export const UCAN_AUTH_EVENT = "ucan-auth-change";
+export const UCAN_AUTH_ERROR_EVENT = "ucan-auth-error";
 
 function emitAuthChange() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(UCAN_AUTH_EVENT));
+}
+
+function emitAuthError(detail?: string) {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(UCAN_AUTH_ERROR_EVENT, { detail: detail ?? "" }),
+  );
 }
 
 let providerPromise: Promise<Eip1193Provider | null> | null = null;
@@ -71,7 +79,12 @@ async function getStoredRoot(): Promise<UcanRootProof | null> {
   return await getStoredUcanRoot(UCAN_SESSION_ID);
 }
 
-async function resolveProvider(): Promise<Eip1193Provider | null> {
+async function resolveProvider(options?: {
+  refresh?: boolean;
+}): Promise<Eip1193Provider | null> {
+  if (options?.refresh) {
+    providerPromise = null;
+  }
   if (!providerPromise) {
     providerPromise = getProvider(providerOptions);
   }
@@ -83,7 +96,7 @@ async function resolveProvider(): Promise<Eip1193Provider | null> {
 }
 
 async function requireProvider(): Promise<Eip1193Provider> {
-  const provider = await resolveProvider();
+  const provider = await resolveProvider({ refresh: true });
   if (!provider) {
     throw new Error("❌未检测到钱包");
   }
@@ -94,7 +107,7 @@ export async function initWalletListeners() {
   if (listenersReady) {
     return listenersCleanup;
   }
-  const provider = await resolveProvider();
+  const provider = await resolveProvider({ refresh: true });
   if (!provider) {
     return null;
   }
@@ -164,7 +177,7 @@ export async function initWalletListeners() {
 
 // 等待钱包注入
 export async function waitForWallet() {
-  const provider = await resolveProvider();
+  const provider = await resolveProvider({ refresh: true });
   if (!provider) {
     throw new Error("❌未检测到钱包");
   }
@@ -321,6 +334,7 @@ export async function loginWithUcan(
       isRootCapMatched(existing)
     ) {
       storeUcanMeta(existing);
+      emitAuthError("");
       emitAuthChange();
       if (options?.reload) {
         window.location.reload();
@@ -354,6 +368,7 @@ export async function loginWithUcan(
     });
     storeUcanMeta(root);
     localStorage.removeItem("authToken");
+    emitAuthError("");
     emitAuthChange();
     if (!options?.silent) {
       notifySuccess(`✅授权成功`);
@@ -369,6 +384,15 @@ export async function loginWithUcan(
         notifyInfo("钱包签名处理中，请在钱包完成确认");
       }
       return;
+    }
+    if (
+      error &&
+      typeof error === "object" &&
+      "message" in error &&
+      typeof (error as { message?: string }).message === "string" &&
+      (error as { message?: string }).message?.includes("Request timeout")
+    ) {
+      emitAuthError("Request timeout");
     }
     console.error("❌授权失败:", error);
     if (!options?.silent) {
