@@ -1,0 +1,36 @@
+name: compile before merge
+
+# 触发条件：当有pull_request事件发生到main分支时
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  #
+  operation_before_merge:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4  # 选择Node.js环境
+        with:
+          node-version: '20'  # 配置Node.js版本
+
+      - name: Install dependencies
+        run: npm install  # 针对Node.js项目安装依赖
+
+      - name: Build 
+        run: npm run build
