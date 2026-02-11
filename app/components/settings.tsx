@@ -317,6 +317,14 @@ function CheckButton() {
 
 function SyncConfigModal(props: { onClose?: () => void }) {
   const syncStore = useSyncStore();
+  const webdavEnvBaseUrl =
+    getClientConfig()?.webdavBackendBaseUrl?.trim() || "";
+  const webdavEnvPrefix =
+    getClientConfig()?.webdavBackendPrefix?.trim() || "";
+  const webdavBaseUrl = syncStore.webdav.baseUrl || webdavEnvBaseUrl;
+  const webdavPrefix = syncStore.webdav.baseUrl.trim()
+    ? syncStore.webdav.prefix
+    : syncStore.webdav.prefix || webdavEnvPrefix;
 
   return (
     <div className="modal-mask">
