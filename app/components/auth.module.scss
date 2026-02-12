@@ -20,6 +20,12 @@
       align-items: center;
       font-size: 14px;
       line-height: 150%;
+      .top-banner-logo {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+        flex: 0 0 auto;
+      }
       span {
         gap: 8px;
         a {
@@ -48,10 +54,13 @@
       }
       .top-banner-inner {
         .top-banner-logo {
+          width: 24px;
+          height: 24px;
           margin-right: 8px;
         }
       }
     }
+
   }
 
   .auth-logo {
