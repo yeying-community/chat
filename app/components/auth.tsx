@@ -1,9 +1,8 @@
 import styles from "./auth.module.scss";
 import { IconButton } from "./button";
-import { useState, useEffect, useMemo } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Path, SAAS_CHAT_URL } from "../constant";
-import { useAccessStore } from "../store";
 import Locale from "../locales";
 import Delete from "../icons/close.svg";
 import Arrow from "../icons/arrow.svg";
@@ -11,12 +10,8 @@ import Logo from "../icons/logo.svg";
 import { useMobileScreen } from "@/app/utils";
 import BotIcon from "../icons/bot.svg";
 import { getClientConfig } from "../config/client";
-import { PasswordInput, showToast } from "./ui-lib";
 import { safeLocalStorage } from "@/app/utils";
-import {
-  trackSettingsPageGuideToCPaymentClick,
-  trackAuthorizationPageButtonToCPaymentClick,
-} from "../utils/auth-settings-events";
+import { trackSettingsPageGuideToCPaymentClick } from "../utils/auth-settings-events";
 import clsx from "clsx";
 import {
   UCAN_AUTH_EVENT,
@@ -28,31 +23,11 @@ import {
 const storage = safeLocalStorage();
 
 export function AuthPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const accessStore = useAccessStore();
-  const redirectTarget = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const raw = params.get("redirect") || Path.Home;
-    if (!raw.startsWith("/")) return Path.Home;
-    if (raw === Path.Auth) return Path.Home;
-    return raw;
-  }, [location.search]);
-  const goSaas = () => {
-    trackAuthorizationPageButtonToCPaymentClick();
-    window.location.href = SAAS_CHAT_URL;
-  };
   const [ucanStatus, setUcanStatus] = useState<
     "checking" | "authorized" | "expired" | "unauthorized"
   >("checking");
   const [ucanAccount, setUcanAccount] = useState("");
-
-  const resetAccessCode = () => {
-    accessStore.update((access) => {
-      access.openaiApiKey = "";
-      access.accessCode = "";
-    });
-  }; // Reset access code to empty string
 
   useEffect(() => {
     if (getClientConfig()?.isApp) {
@@ -90,7 +65,7 @@ export function AuthPage() {
   }, []);
 
   const ucanActionText =
-    ucanStatus === "authorized" ? "UCAN 已授权" : "连接钱包 / 授权 UCAN";
+    ucanStatus === "authorized" ? "UCAN 已授权" : "连接钱包";
 
   return (
     <div className={styles["auth-page"]}>
@@ -98,8 +73,6 @@ export function AuthPage() {
       <div className={clsx("no-dark", styles["auth-logo"])}>
         <BotIcon />
       </div>
-
-      <div className={styles["auth-tips"]}>{Locale.Auth.Tips}</div>
 
       <div className={styles["auth-wallet"]}>
         {ucanAccount ? (
@@ -110,72 +83,6 @@ export function AuthPage() {
           type="primary"
           onClick={() => connectWallet()}
           disabled={ucanStatus === "authorized"}
-        />
-      </div>
-
-      <PasswordInput
-        style={{ marginTop: "3vh", marginBottom: "3vh" }}
-        aria={Locale.Settings.ShowPassword}
-        aria-label={Locale.Auth.Input}
-        value={accessStore.accessCode}
-        type="text"
-        placeholder={Locale.Auth.Input}
-        onChange={(e) => {
-          accessStore.update(
-            (access) => (access.accessCode = e.currentTarget.value),
-          );
-        }}
-      />
-
-      {!accessStore.hideUserApiKey ? (
-        <>
-          <div className={styles["auth-tips"]}>{Locale.Auth.SubTips}</div>
-          <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
-            aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-            value={accessStore.openaiApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.OpenAI.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.openaiApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-          <PasswordInput
-            style={{ marginTop: "3vh", marginBottom: "3vh" }}
-            aria={Locale.Settings.ShowPassword}
-            aria-label={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            value={accessStore.googleApiKey}
-            type="text"
-            placeholder={Locale.Settings.Access.Google.ApiKey.Placeholder}
-            onChange={(e) => {
-              accessStore.update(
-                (access) => (access.googleApiKey = e.currentTarget.value),
-              );
-            }}
-          />
-        </>
-      ) : null}
-
-      <div className={styles["auth-actions"]}>
-        <IconButton
-          text={Locale.Auth.Confirm}
-          type="primary"
-          onClick={() => {
-            if (accessStore.isAuthorized()) {
-              navigate(redirectTarget);
-              return;
-            }
-            showToast("请先完成登录");
-          }}
-        />
-        <IconButton
-          text={Locale.Auth.SaasTips}
-          onClick={() => {
-            goSaas();
-          }}
         />
       </div>
     </div>

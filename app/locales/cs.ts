@@ -25,7 +25,6 @@ const cs: PartialLocaleType = {
     Confirm: "Potvrdit",
     Later: "Později",
     Return: "Návrat",
-    SaasTips: "Konfigurace je příliš složitá, chci okamžitě začít používat",
     TopTips:
       "🥳 Uvítací nabídka Chat AI, okamžitě odemkněte OpenAI o1, GPT-4o, Claude-3.5 a nejnovější velké modely",
   },

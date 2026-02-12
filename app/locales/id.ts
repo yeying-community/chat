@@ -25,7 +25,6 @@ const id: PartialLocaleType = {
     Confirm: "Konfirmasi",
     Later: "Nanti",
     Return: "Kembali",
-    SaasTips: "Konfigurasi terlalu rumit, saya ingin menggunakannya segera",
     TopTips:
       "🥳 Penawaran Peluncuran Chat AI, buka OpenAI o1, GPT-4o, Claude-3.5 dan model besar terbaru sekarang",
   },

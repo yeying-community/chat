@@ -25,7 +25,6 @@ const tw = {
     Confirm: "確認",
     Later: "稍候再說",
     Return: "返回",
-    SaasTips: "設定太麻煩，想要立即使用",
     TopTips:
       "🥳 Chat AI 首發優惠，立刻解鎖 OpenAI o1, GPT-4o, Claude-3.5 等最新的大型語言模型",
   },

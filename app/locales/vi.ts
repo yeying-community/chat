@@ -25,7 +25,6 @@ const vi: PartialLocaleType = {
     Confirm: "Xác nhận",
     Later: "Để sau",
     Return: "Trở lại",
-    SaasTips: "Cấu hình quá phức tạp, tôi muốn sử dụng ngay lập tức",
     TopTips:
       "🥳 Ưu đãi ra mắt Chat AI, mở khóa OpenAI o1, GPT-4o, Claude-3.5 và các mô hình lớn mới nhất ngay bây giờ",
   },

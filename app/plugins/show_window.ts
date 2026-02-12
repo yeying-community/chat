@@ -2,6 +2,7 @@ import { toast } from "sonner";
 
 const RECENT_TOASTS = new Map<string, number>();
 const DEDUPE_WINDOW_MS = 1500;
+const STATUS_EMOJI_PREFIX = /^[\u2705\u274C\u26A0\u{1F7E1}\uFE0F]+\s*/u;
 
 function shouldToast(key: string) {
   const now = Date.now();
@@ -11,20 +12,27 @@ function shouldToast(key: string) {
   return true;
 }
 
+function normalizeToastMessage(msg: string) {
+  return msg.replace(STATUS_EMOJI_PREFIX, "");
+}
+
 export const notifyError = (msg: string) => {
-  const key = `error:${msg}`;
+  const normalized = normalizeToastMessage(msg);
+  const key = `error:${normalized}`;
   if (!shouldToast(key)) return;
-  toast.error(msg, { id: key, duration: 3000 });
+  toast.error(normalized, { id: key, duration: 3000 });
 };
 
 export const notifyInfo = (msg: string) => {
-  const key = `info:${msg}`;
+  const normalized = normalizeToastMessage(msg);
+  const key = `info:${normalized}`;
   if (!shouldToast(key)) return;
-  toast.info(msg, { id: key });
+  toast.info(normalized, { id: key });
 };
 
 export const notifySuccess = (msg: string) => {
-  const key = `success:${msg}`;
+  const normalized = normalizeToastMessage(msg);
+  const key = `success:${normalized}`;
   if (!shouldToast(key)) return;
-  toast.success(msg, { id: key });
+  toast.success(normalized, { id: key });
 };

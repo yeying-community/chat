@@ -25,7 +25,6 @@ const pt: PartialLocaleType = {
     Confirm: "Confirmar",
     Later: "Depois",
     Return: "Voltar",
-    SaasTips: "A configuração é muito complicada, quero usá-la imediatamente",
     TopTips:
       "🥳 Oferta de Lançamento do Chat AI, desbloqueie o OpenAI o1, GPT-4o, Claude-3.5 e os mais recentes grandes modelos agora",
   },

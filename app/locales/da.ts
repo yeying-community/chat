@@ -25,7 +25,6 @@ const da: PartialLocaleType = {
     Input: "Adgangskode",
     Confirm: "OK",
     Later: "Senere",
-    SaasTips: "Hvis det er for svært, kan du starte nu",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} beskeder`,
