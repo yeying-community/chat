@@ -385,6 +385,8 @@
 
 .chat-message-avatar {
   position: relative;
+  border-radius: 50%;
+  overflow: hidden;
 
   .chat-message-edit {
     position: absolute;

@@ -21,9 +21,13 @@ import BotIconGrok from "../icons/llm-icons/grok.svg";
 import BotIconHunyuan from "../icons/llm-icons/hunyuan.svg";
 import BotIconDoubao from "../icons/llm-icons/doubao.svg";
 import BotIconChatglm from "../icons/llm-icons/chatglm.svg";
-import React from "react";
+import React, { useMemo } from "react";
 import { notifyError, notifySuccess } from "../plugins/show_window";
 import styles from "./emoji.module.scss";
+import {
+  getAddressAvatarDataUrl,
+  isValidAddress,
+} from "../utils/address-avatar";
 
 export function getEmojiUrl(unified: string, style: EmojiStyle) {
   // Whoever owns this Content Delivery Network (CDN), I am using your CDN to serve emojis
@@ -48,7 +52,22 @@ export function AvatarPicker(props: {
   );
 }
 
-export function Avatar(props: { model?: ModelType; avatar?: string }) {
+export function Avatar(props: {
+  model?: ModelType;
+  avatar?: string;
+  address?: string;
+  size?: number;
+}) {
+  const size = props.size ?? 30;
+
+  if (props.address && isValidAddress(props.address)) {
+    return (
+      <div className="user-avatar">
+        <AddressAvatar address={props.address} size={size} />
+      </div>
+    );
+  }
+
   let LlmIcon = BotIconDefault;
 
   if (props.model) {
@@ -100,7 +119,7 @@ export function Avatar(props: { model?: ModelType; avatar?: string }) {
 
     return (
       <div className="no-dark">
-        <LlmIcon className="user-avatar" width={30} height={30} />
+        <LlmIcon className="user-avatar" width={size} height={size} />
       </div>
     );
   }
@@ -120,6 +139,17 @@ export function EmojiAvatar(props: { avatar: string; size?: number }) {
       getEmojiUrl={getEmojiUrl}
     />
   );
+}
+
+export function AddressAvatar(props: { address: string; size?: number }) {
+  const size = props.size ?? 30;
+  const dataUrl = useMemo(() => {
+    if (!isValidAddress(props.address)) return "";
+    return getAddressAvatarDataUrl(props.address, size);
+  }, [props.address, size]);
+
+  if (!dataUrl) return null;
+  return <img src={dataUrl} width={size} height={size} alt="" />;
 }
 
 export function WalletAccount(props: { address?: string; title?: string }) {

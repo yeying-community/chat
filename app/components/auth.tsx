@@ -6,7 +6,7 @@ import { Path, SAAS_CHAT_URL } from "../constant";
 import Locale from "../locales";
 import Delete from "../icons/close.svg";
 import Arrow from "../icons/arrow.svg";
-import Logo from "../icons/yeying_logo.svg";
+import Logo from "../icons/yeying.svg";
 import { useMobileScreen } from "@/app/utils";
 import BotIcon from "../icons/bot.svg";
 import { getClientConfig } from "../config/client";

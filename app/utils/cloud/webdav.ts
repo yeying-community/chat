@@ -15,6 +15,7 @@ import {
   initWebDavStorage,
 } from "@yeying-community/web3-bs";
 import { getCachedUcanSession } from "@/app/plugins/ucan-session";
+import { invalidateUcanAuthorization } from "@/app/plugins/wallet";
 import {
   acquireUcanSignLock,
   isUcanSignPending,
@@ -344,12 +345,15 @@ async function getUcanWebDavClient(store: SyncStore) {
   const fetcher = useProxy ? createWebdavProxyFetcher(endpoint) : undefined;
   const root = await getStoredUcanRoot(UCAN_SESSION_ID);
   if (!root) {
+    await invalidateUcanAuthorization("UCAN root is not ready");
     throw new Error("UCAN root is not ready");
   }
   if (getUcanCapsKey(root.cap) !== getUcanRootCapsKey()) {
+    await invalidateUcanAuthorization("UCAN root capability mismatch");
     throw new Error("UCAN root capability mismatch");
   }
   if (typeof root.exp === "number" && root.exp <= Date.now()) {
+    await invalidateUcanAuthorization("UCAN root expired");
     throw new Error("UCAN root expired");
   }
   const appId = getWebdavAppId();
@@ -372,9 +376,11 @@ async function getUcanWebDavClient(store: SyncStore) {
   }
   const session = await getCachedUcanSession();
   if (!session) {
+    await invalidateUcanAuthorization("UCAN session is not available");
     throw new Error("UCAN session is not available");
   }
   if (root.aud && root.aud !== session.did) {
+    await invalidateUcanAuthorization("UCAN root audience mismatch");
     throw new Error("UCAN root audience mismatch");
   }
 

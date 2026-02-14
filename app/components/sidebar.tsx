@@ -286,7 +286,14 @@ export function SideBar(props: { className?: string }) {
     >
       <SideBarHeader
         shouldNarrow={shouldNarrow}
-        logo={show ? <Avatar avatar={config.avatar} /> : undefined}
+        logo={
+          show ? (
+            <Avatar
+              avatar={config.avatar}
+              address={getCurrentAccount() || undefined}
+            />
+          ) : undefined
+        }
         title={
           show ? (
             <WalletAccount

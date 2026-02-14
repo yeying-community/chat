@@ -78,6 +78,8 @@ import {
 } from "../utils";
 
 import { uploadImage as uploadImageRemote } from "@/app/utils/chat";
+import { useAuth } from "../hooks/useAuth";
+import { getCurrentAccount } from "../plugins/wallet";
 
 import dynamic from "next/dynamic";
 
@@ -1041,6 +1043,8 @@ function ChatView() {
   const config = useAppConfig();
   const fontSize = config.fontSize;
   const fontFamily = config.fontFamily;
+  const isAuthenticated = useAuth();
+  const walletAddress = isAuthenticated ? getCurrentAccount() : "";
 
   const [showExport, setShowExport] = useState(false);
 
@@ -1897,7 +1901,10 @@ function ChatView() {
                                 ></IconButton>
                               </div>
                               {isUser ? (
-                                <Avatar avatar={config.avatar} />
+                                <Avatar
+                                  avatar={config.avatar}
+                                  address={walletAddress || undefined}
+                                />
                               ) : (
                                 <>
                                   {["system"].includes(message.role) ? (

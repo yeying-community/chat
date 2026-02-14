@@ -39,6 +39,18 @@ function emitAuthChange() {
   window.dispatchEvent(new Event(UCAN_AUTH_EVENT));
 }
 
+export async function invalidateUcanAuthorization(reason?: string) {
+  try {
+    await clearUcanSession(UCAN_SESSION_ID);
+  } catch (error) {
+    console.warn("[UCAN] failed to clear session", error);
+  }
+  clearUcanMeta();
+  clearCachedUcanSession();
+  emitAuthError(reason);
+  emitAuthChange();
+}
+
 function emitAuthError(detail?: string) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
