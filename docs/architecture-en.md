@@ -10,17 +10,15 @@ flowchart TB
     UI["Next.js UI + Wallet Extension<br/>- Connect wallet (EIP-1193)<br/>- Create Root UCAN<br/>- Create Invocation UCAN"]
   end
   subgraph Proxy["Next.js API Proxy"]
-    AUTH["/api/v1/public/auth/*"]
     WEBDAVSYNC["/api/webdav/* (sync proxy)"]
   end
   subgraph Backends["Backends"]
     ROUTER["Router<br/>OpenAI-compatible"]
     WEBDAV["WebDAV<br/>Storage/Quota + /api/v1/public/webdav/quota"]
   end
-  UI -->|"Authorization: Bearer UCAN"| AUTH
+  UI -->|"Authorization: Bearer UCAN"| ROUTER
   UI -->|"Authorization: Bearer UCAN"| WEBDAV
   UI -->|"WebDAV sync (optional proxy)"| WEBDAVSYNC
-  AUTH --> ROUTER
   WEBDAVSYNC --> WEBDAV
 ```
 
@@ -28,14 +26,10 @@ flowchart TB
 
 ### 1) Environment Variables
 
-- `ROUTER_BACKEND_URL`: Router backend URL (required)
+- `ROUTER_BACKEND_URL`: default Router backend URL (optional, frontend default)
 - `WEBDAV_BACKEND_BASE_URL`: WebDAV base URL (required, no path)
 - `WEBDAV_BACKEND_PREFIX`: path prefix (default `/dav`, optional to change)
 - Shared UCAN caps: fixed to `profile/read`
-- `NEXT_PUBLIC_ROUTER_UCAN_AUD`: Router audience override (optional)
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`: WebDAV audience override (optional)
-
-If `*_UCAN_AUD` is not set, the system derives `did:web:<host>` automatically.
 
 ### 2) Local Dev
 
@@ -57,7 +51,7 @@ npm run start
 
 ### 4) Proxy Strategy
 
-Deploy Router in private network and keep auth endpoints behind Next API proxy. WebDAV quota is browser-direct, so configure strict CORS/origin policy on WebDAV. WebDAV file sync can still use `/api/webdav/*` proxy if needed.
+Deploy Router and WebDAV in trusted networks. Browser-facing business APIs are direct, and `/api/webdav/*` can still be used as an optional sync proxy. Configure strict CORS/origin policy on direct endpoints.
 
 ## Security Checklist
 

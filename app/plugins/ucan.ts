@@ -96,13 +96,10 @@ export function getUcanCapsKey(caps?: UcanCapability[] | null): string {
 }
 
 export function getWebdavAudience(backendUrl?: string | null): string | null {
-  const envAud = process.env.NEXT_PUBLIC_WEBDAV_UCAN_AUD?.trim();
-  if (envAud) return envAud;
   const resolvedBackendUrl = backendUrl ?? getBackendUrl("webdav");
   return toDidWeb(resolvedBackendUrl ?? undefined);
 }
 
 export function getRouterAudience(): string | null {
-  const envAud = process.env.NEXT_PUBLIC_ROUTER_UCAN_AUD?.trim();
-  return envAud || toDidWeb(getBackendUrl("router"));
+  return toDidWeb(getBackendUrl("router"));
 }

@@ -36,12 +36,8 @@ Root UCAN 可同时用于多个后端服务，Invocation UCAN 会根据目标后
 
 - `WEBDAV_BACKEND_BASE_URL`：WebDAV 后端基础地址（不含路径）
 - `WEBDAV_BACKEND_PREFIX`：WebDAV 路径前缀（默认 `/dav`，可选修改）
-- `ROUTER_BACKEND_URL`：Router 后端地址
+- `ROUTER_BACKEND_URL`：Router 默认后端地址（用于前端默认值）
 - 通用 UCAN 能力：固定为 `profile/read`
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`：WebDAV audience（可选）
-- `NEXT_PUBLIC_ROUTER_UCAN_AUD`：Router audience（可选）
-
-若未指定 `*_UCAN_AUD`，系统会根据后端 URL 自动推导 `did:web:<host>`。
 
 提示：`WEBDAV_BACKEND_PREFIX` 只用于 WebDAV 协议接口路径（兼容第三方 WebDAV 客户端挂载），
 配额、SIWE、UCAN 等 HTTP 接口不加前缀。

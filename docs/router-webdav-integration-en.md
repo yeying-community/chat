@@ -6,7 +6,7 @@ This document explains how the current Chat integrates Router and WebDAV using U
 
 - One wallet authorization (UCAN Root) enables access to multiple backends (Router + WebDAV).
 - Router provides OpenAI-compatible APIs; WebDAV provides storage and quota services.
-- Next.js acts as UI plus selective proxy (Router auth proxy + WebDAV sync proxy).
+- Next.js acts as UI plus selective proxy (WebDAV sync proxy).
 
 ## Request Flow
 
@@ -16,7 +16,6 @@ flowchart TB
     UI["Next.js UI\n- Wallet connect\n- Root UCAN\n- Invocation UCAN"]
   end
   subgraph Proxy["Next.js API Proxy"]
-    AUTH["/api/v1/public/auth/*"]
     WEBDAVSYNC["/api/webdav/*"]
   end
   subgraph Backends["Backends"]
@@ -24,10 +23,9 @@ flowchart TB
     WEBDAV["WebDAV\nStorage/Quota + /api/v1/public/webdav/quota"]
   end
 
-  UI -->|"Authorization: Bearer UCAN"| AUTH
+  UI -->|"Authorization: Bearer UCAN"| ROUTER
   UI -->|"Authorization: Bearer UCAN"| WEBDAV
   UI -->|"Authorization: Bearer UCAN"| WEBDAVSYNC
-  AUTH --> ROUTER
   WEBDAVSYNC --> WEBDAV
 ```
 
@@ -35,15 +33,15 @@ flowchart TB
 
 - **Entry point**: `app/client/platforms/openai.ts` generates Invocation UCAN for Router requests.
 - **Header**: `Authorization: Bearer <UCAN>`.
-- **Proxy path**: `/api/v1/public/auth/*` with an allowlist for permitted backend routes.
-- **Audience**: `NEXT_PUBLIC_ROUTER_UCAN_AUD` if set; otherwise derived as `did:web:<router-host>`.
+- **Access path**: browser calls Router directly; no Chat auth proxy route.
+- **Audience**: auto-derived as `did:web:<router-host>`.
 
 ## WebDAV Integration
 
 - **Quota**: `app/plugins/webdav.ts` calls `WEBDAV_BACKEND_BASE_URL + /api/v1/public/webdav/quota` directly via `authUcanFetch` (no Next proxy).
 - **Sync**: `/api/webdav/*` proxies WebDAV file sync to `WEBDAV_BACKEND_BASE_URL + WEBDAV_BACKEND_PREFIX`, with method/path restrictions to prevent SSRF.
 - **Headers**: quota is browser-direct; WebDAV backend must allow required CORS/auth headers.
-- **Audience**: `NEXT_PUBLIC_WEBDAV_UCAN_AUD` if set; otherwise derived as `did:web:<webdav-host>`.
+- **Audience**: auto-derived as `did:web:<webdav-host>`.
 - **App capability**: defaults to `app:<appId>` (`appId` defaults to current host).
 > Note: `WEBDAV_BACKEND_PREFIX` applies only to WebDAV protocol paths (for third‑party WebDAV client compatibility).
 > Other HTTP APIs (quota / SIWE / UCAN) must not include the prefix and use the base URL directly.
@@ -93,17 +91,14 @@ When proxy is disabled, the browser will call the WebDAV server directly (no `/a
 
 ## Key Environment Variables
 
-- `ROUTER_BACKEND_URL`: Router backend URL (required)
+- `ROUTER_BACKEND_URL`: default Router backend URL (optional, frontend default)
 - `WEBDAV_BACKEND_BASE_URL`: WebDAV base URL (required, no path)
 - `WEBDAV_BACKEND_PREFIX`: path prefix (default `/dav`, optional to change)
 - `WebDAV app action`: fixed to `write`
 - `Shared UCAN caps`: fixed to `profile/read`
-- `NEXT_PUBLIC_ROUTER_UCAN_AUD`: Router audience (optional)
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`: WebDAV audience (optional)
 
 ## Security Notes
 
-- Router proxy enforces an allowlist of routes.
 - WebDAV sync proxy restricts methods and target paths to prevent SSRF.
 - Quota is direct browser access; enforce strict CORS origin/header policy on WebDAV side.
 - Ensure UCAN `aud` matches backend configuration.

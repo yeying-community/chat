@@ -51,8 +51,7 @@ flowchart TB
 ## UCAN Requirements
 
 - `aud` must match the backend configuration:
-  - Default: `did:web:<host>` (derived from `WEBDAV_BACKEND_BASE_URL`).
-  - Override with `NEXT_PUBLIC_WEBDAV_UCAN_AUD`.
+  - `did:web:<host>` (derived from `WEBDAV_BACKEND_BASE_URL`).
 - `capability` must include backend-required `resource/action` (e.g. `app:<appId>/write`).
 - When the backend enforces `required_resource=app:*`, the client must include `app:<appId>`
   and keep requests under `/apps/<appId>/...`.
@@ -81,7 +80,6 @@ If a session has a newer `lastUpdate` than the delete timestamp, the update over
 
 - `WEBDAV_BACKEND_BASE_URL`: WebDAV base URL (required, no path)
 - `WEBDAV_BACKEND_PREFIX`: path prefix (default `/dav`, optional to change)
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`: audience override (optional)
 - `WebDAV app action`: fixed to `write`
 - `Shared UCAN caps`: fixed to `profile/read` (mainly for Router)
 - Sync setting: `useProxy` (off = direct mode)
