@@ -114,14 +114,6 @@ export type GetStoreState<T> = T extends { getState: () => infer U }
   ? NonFunctionFields<U>
   : never;
 
-const LocalStateSetters = {
-  [StoreKey.Chat]: useChatStore.setState,
-  [StoreKey.Access]: useAccessStore.setState,
-  [StoreKey.Config]: useAppConfig.setState,
-  [StoreKey.Mask]: useMaskStore.setState,
-  [StoreKey.Prompt]: usePromptStore.setState,
-} as const;
-
 const LocalStateGetters = {
   [StoreKey.Chat]: () => getNonFunctionFileds(useChatStore.getState()),
   [StoreKey.Access]: () => getNonFunctionFileds(useAccessStore.getState()),
@@ -314,9 +306,11 @@ export function getLocalAppStateForSync() {
 }
 
 export function setLocalAppState(appState: AppState) {
-  Object.entries(LocalStateSetters).forEach(([key, setter]) => {
-    setter(appState[key as keyof AppState]);
-  });
+  useChatStore.setState(appState[StoreKey.Chat]);
+  useAccessStore.setState(appState[StoreKey.Access]);
+  useAppConfig.setState(appState[StoreKey.Config]);
+  useMaskStore.setState(appState[StoreKey.Mask]);
+  usePromptStore.setState(appState[StoreKey.Prompt]);
 }
 
 export function mergeAppState(localState: AppState, remoteState: AppState) {

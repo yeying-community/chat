@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { combine, persist, createJSONStorage } from "zustand/middleware";
+import type { StoreApi } from "zustand/vanilla";
 import { Updater } from "../typing";
 import { deepClone } from "./clone";
 import { indexedDBStorage } from "@/app/utils/indexedDB-storage";
@@ -21,10 +22,7 @@ type MakeUpdater<T> = {
   setHasHydrated: (state: boolean) => void;
 };
 
-type SetStoreState<T> = (
-  partial: T | Partial<T> | ((state: T) => T | Partial<T>),
-  replace?: boolean | undefined,
-) => void;
+type SetStoreState<T> = StoreApi<T>["setState"];
 
 export function createPersistStore<T extends object, M>(
   state: T,
