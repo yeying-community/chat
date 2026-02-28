@@ -20,7 +20,7 @@ const cn = {
   Auth: {
     Return: "返回",
     Title: "需要密码",
-    Tips: "管理员开启了密码验证，请在下方填入访问码",
+    Tips: "已开启密码验证，请在下方填入访问码",
     SubTips: "或者输入你的 OpenAI 或 Google AI 密钥",
     Input: "在此处填写访问码",
     Confirm: "确认",
@@ -326,7 +326,7 @@ const cn = {
       },
       AccessCode: {
         Title: "访问密码",
-        SubTitle: "管理员已开启加密访问",
+        SubTitle: "已开启加密访问",
         Placeholder: "请输入访问密码",
       },
       CustomEndpoint: {

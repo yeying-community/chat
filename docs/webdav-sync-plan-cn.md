@@ -51,8 +51,7 @@ flowchart TB
 ## UCAN 关键要求
 
 - `aud` 必须与 WebDAV 服务端配置一致：
-  - 默认：`did:web:<host>`（由 `WEBDAV_BACKEND_BASE_URL` 推导）。
-  - 可覆盖：`NEXT_PUBLIC_WEBDAV_UCAN_AUD`。
+  - `did:web:<host>`（由 `WEBDAV_BACKEND_BASE_URL` 推导）。
 - `capability` 需包含服务端配置要求（如 `app:<appId>/write`）。
 - 当服务端开启 `required_resource=app:*` 时，前端必须携带 `app:<appId>` 能力，
   并保证访问路径落在 `/apps/<appId>/...`。
@@ -81,7 +80,6 @@ flowchart TB
 
 - `WEBDAV_BACKEND_BASE_URL`: WebDAV 基础地址（必填，不含路径）
 - `WEBDAV_BACKEND_PREFIX`: WebDAV 路径前缀（默认 `/dav`，可选修改）
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`: WebDAV audience（可选）
 - `WebDAV app action`: 固定为 `write`
 - `通用 UCAN 能力`: 固定为 `profile/read`（主要用于 Router）
 - 同步设置：`useProxy`（关闭即直连）

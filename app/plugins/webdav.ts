@@ -5,6 +5,7 @@ import {
   getWebdavCapabilities,
 } from "./ucan";
 import { getCachedUcanSession } from "./ucan-session";
+import { getClientConfig } from "../config/client";
 
 export interface WebDAVQuota {
   quota: number; // 总配额（字节）
@@ -46,6 +47,20 @@ function normalizeQuota(data: unknown): WebDAVQuota | undefined {
   };
 }
 
+function normalizeBaseUrl(raw: string): string {
+  return raw.trim().replace(/\/+$/, "");
+}
+
+function getDirectQuotaUrl(): string {
+  const backendBaseUrl = normalizeBaseUrl(
+    getClientConfig()?.webdavBackendBaseUrl ?? "",
+  );
+  if (!backendBaseUrl) {
+    throw new Error("WEBDAV_BACKEND_BASE_URL is not configured");
+  }
+  return `${backendBaseUrl}/api/v1/public/webdav/quota`;
+}
+
 export async function fetchQuota(): Promise<WebDAVQuota | undefined> {
   try {
     const audience = getWebdavAudience();
@@ -57,7 +72,7 @@ export async function fetchQuota(): Promise<WebDAVQuota | undefined> {
       return;
     }
     const response = await authUcanFetch(
-      "/api/v1/public/webdav/quota",
+      getDirectQuotaUrl(),
       {
         method: "GET",
         headers: {

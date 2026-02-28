@@ -19,7 +19,7 @@ const fr: PartialLocaleType = {
   },
   Auth: {
     Title: "Mot de passe requis",
-    Tips: "L'administrateur a activé la vérification par mot de passe. Veuillez entrer le code d'accès ci-dessous",
+    Tips: "La vérification par mot de passe est activée. Veuillez entrer le code d'accès ci-dessous",
     SubTips: "Ou entrez votre clé API OpenAI ou Google",
     Input: "Entrez le code d'accès ici",
     Confirm: "Confirmer",
@@ -313,7 +313,7 @@ const fr: PartialLocaleType = {
 
       AccessCode: {
         Title: "Mot de passe d'accès",
-        SubTitle: "L'administrateur a activé l'accès sécurisé",
+        SubTitle: "L'accès sécurisé est activé",
         Placeholder: "Veuillez entrer le mot de passe d'accès",
       },
       CustomEndpoint: {

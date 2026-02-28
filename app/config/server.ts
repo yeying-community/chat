@@ -99,7 +99,6 @@ declare global {
 
       WEBDAV_BACKEND_BASE_URL?: string;
       WEBDAV_BACKEND_PREFIX?: string;
-      ROUTER_BACKEND_URL?: string;
       YEYING_BACKEND_URL?: string;
     }
   }
@@ -117,8 +116,6 @@ const ACCESS_CODES = (function getAccessCodes(): Set<string> {
     return new Set();
   }
 })();
-
-const DEFAULT_ROUTER_BACKEND_URL = "http://127.0.0.1:3011";
 
 function normalizeBaseUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
@@ -217,10 +214,6 @@ export const getServerSideConfig = () => {
   //   `[Server Config] using ${randomIndex + 1} of ${apiKeys.length} api key`,
   // );
 
-  const allowedWebDavEndpoints = (
-    process.env.WHITE_WEBDAV_ENDPOINTS ?? ""
-  ).split(",");
-
   const webdavBackendBaseUrlEnv =
     process.env.WEBDAV_BACKEND_BASE_URL?.trim() || "";
   const rawWebdavBackendPrefixEnv = process.env.WEBDAV_BACKEND_PREFIX;
@@ -249,11 +242,6 @@ export const getServerSideConfig = () => {
   const webdavBackendUrl = webdavBackendBaseUrl
     ? joinBasePrefix(webdavBackendBaseUrl, webdavBackendPrefix)
     : "";
-
-  const routerBackendUrl =
-    process.env.ROUTER_BACKEND_URL?.trim() ||
-    process.env.YEYING_BACKEND_URL?.trim() ||
-    DEFAULT_ROUTER_BACKEND_URL;
 
   return {
     baseUrl: process.env.BASE_URL,
@@ -347,11 +335,9 @@ export const getServerSideConfig = () => {
     customModels,
     defaultModel,
     visionModels,
-    allowedWebDavEndpoints,
     enableMcp: process.env.ENABLE_MCP === "true",
     web_dav_backend_base_url: webdavBackendBaseUrl,
     web_dav_backend_prefix: webdavBackendPrefix,
     web_dav_backend_url: webdavBackendUrl,
-    router_backend_url: routerBackendUrl,
   };
 };

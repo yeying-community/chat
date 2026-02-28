@@ -666,11 +666,8 @@ export function Settings() {
   const clientConfig = useMemo(() => getClientConfig(), []);
   const navigate = useNavigate();
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isAdmin, setAdmin] = useState(false);
   const config = useAppConfig();
   const updateConfig = config.update;
-  const adminAccount = clientConfig?.adminWalletAccount;
-  const storageAccount = localStorage.getItem("currentAccount");
 
   const updateStore = useUpdateStore();
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -737,7 +734,6 @@ export function Settings() {
 
   const showUsage = accessStore.isAuthorized();
   useEffect(() => {
-    setAdmin(adminAccount === storageAccount);
     // checks per minutes
     checkUpdate();
     showUsage && checkUsage();
@@ -817,8 +813,7 @@ export function Settings() {
   );
 
   const openAIConfigComponent = accessStore.provider ===
-    ServiceProvider.OpenAI &&
-    isAdmin && (
+    ServiceProvider.OpenAI && (
       <>
         <ListItem
           title={Locale.Settings.Access.OpenAI.Endpoint.Title}
@@ -907,42 +902,38 @@ export function Settings() {
               </div>
             </Popover>
           </ListItem>
-          {isAdmin && (
-            <ListItem
-              title={Locale.Settings.Update.Version(
-                currentVersion ?? "unknown",
-              )}
-              subTitle={
-                checkingUpdate
-                  ? Locale.Settings.Update.IsChecking
-                  : hasNewVersion
-                    ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
-                    : Locale.Settings.Update.IsLatest
-              }
-            >
-              {checkingUpdate ? (
-                <LoadingIcon />
-              ) : hasNewVersion ? (
-                clientConfig?.isApp ? (
-                  <IconButton
-                    icon={<ResetIcon></ResetIcon>}
-                    text={Locale.Settings.Update.GoToUpdate}
-                    onClick={() => clientUpdate()}
-                  />
-                ) : (
-                  <Link href={updateUrl} target="_blank" className="link">
-                    {Locale.Settings.Update.GoToUpdate}
-                  </Link>
-                )
-              ) : (
+          <ListItem
+            title={Locale.Settings.Update.Version(currentVersion ?? "unknown")}
+            subTitle={
+              checkingUpdate
+                ? Locale.Settings.Update.IsChecking
+                : hasNewVersion
+                  ? Locale.Settings.Update.FoundUpdate(remoteId ?? "ERROR")
+                  : Locale.Settings.Update.IsLatest
+            }
+          >
+            {checkingUpdate ? (
+              <LoadingIcon />
+            ) : hasNewVersion ? (
+              clientConfig?.isApp ? (
                 <IconButton
                   icon={<ResetIcon></ResetIcon>}
-                  text={Locale.Settings.Update.CheckUpdate}
-                  onClick={() => checkUpdate(true)}
+                  text={Locale.Settings.Update.GoToUpdate}
+                  onClick={() => clientUpdate()}
                 />
-              )}
-            </ListItem>
-          )}
+              ) : (
+                <Link href={updateUrl} target="_blank" className="link">
+                  {Locale.Settings.Update.GoToUpdate}
+                </Link>
+              )
+            ) : (
+              <IconButton
+                icon={<ResetIcon></ResetIcon>}
+                text={Locale.Settings.Update.CheckUpdate}
+                onClick={() => checkUpdate(true)}
+              />
+            )}
+          </ListItem>
 
           <ListItem title={Locale.Settings.SendKey}>
             <Select
@@ -1016,24 +1007,22 @@ export function Settings() {
               }
             ></InputRange>
           </ListItem>
-          {isAdmin && (
-            <ListItem
-              title={Locale.Settings.FontFamily.Title}
-              subTitle={Locale.Settings.FontFamily.SubTitle}
-            >
-              <input
-                aria-label={Locale.Settings.FontFamily.Title}
-                type="text"
-                value={config.fontFamily}
-                placeholder={Locale.Settings.FontFamily.Placeholder}
-                onChange={(e) =>
-                  updateConfig(
-                    (config) => (config.fontFamily = e.currentTarget.value),
-                  )
-                }
-              ></input>
-            </ListItem>
-          )}
+          <ListItem
+            title={Locale.Settings.FontFamily.Title}
+            subTitle={Locale.Settings.FontFamily.SubTitle}
+          >
+            <input
+              aria-label={Locale.Settings.FontFamily.Title}
+              type="text"
+              value={config.fontFamily}
+              placeholder={Locale.Settings.FontFamily.Placeholder}
+              onChange={(e) =>
+                updateConfig(
+                  (config) => (config.fontFamily = e.currentTarget.value),
+                )
+              }
+            ></input>
+          </ListItem>
 
           <ListItem
             title={Locale.Settings.AutoGenerateTitle.Title}
@@ -1234,26 +1223,24 @@ export function Settings() {
             </ListItem>
           ) : null}
 
-          {isAdmin && (
-            <ListItem
-              title={Locale.Settings.Access.CustomModel.Title}
-              subTitle={Locale.Settings.Access.CustomModel.SubTitle}
-              vertical={true}
-            >
-              <input
-                aria-label={Locale.Settings.Access.CustomModel.Title}
-                style={{ width: "100%", maxWidth: "unset", textAlign: "left" }}
-                type="text"
-                value={config.customModels}
-                placeholder="model1,model2,model3"
-                onChange={(e) =>
-                  config.update(
-                    (config) => (config.customModels = e.currentTarget.value),
-                  )
-                }
-              ></input>
-            </ListItem>
-          )}
+          <ListItem
+            title={Locale.Settings.Access.CustomModel.Title}
+            subTitle={Locale.Settings.Access.CustomModel.SubTitle}
+            vertical={true}
+          >
+            <input
+              aria-label={Locale.Settings.Access.CustomModel.Title}
+              style={{ width: "100%", maxWidth: "unset", textAlign: "left" }}
+              type="text"
+              value={config.customModels}
+              placeholder="model1,model2,model3"
+              onChange={(e) =>
+                config.update(
+                  (config) => (config.customModels = e.currentTarget.value),
+                )
+              }
+            ></input>
+          </ListItem>
         </List>
 
         <List>
@@ -1282,20 +1269,18 @@ export function Settings() {
             }}
           />
         </List>
-        {isAdmin && (
-          <List>
-            <TTSConfigList
-              ttsConfig={config.ttsConfig}
-              updateConfig={(updater) => {
-                const ttsConfig = { ...config.ttsConfig };
-                updater(ttsConfig);
-                config.update((config) => (config.ttsConfig = ttsConfig));
-              }}
-            />
-          </List>
-        )}
+        <List>
+          <TTSConfigList
+            ttsConfig={config.ttsConfig}
+            updateConfig={(updater) => {
+              const ttsConfig = { ...config.ttsConfig };
+              updater(ttsConfig);
+              config.update((config) => (config.ttsConfig = ttsConfig));
+            }}
+          />
+        </List>
 
-        {isAdmin && <DangerItems />}
+        <DangerItems />
       </div>
     </ErrorBoundary>
   );

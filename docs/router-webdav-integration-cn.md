@@ -6,7 +6,7 @@
 
 - 通过一次钱包授权（UCAN Root），同时访问多个后端（Router + WebDAV）。
 - Router 提供 OpenAI-compatible API；WebDAV 提供存储与配额服务。
-- Next.js 同时承担前端与 API 代理层，统一跨域与鉴权。
+- Next.js 承担前端与部分 API 代理层（WebDAV 同步代理）。
 
 ## 调用链路
 
@@ -16,20 +16,16 @@ flowchart TB
     UI["Next.js 前端<br/>- 钱包连接<br/>- Root UCAN<br/>- Invocation UCAN"]
   end
   subgraph Proxy["Next.js API 代理"]
-    AUTH["/api/v1/public/auth/*"]
-    WEBDAVQ["/api/v1/public/webdav/quota"]
     WEBDAVSYNC["/api/webdav/*"]
   end
   subgraph Backends["后端服务"]
     ROUTER["Router<br/>OpenAI-compatible"]
-    WEBDAV["WebDAV<br/>Storage/Quota"]
+    WEBDAV["WebDAV<br/>Storage/Quota + /api/v1/public/webdav/quota"]
   end
 
-  UI -->|"Authorization: Bearer UCAN"| AUTH
-  UI -->|"Authorization: Bearer UCAN"| WEBDAVQ
+  UI -->|"Authorization: Bearer UCAN"| ROUTER
+  UI -->|"Authorization: Bearer UCAN"| WEBDAV
   UI -->|"Authorization: Bearer UCAN"| WEBDAVSYNC
-  AUTH --> ROUTER
-  WEBDAVQ --> WEBDAV
   WEBDAVSYNC --> WEBDAV
 ```
 
@@ -37,15 +33,15 @@ flowchart TB
 
 - **入口**：`app/client/platforms/openai.ts` 在请求 Router 相关接口时生成 Invocation UCAN。
 - **请求头**：`Authorization: Bearer <UCAN>`。
-- **代理路径**：`/api/v1/public/auth/*`，并限制允许的后端路径（白名单）。
-- **受众 (audience)**：优先使用 `NEXT_PUBLIC_ROUTER_UCAN_AUD`，未设置时自动推导 `did:web:<router-host>`。
+- **访问方式**：前端直连 Router，不经过 Chat 的 auth 代理路由。
+- **受众 (audience)**：自动按 Router 地址推导 `did:web:<router-host>`。
 
 ## WebDAV 集成
 
-- **配额接口**：`app/plugins/webdav.ts` 使用 `authUcanFetch` 调用 `/api/v1/public/webdav/quota`。
+- **配额接口**：`app/plugins/webdav.ts` 使用 `authUcanFetch` 直连 `WEBDAV_BACKEND_BASE_URL + /api/v1/public/webdav/quota`（不经过 Next 代理）。
 - **同步接口**：`/api/webdav/*` 负责 WebDAV 文件同步，代理到 `WEBDAV_BACKEND_BASE_URL + WEBDAV_BACKEND_PREFIX`，限制方法与目标路径，避免 SSRF。
-- **请求头**：配额代理使用允许头白名单，仅透传必要头部。
-- **受众 (audience)**：优先使用 `NEXT_PUBLIC_WEBDAV_UCAN_AUD`，未设置时自动推导 `did:web:<webdav-host>`。
+- **请求头**：配额请求由浏览器直接发起，需由 WebDAV 服务端正确配置 CORS 与鉴权头放行。
+- **受众 (audience)**：自动按 WebDAV 地址推导 `did:web:<webdav-host>`。
 - **应用能力**：默认携带 `app:<appId>`（`appId` 默认当前域名）。
 > 说明：`WEBDAV_BACKEND_PREFIX` 仅用于 WebDAV 协议接口路径，便于兼容第三方 WebDAV 客户端。
 > quota / SIWE / UCAN 等 HTTP 接口不加前缀，仍走基础地址。
@@ -95,17 +91,14 @@ flowchart TB
 
 ## 关键配置项
 
-- `ROUTER_BACKEND_URL`: Router 后端地址（必填）
+- `ROUTER_BACKEND_URL`: Router 默认后端地址（可选，前端默认值）
 - `WEBDAV_BACKEND_BASE_URL`: WebDAV 后端基础地址（必填，不含路径）
 - `WEBDAV_BACKEND_PREFIX`: WebDAV 路径前缀（默认 `/dav`，可选修改）
 - `WebDAV app action`: 固定为 `write`
 - `通用 UCAN 能力`: 固定为 `profile/read`
-- `NEXT_PUBLIC_ROUTER_UCAN_AUD`: Router audience（可选）
-- `NEXT_PUBLIC_WEBDAV_UCAN_AUD`: WebDAV audience（可选）
 
 ## 安全要点
 
-- Router 代理使用路径白名单，拒绝非授权路由。
 - WebDAV 同步代理限制方法与目标路径，避免 SSRF。
-- 配额代理使用允许头白名单，避免透传敏感头。
+- 配额接口为浏览器直连，必须在 WebDAV 端严格限制跨域来源与头部。
 - UCAN `aud` 必须与后端配置保持一致。
