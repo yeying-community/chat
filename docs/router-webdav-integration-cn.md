@@ -6,7 +6,7 @@
 
 - 通过一次钱包授权（UCAN Root），同时访问多个后端（Router + WebDAV）。
 - Router 提供 OpenAI-compatible API；WebDAV 提供存储与配额服务。
-- Next.js 同时承担前端与 API 代理层，统一跨域与鉴权。
+- Next.js 承担前端与部分 API 代理层（Router 鉴权代理 + WebDAV 同步代理）。
 
 ## 调用链路
 
@@ -17,19 +17,17 @@ flowchart TB
   end
   subgraph Proxy["Next.js API 代理"]
     AUTH["/api/v1/public/auth/*"]
-    WEBDAVQ["/api/v1/public/webdav/quota"]
     WEBDAVSYNC["/api/webdav/*"]
   end
   subgraph Backends["后端服务"]
     ROUTER["Router<br/>OpenAI-compatible"]
-    WEBDAV["WebDAV<br/>Storage/Quota"]
+    WEBDAV["WebDAV<br/>Storage/Quota + /api/v1/public/webdav/quota"]
   end
 
   UI -->|"Authorization: Bearer UCAN"| AUTH
-  UI -->|"Authorization: Bearer UCAN"| WEBDAVQ
+  UI -->|"Authorization: Bearer UCAN"| WEBDAV
   UI -->|"Authorization: Bearer UCAN"| WEBDAVSYNC
   AUTH --> ROUTER
-  WEBDAVQ --> WEBDAV
   WEBDAVSYNC --> WEBDAV
 ```
 
@@ -42,9 +40,9 @@ flowchart TB
 
 ## WebDAV 集成
 
-- **配额接口**：`app/plugins/webdav.ts` 使用 `authUcanFetch` 调用 `/api/v1/public/webdav/quota`。
+- **配额接口**：`app/plugins/webdav.ts` 使用 `authUcanFetch` 直连 `WEBDAV_BACKEND_BASE_URL + /api/v1/public/webdav/quota`（不经过 Next 代理）。
 - **同步接口**：`/api/webdav/*` 负责 WebDAV 文件同步，代理到 `WEBDAV_BACKEND_BASE_URL + WEBDAV_BACKEND_PREFIX`，限制方法与目标路径，避免 SSRF。
-- **请求头**：配额代理使用允许头白名单，仅透传必要头部。
+- **请求头**：配额请求由浏览器直接发起，需由 WebDAV 服务端正确配置 CORS 与鉴权头放行。
 - **受众 (audience)**：优先使用 `NEXT_PUBLIC_WEBDAV_UCAN_AUD`，未设置时自动推导 `did:web:<webdav-host>`。
 - **应用能力**：默认携带 `app:<appId>`（`appId` 默认当前域名）。
 > 说明：`WEBDAV_BACKEND_PREFIX` 仅用于 WebDAV 协议接口路径，便于兼容第三方 WebDAV 客户端。
@@ -107,5 +105,5 @@ flowchart TB
 
 - Router 代理使用路径白名单，拒绝非授权路由。
 - WebDAV 同步代理限制方法与目标路径，避免 SSRF。
-- 配额代理使用允许头白名单，避免透传敏感头。
+- 配额接口为浏览器直连，必须在 WebDAV 端严格限制跨域来源与头部。
 - UCAN `aud` 必须与后端配置保持一致。

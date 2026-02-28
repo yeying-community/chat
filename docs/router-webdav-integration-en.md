@@ -6,7 +6,7 @@ This document explains how the current Chat integrates Router and WebDAV using U
 
 - One wallet authorization (UCAN Root) enables access to multiple backends (Router + WebDAV).
 - Router provides OpenAI-compatible APIs; WebDAV provides storage and quota services.
-- Next.js acts as both UI and API proxy to unify CORS and auth.
+- Next.js acts as UI plus selective proxy (Router auth proxy + WebDAV sync proxy).
 
 ## Request Flow
 
@@ -17,19 +17,17 @@ flowchart TB
   end
   subgraph Proxy["Next.js API Proxy"]
     AUTH["/api/v1/public/auth/*"]
-    WEBDAVQ["/api/v1/public/webdav/quota"]
     WEBDAVSYNC["/api/webdav/*"]
   end
   subgraph Backends["Backends"]
     ROUTER["Router\nOpenAI-compatible"]
-    WEBDAV["WebDAV\nStorage/Quota"]
+    WEBDAV["WebDAV\nStorage/Quota + /api/v1/public/webdav/quota"]
   end
 
   UI -->|"Authorization: Bearer UCAN"| AUTH
-  UI -->|"Authorization: Bearer UCAN"| WEBDAVQ
+  UI -->|"Authorization: Bearer UCAN"| WEBDAV
   UI -->|"Authorization: Bearer UCAN"| WEBDAVSYNC
   AUTH --> ROUTER
-  WEBDAVQ --> WEBDAV
   WEBDAVSYNC --> WEBDAV
 ```
 
@@ -42,9 +40,9 @@ flowchart TB
 
 ## WebDAV Integration
 
-- **Quota**: `app/plugins/webdav.ts` calls `/api/v1/public/webdav/quota` via `authUcanFetch`.
+- **Quota**: `app/plugins/webdav.ts` calls `WEBDAV_BACKEND_BASE_URL + /api/v1/public/webdav/quota` directly via `authUcanFetch` (no Next proxy).
 - **Sync**: `/api/webdav/*` proxies WebDAV file sync to `WEBDAV_BACKEND_BASE_URL + WEBDAV_BACKEND_PREFIX`, with method/path restrictions to prevent SSRF.
-- **Headers**: quota proxy uses an allowlist to avoid forwarding sensitive headers.
+- **Headers**: quota is browser-direct; WebDAV backend must allow required CORS/auth headers.
 - **Audience**: `NEXT_PUBLIC_WEBDAV_UCAN_AUD` if set; otherwise derived as `did:web:<webdav-host>`.
 - **App capability**: defaults to `app:<appId>` (`appId` defaults to current host).
 > Note: `WEBDAV_BACKEND_PREFIX` applies only to WebDAV protocol paths (for third‑party WebDAV client compatibility).
@@ -107,5 +105,5 @@ When proxy is disabled, the browser will call the WebDAV server directly (no `/a
 
 - Router proxy enforces an allowlist of routes.
 - WebDAV sync proxy restricts methods and target paths to prevent SSRF.
-- Quota proxy uses header allowlist to avoid sensitive header forwarding.
+- Quota is direct browser access; enforce strict CORS origin/header policy on WebDAV side.
 - Ensure UCAN `aud` matches backend configuration.

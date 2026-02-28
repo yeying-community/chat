@@ -11,16 +11,17 @@ flowchart TB
   end
   subgraph Proxy["Next.js API Proxy"]
     AUTH["/api/v1/public/auth/*"]
-    WEBDAVQ["/api/v1/public/webdav/quota"]
+    WEBDAVSYNC["/api/webdav/* (sync proxy)"]
   end
   subgraph Backends["Backends"]
     ROUTER["Router<br/>OpenAI-compatible"]
-    WEBDAV["WebDAV<br/>Storage/Quota"]
+    WEBDAV["WebDAV<br/>Storage/Quota + /api/v1/public/webdav/quota"]
   end
   UI -->|"Authorization: Bearer UCAN"| AUTH
-  UI -->|"Authorization: Bearer UCAN"| WEBDAVQ
+  UI -->|"Authorization: Bearer UCAN"| WEBDAV
+  UI -->|"WebDAV sync (optional proxy)"| WEBDAVSYNC
   AUTH --> ROUTER
-  WEBDAVQ --> WEBDAV
+  WEBDAVSYNC --> WEBDAV
 ```
 
 ## Deployment
@@ -56,7 +57,7 @@ npm run start
 
 ### 4) Proxy Strategy
 
-Deploy Router/WebDAV in private network and access them via Next API proxy to avoid CORS and exposure.
+Deploy Router in private network and keep auth endpoints behind Next API proxy. WebDAV quota is browser-direct, so configure strict CORS/origin policy on WebDAV. WebDAV file sync can still use `/api/webdav/*` proxy if needed.
 
 ## Security Checklist
 

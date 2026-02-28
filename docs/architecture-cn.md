@@ -11,16 +11,17 @@ flowchart TB
   end
   subgraph Proxy["Next.js API 代理"]
     AUTH["/api/v1/public/auth/*"]
-    WEBDAVQ["/api/v1/public/webdav/quota"]
+    WEBDAVSYNC["/api/webdav/* (同步代理)"]
   end
   subgraph Backends["后端服务"]
     ROUTER["Router<br/>OpenAI-compatible"]
-    WEBDAV["WebDAV<br/>Storage/Quota"]
+    WEBDAV["WebDAV<br/>Storage/Quota + /api/v1/public/webdav/quota"]
   end
   UI -->|"Authorization: Bearer UCAN"| AUTH
-  UI -->|"Authorization: Bearer UCAN"| WEBDAVQ
+  UI -->|"Authorization: Bearer UCAN"| WEBDAV
+  UI -->|"WebDAV 同步（可选代理）"| WEBDAVSYNC
   AUTH --> ROUTER
-  WEBDAVQ --> WEBDAV
+  WEBDAVSYNC --> WEBDAV
 ```
 
 ## 部署说明
@@ -56,7 +57,7 @@ npm run start
 
 ### 4) 代理服务
 
-建议将 Router/WebDAV 部署在内网，并通过 Next API 代理访问，避免 CORS 与跨域风险。
+建议将 Router 放在内网并通过 Next API 代理鉴权接口访问；WebDAV 的 quota 为浏览器直连，需在 WebDAV 侧配置 CORS 与来源白名单。WebDAV 文件同步可按需使用 `/api/webdav/*` 代理。
 
 ## 安全清单
 
