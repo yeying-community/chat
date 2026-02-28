@@ -12,7 +12,6 @@ const localAllowedWebDavEndpoints = allowLocalWebDav
   : [];
 const mergedAllowedWebDavEndpoints = [
   ...internalAllowedWebDavEndpoints,
-  ...config.allowedWebDavEndpoints,
   ...(config.web_dav_backend_url ? [config.web_dav_backend_url] : []),
   ...localAllowedWebDavEndpoints,
 ].filter((domain) => Boolean(domain.trim()));

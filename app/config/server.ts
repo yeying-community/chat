@@ -214,10 +214,6 @@ export const getServerSideConfig = () => {
   //   `[Server Config] using ${randomIndex + 1} of ${apiKeys.length} api key`,
   // );
 
-  const allowedWebDavEndpoints = (
-    process.env.WHITE_WEBDAV_ENDPOINTS ?? ""
-  ).split(",");
-
   const webdavBackendBaseUrlEnv =
     process.env.WEBDAV_BACKEND_BASE_URL?.trim() || "";
   const rawWebdavBackendPrefixEnv = process.env.WEBDAV_BACKEND_PREFIX;
@@ -339,7 +335,6 @@ export const getServerSideConfig = () => {
     customModels,
     defaultModel,
     visionModels,
-    allowedWebDavEndpoints,
     enableMcp: process.env.ENABLE_MCP === "true",
     web_dav_backend_base_url: webdavBackendBaseUrl,
     web_dav_backend_prefix: webdavBackendPrefix,

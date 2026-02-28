@@ -59,10 +59,22 @@ cd ChatGPT-Next-Web
 npm install
 
 # Prompt user for environment variables
-read -p "Enter OPENAI_API_KEY: " OPENAI_API_KEY
-read -p "Enter CODE: " CODE
-read -p "Enter PORT: " PORT
+read -p "Enter ROUTER_BACKEND_URL [http://127.0.0.1:3011]: " ROUTER_BACKEND_URL
+read -p "Enter WEBDAV_BACKEND_BASE_URL [http://127.0.0.1:6065]: " WEBDAV_BACKEND_BASE_URL
+read -p "Enter WEBDAV_BACKEND_PREFIX [/dav]: " WEBDAV_BACKEND_PREFIX
+read -p "Enter PORT [3020]: " PORT
 
-# Build and run the project using the environment variables
-OPENAI_API_KEY=$OPENAI_API_KEY CODE=$CODE PORT=$PORT npm run build
-OPENAI_API_KEY=$OPENAI_API_KEY CODE=$CODE PORT=$PORT npm run start
+ROUTER_BACKEND_URL=${ROUTER_BACKEND_URL:-http://127.0.0.1:3011}
+WEBDAV_BACKEND_BASE_URL=${WEBDAV_BACKEND_BASE_URL:-http://127.0.0.1:6065}
+WEBDAV_BACKEND_PREFIX=${WEBDAV_BACKEND_PREFIX:-/dav}
+PORT=${PORT:-3020}
+
+cat > .env <<EOF
+ROUTER_BACKEND_URL=${ROUTER_BACKEND_URL}
+WEBDAV_BACKEND_BASE_URL=${WEBDAV_BACKEND_BASE_URL}
+WEBDAV_BACKEND_PREFIX=${WEBDAV_BACKEND_PREFIX}
+EOF
+
+# Build and run the project
+npm run build
+PORT=$PORT npm run start
