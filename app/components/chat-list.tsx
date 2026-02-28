@@ -20,6 +20,7 @@ import { showConfirm } from "./ui-lib";
 import { useMobileScreen } from "../utils";
 import clsx from "clsx";
 import { useAuth } from "../hooks/useAuth";
+import { useShallow } from "zustand/react/shallow";
 
 export function ChatItem(props: {
   onClick?: () => void;
@@ -104,15 +105,14 @@ export function ChatItem(props: {
 
 export function ChatList(props: { narrow?: boolean }) {
   const [sessions, selectedIndex, selectSession, moveSession] = useChatStore(
-    (state) => [
+    useShallow((state) => [
       state.sessions,
       state.currentSessionIndex,
       state.selectSession,
       state.moveSession,
-    ],
+    ]),
   );
-
-  const chatStore = useChatStore();
+  const deleteSession = useChatStore((state) => state.deleteSession);
   const navigate = useNavigate();
   const isMobileScreen = useMobileScreen();
 
@@ -165,7 +165,7 @@ export function ChatList(props: { narrow?: boolean }) {
                     (!props.narrow && !isMobileScreen) ||
                     (await showConfirm(Locale.Home.DeleteChat))
                   ) {
-                    chatStore.deleteSession(i);
+                    deleteSession(i);
                   }
                 }}
                 narrow={props.narrow}
