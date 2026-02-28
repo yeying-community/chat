@@ -15,6 +15,12 @@ AUTO_PUSH="${AUTO_PUSH:-true}"
 # 是否在创建 PR 前进行交互确认
 INTERACTIVE="${INTERACTIVE:-true}"
 
+# 非交互模式下，是否自动使用最近提交信息填充 PR 标题和描述
+AUTO_FILL_PR="${AUTO_FILL_PR:-true}"
+
+# 若设置为 true，检测到 GH_TOKEN 时优先使用 gh auth login 的本地凭据
+PREFER_GH_AUTH_LOGIN="${PREFER_GH_AUTH_LOGIN:-true}"
+
 # =============================================
 
 detect_os() {
@@ -152,18 +158,82 @@ install_gh() {
   info "GitHub CLI (gh) 已安装完成。"
 }
 
+parse_github_repo() {
+  # 传入 remote url，返回 owner/repo
+  local remote_url="$1"
+  case "$remote_url" in
+    git@github.com:*)
+      local tmp="${remote_url#git@github.com:}"
+      tmp="${tmp%.git}"
+      printf '%s\n' "$tmp"
+      ;;
+    https://github.com/*)
+      local tmp="${remote_url#https://github.com/}"
+      tmp="${tmp%.git}"
+      printf '%s\n' "$tmp"
+      ;;
+    *)
+      printf '%s\n' ""
+      ;;
+  esac
+}
+
+run_gh_pr_create() {
+  local base="$1"
+  local head="$2"
+  local -a cmd=(gh pr create --base "$base" --head "$head")
+
+  if [ "$INTERACTIVE" != "true" ]; then
+    if [ -n "${PR_TITLE:-}" ] || [ -n "${PR_BODY:-}" ]; then
+      if [ -z "${PR_TITLE:-}" ] || [ -z "${PR_BODY:-}" ]; then
+        info "PR_TITLE 和 PR_BODY 需要同时提供。"
+        return 2
+      fi
+      cmd+=(--title "$PR_TITLE" --body "$PR_BODY")
+    elif [ "$AUTO_FILL_PR" = "true" ]; then
+      cmd+=(--fill)
+    fi
+  fi
+
+  "${cmd[@]}"
+}
+
 # 封装 gh pr create，自动处理默认仓库未设置的情况
 gh_pr_create_with_default_repo() {
   local base="$1"
   local head="$2"
+  local output
+  local status
 
   # 第一次尝试
-  if gh pr create --base "$base" --head "$head"; then
+  set +e
+  output="$(run_gh_pr_create "$base" "$head" 2>&1)"
+  status=$?
+  set -e
+  if [ "$status" -eq 0 ]; then
+    [ -n "$output" ] && info "$output"
     return 0
   fi
 
-  # 检查错误是否和 default repo 相关
-  # 直接再试一次：先把 upstream 设置为默认仓库，然后重试
+  if [ -n "$output" ]; then
+    info "$output"
+    blank
+  fi
+
+  if printf '%s' "$output" | grep -qi "Resource not accessible by personal access token"; then
+    info "创建 PR 失败：GH_TOKEN 缺少权限（createPullRequest）。"
+    info "解决方式："
+    info "  1) 推荐：unset GH_TOKEN && gh auth login -h github.com -s repo"
+    if [ -n "${UPSTREAM_REPO:-}" ]; then
+      info "  2) 或为 GH_TOKEN 授予 ${UPSTREAM_REPO} 的 Pull requests: Read and write 权限"
+      info "  3) 手动创建 PR：https://github.com/${UPSTREAM_REPO}/compare/${base}...${head}?expand=1"
+    else
+      info "  2) 或为 GH_TOKEN 授予目标仓库的 Pull requests: Read and write 权限"
+    fi
+    return 1
+  fi
+
+  # 可能是 default repo 未设置：先设置 upstream 后重试
   info "检测到 gh 默认仓库未设置，尝试将 upstream 设置为默认仓库..."
   if ! gh repo set-default upstream >/dev/null 2>&1; then
     blank
@@ -175,7 +245,7 @@ gh_pr_create_with_default_repo() {
   blank
   info "已将 gh 默认仓库设置为 upstream，重试创建 PR..."
 
-  gh pr create --base "$base" --head "$head"
+  run_gh_pr_create "$base" "$head"
 }
 
 # 1. 基础检查：git 仓库
@@ -189,6 +259,16 @@ fi
 
 if ! command -v gh >/dev/null 2>&1; then
   install_gh
+fi
+
+if [ "$PREFER_GH_AUTH_LOGIN" = "true" ] && [ -n "${GH_TOKEN:-}" ]; then
+  info "检测到 GH_TOKEN。为避免 token 权限不足，默认忽略 GH_TOKEN，改用 gh auth login 凭据。"
+  unset GH_TOKEN
+fi
+
+if ! gh auth status -h github.com >/dev/null 2>&1; then
+  info "未检测到 gh 登录状态，请先执行：gh auth login -h github.com -s repo"
+  exit 1
 fi
 
 # 3. 当前分支 & 工作区状态检查
@@ -221,6 +301,7 @@ fi
 
 ORIGIN_URL="$(git remote get-url origin)"
 UPSTREAM_URL="$(git remote get-url upstream)"
+UPSTREAM_REPO="$(parse_github_repo "$UPSTREAM_URL")"
 
 info "origin:   $ORIGIN_URL"
 info "upstream: $UPSTREAM_URL"
@@ -302,4 +383,3 @@ blank
 info "PR 创建命令已执行。"
 info "查看 PR 列表： gh pr list"
 info "打开刚才的 PR 页面： gh pr view --web"
-
