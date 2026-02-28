@@ -69,3 +69,7 @@ npm run start
 - [ ] HTTPS 部署，确保钱包签名安全上下文
 - [ ] Nginx 只暴露 `:3020`
 - [ ] 监控异常鉴权失败/频繁授权重试
+
+## 相关文档
+
+- MCP 开关与运行机制：`docs/mcp-enable-cn.md`
