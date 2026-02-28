@@ -18,6 +18,21 @@ const mockUsage = {
   totalTokens: "2,450,000",
 };
 
+function formatBytes(bytes?: number): string {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) {
+    return "-";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB", "PB"];
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 ? 0 : value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toFixed(precision)} ${units[unitIndex]}`;
+}
+
 export function Centers() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<
@@ -91,25 +106,21 @@ export function Centers() {
               <ListItem
                 title={Locale.MyCenter.Tab1.Info.Total}
                 subTitle={
-                  storageQuota?.quota === undefined
-                    ? "-"
-                    : storageQuota?.quota + "GB"
+                  storageQuota?.unlimited
+                    ? "∞"
+                    : formatBytes(storageQuota?.quota)
                 }
               />
               <ListItem
                 title={Locale.MyCenter.Tab1.Info.Used}
-                subTitle={
-                  storageQuota?.used === undefined
-                    ? "-"
-                    : storageQuota?.used + "GB"
-                }
+                subTitle={formatBytes(storageQuota?.used)}
               />
               <ListItem
                 title={Locale.MyCenter.Tab1.Info.Remain}
                 subTitle={
-                  storageQuota?.available === undefined
-                    ? "-"
-                    : storageQuota?.available + "GB"
+                  storageQuota?.unlimited
+                    ? "∞"
+                    : formatBytes(storageQuota?.available)
                 }
               />
             </List>
