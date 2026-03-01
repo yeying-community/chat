@@ -63,6 +63,8 @@
   }
 
   .auth-wallet {
+    --wallet-gap: 8px;
+    --wallet-button-width: 132px;
     margin-top: 16vh;
     margin-bottom: 3vh;
     padding: 0;
@@ -70,9 +72,9 @@
     border-radius: 0;
     width: 380px;
     display: grid;
-    grid-template-columns: 240px 132px;
+    grid-template-columns: 240px var(--wallet-button-width);
     align-items: center;
-    column-gap: 8px;
+    column-gap: var(--wallet-gap);
   }
 
   .auth-wallet-select-wrap {
@@ -156,7 +158,8 @@
     position: absolute;
     left: 0;
     top: calc(100% + 8px);
-    width: 100%;
+    width: calc(100% + var(--wallet-gap) + var(--wallet-button-width));
+    box-sizing: border-box;
     z-index: 40;
     border-radius: 12px;
     border: 1px solid #d7e4fb;
@@ -236,6 +239,10 @@
       width: 100%;
       min-width: 0;
       max-width: none;
+    }
+
+    .auth-wallet-menu {
+      width: 100%;
     }
 
     .auth-wallet-connect {
