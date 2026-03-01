@@ -215,7 +215,7 @@ export async function waitForWallet() {
 }
 
 // 连接钱包
-export async function connectWallet() {
+export async function connectWallet(preferredAccount?: string) {
   if (localStorage.getItem("hasConnectedWallet") === "false") {
     notifyError("❌未检测到钱包，请先安装并连接钱包");
     return;
@@ -225,7 +225,18 @@ export async function connectWallet() {
       const provider = await requireProvider();
       const accounts = await requestAccounts({ provider });
       if (Array.isArray(accounts) && accounts.length > 0) {
-        const currentAccount = accounts[0];
+        const preferred = preferredAccount?.trim().toLowerCase();
+        let currentAccount = accounts[0];
+        if (preferred) {
+          const matchedAccount = accounts.find(
+            (account) => account.toLowerCase() === preferred,
+          );
+          if (!matchedAccount) {
+            notifyError("❌请在钱包中切换到选中的账户");
+            return;
+          }
+          currentAccount = matchedAccount;
+        }
         localStorage.setItem("currentAccount", currentAccount);
         await loginWithUcan(provider, currentAccount, {
           silent: false,
