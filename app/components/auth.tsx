@@ -1,6 +1,6 @@
 import styles from "./auth.module.scss";
 import { IconButton } from "./button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Path, SAAS_CHAT_URL } from "../constant";
 import Locale from "../locales";
@@ -65,6 +65,11 @@ function mergeWalletHistory(account: string, history: string[]) {
   ].slice(0, WALLET_HISTORY_LIMIT);
 }
 
+function formatWalletAccount(account: string) {
+  if (account.length <= 18) return account;
+  return `${account.slice(0, 10)}...${account.slice(-8)}`;
+}
+
 export function AuthPage() {
   const navigate = useNavigate();
   const [ucanStatus, setUcanStatus] = useState<
@@ -72,6 +77,8 @@ export function AuthPage() {
   >("checking");
   const [walletHistory, setWalletHistory] = useState<string[]>([]);
   const [selectedWalletAccount, setSelectedWalletAccount] = useState("");
+  const [isWalletMenuOpen, setIsWalletMenuOpen] = useState(false);
+  const walletMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (getClientConfig()?.isApp) {
@@ -113,13 +120,37 @@ export function AuthPage() {
     };
   }, []);
 
-  const handleWalletSelectChange = (
-    event: React.ChangeEvent<HTMLSelectElement>,
-  ) => {
-    const account = normalizeAccount(event.target.value);
-    setSelectedWalletAccount(account);
-    if (!account) return;
-    storage.setItem("currentAccount", account);
+  useEffect(() => {
+    if (!isWalletMenuOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target;
+      if (
+        walletMenuRef.current &&
+        target instanceof Node &&
+        !walletMenuRef.current.contains(target)
+      ) {
+        setIsWalletMenuOpen(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsWalletMenuOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isWalletMenuOpen]);
+
+  const handleWalletAccountSelect = (account: string) => {
+    const normalized = normalizeAccount(account);
+    setSelectedWalletAccount(normalized);
+    setIsWalletMenuOpen(false);
+    if (!normalized) return;
+    storage.setItem("currentAccount", normalized);
   };
 
   const handleWalletConnect = () => {
@@ -127,27 +158,73 @@ export function AuthPage() {
   };
 
   const isWalletConnectDisabled = ucanStatus === "authorized";
+  const selectedWalletLabel = selectedWalletAccount
+    ? formatWalletAccount(selectedWalletAccount)
+    : "历史账户（可选）";
+
+  const handleWalletMenuKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      setIsWalletMenuOpen((open) => !open);
+    }
+  };
 
   return (
     <div className={styles["auth-page"]}>
       <TopBanner></TopBanner>
 
       <div className={styles["auth-wallet"]}>
-        <select
-          className={styles["auth-wallet-select"]}
-          value={selectedWalletAccount}
-          onChange={handleWalletSelectChange}
-          aria-label="wallet-history-select"
-        >
-          <option value="" disabled hidden>
-            历史账户（可选）
-          </option>
-          {walletHistory.map((account) => (
-            <option key={account} value={account}>
-              {account}
-            </option>
-          ))}
-        </select>
+        <div className={styles["auth-wallet-select-wrap"]} ref={walletMenuRef}>
+          <button
+            type="button"
+            className={styles["auth-wallet-select"]}
+            aria-label="wallet-history-select"
+            aria-haspopup="listbox"
+            aria-expanded={isWalletMenuOpen}
+            onClick={() => setIsWalletMenuOpen((open) => !open)}
+            onKeyDown={handleWalletMenuKeyDown}
+          >
+            <span
+              className={
+                selectedWalletAccount
+                  ? styles["auth-wallet-select-value"]
+                  : styles["auth-wallet-select-placeholder"]
+              }
+              title={selectedWalletAccount || undefined}
+            >
+              {selectedWalletLabel}
+            </span>
+            <span
+              className={styles["auth-wallet-select-arrow"]}
+              data-open={isWalletMenuOpen}
+            />
+          </button>
+          {isWalletMenuOpen && (
+            <div className={styles["auth-wallet-menu"]} role="listbox">
+              {walletHistory.length > 0 ? (
+                walletHistory.map((account) => (
+                  <button
+                    type="button"
+                    key={account}
+                    className={styles["auth-wallet-option"]}
+                    data-active={
+                      account.toLowerCase() ===
+                      selectedWalletAccount.toLowerCase()
+                    }
+                    onClick={() => handleWalletAccountSelect(account)}
+                    title={account}
+                  >
+                    {account}
+                  </button>
+                ))
+              ) : (
+                <div className={styles["auth-wallet-option-empty"]}>
+                  暂无历史账户
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <IconButton
           text="连接钱包"
           type="primary"
