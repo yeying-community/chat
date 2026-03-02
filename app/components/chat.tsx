@@ -584,13 +584,39 @@ export function ChatActions(props: {
     }
   }, [allModels]);
   const currentModelName = useMemo(() => {
+    if (models.length === 0) return Locale.SearchChat.Page.Loading;
     const model = models.find(
       (m: { name: string; provider: { providerName: ServiceProvider } }) =>
         m.name == currentModel &&
         m?.provider?.providerName == currentProviderName,
     );
-    return model?.displayName ?? "";
+    return model?.displayName ?? currentModel;
   }, [models, currentModel, currentProviderName]);
+  const modelSelectorItems = useMemo(() => {
+    if (models.length === 0) {
+      return [
+        {
+          title: Locale.SearchChat.Page.Loading,
+          value: "loading",
+          disable: true,
+        },
+      ];
+    }
+    return models.map(
+      (m: {
+        displayName: any;
+        provider: { providerName: string };
+        name: any;
+      }) => ({
+        title: `${m.displayName}${
+          m?.provider?.providerName
+            ? " (" + m?.provider?.providerName + ")"
+            : ""
+        }`,
+        value: `${m.name}@${m?.provider?.providerName}`,
+      }),
+    );
+  }, [models]);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showPluginSelector, setShowPluginSelector] = useState(false);
   const [showUploadImage, setShowUploadImage] = useState(false);
@@ -725,20 +751,7 @@ export function ChatActions(props: {
         {showModelSelector && (
           <Selector
             defaultSelectedValue={`${currentModel}@${currentProviderName}`}
-            items={models.map(
-              (m: {
-                displayName: any;
-                provider: { providerName: string };
-                name: any;
-              }) => ({
-                title: `${m.displayName}${
-                  m?.provider?.providerName
-                    ? " (" + m?.provider?.providerName + ")"
-                    : ""
-                }`,
-                value: `${m.name}@${m?.provider?.providerName}`,
-              }),
-            )}
+            items={modelSelectorItems}
             onClose={() => setShowModelSelector(false)}
             onSelection={(s) => {
               if (s.length === 0) return;
