@@ -172,6 +172,16 @@ export function removeImage(imageUrl: string) {
   });
 }
 
+function normalizeStreamError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  if (typeof error === "string") return new Error(error);
+  try {
+    return new Error(JSON.stringify(error));
+  } catch {
+    return new Error(String(error));
+  }
+}
+
 export function stream(
   chatPath: string,
   requestPayload: any,
@@ -275,15 +285,21 @@ export function stream(
                 tool_call_id: tool.id,
               }));
           }),
-        ).then((toolCallResult) => {
-          processToolMessage(requestPayload, toolCallMessage, toolCallResult);
-          setTimeout(() => {
-            // call again
-            console.debug("[ChatAPI] restart");
+        )
+          .then((toolCallResult) => {
+            processToolMessage(requestPayload, toolCallMessage, toolCallResult);
+            setTimeout(() => {
+              // call again
+              console.debug("[ChatAPI] restart");
+              running = false;
+              chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
+            }, 60);
+          })
+          .catch((error) => {
             running = false;
-            chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
-          }, 60);
-        });
+            options?.onError?.(normalizeStreamError(error));
+            finish();
+          });
         return;
       }
       if (running) {
@@ -316,7 +332,7 @@ export function stream(
       () => controller.abort(),
       REQUEST_TIMEOUT_MS,
     );
-    fetchEventSource(chatPath, {
+    void fetchEventSource(chatPath, {
       fetch: tauriFetch as any,
       ...chatPayload,
       async onopen(res) {
@@ -376,13 +392,19 @@ export function stream(
         }
       },
       onclose() {
+        clearTimeout(requestTimeoutId);
         finish();
       },
       onerror(e) {
-        options?.onError?.(e);
-        throw e;
+        clearTimeout(requestTimeoutId);
+        throw normalizeStreamError(e);
       },
       openWhenHidden: true,
+    }).catch((error) => {
+      clearTimeout(requestTimeoutId);
+      if (finished) return;
+      options?.onError?.(normalizeStreamError(error));
+      finish();
     });
   }
   console.debug("[ChatAPI] start");
@@ -501,15 +523,21 @@ export function streamWithThink(
                 tool_call_id: tool.id,
               }));
           }),
-        ).then((toolCallResult) => {
-          processToolMessage(requestPayload, toolCallMessage, toolCallResult);
-          setTimeout(() => {
-            // call again
-            console.debug("[ChatAPI] restart");
+        )
+          .then((toolCallResult) => {
+            processToolMessage(requestPayload, toolCallMessage, toolCallResult);
+            setTimeout(() => {
+              // call again
+              console.debug("[ChatAPI] restart");
+              running = false;
+              chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
+            }, 60);
+          })
+          .catch((error) => {
             running = false;
-            chatApi(chatPath, headers, requestPayload, tools); // call fetchEventSource
-          }, 60);
-        });
+            options?.onError?.(normalizeStreamError(error));
+            finish();
+          });
         return;
       }
       if (running) {
@@ -542,7 +570,7 @@ export function streamWithThink(
       () => controller.abort(),
       REQUEST_TIMEOUT_MS,
     );
-    fetchEventSource(chatPath, {
+    void fetchEventSource(chatPath, {
       fetch: tauriFetch as any,
       ...chatPayload,
       async onopen(res) {
@@ -653,13 +681,19 @@ export function streamWithThink(
         }
       },
       onclose() {
+        clearTimeout(requestTimeoutId);
         finish();
       },
       onerror(e) {
-        options?.onError?.(e);
-        throw e;
+        clearTimeout(requestTimeoutId);
+        throw normalizeStreamError(e);
       },
       openWhenHidden: true,
+    }).catch((error) => {
+      clearTimeout(requestTimeoutId);
+      if (finished) return;
+      options?.onError?.(normalizeStreamError(error));
+      finish();
     });
   }
   console.debug("[ChatAPI] start");
