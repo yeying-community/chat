@@ -17,7 +17,11 @@ import {
 import { downloadAs, readFromFile } from "../utils";
 import { showToast } from "../components/ui-lib";
 import Locale from "../locales";
-import { createSyncClient, ProviderType } from "../utils/cloud";
+import {
+  createSyncClient,
+  ProviderType,
+  type SyncClient,
+} from "../utils/cloud";
 import {
   getCachedUcanSession,
   refreshUcanSession,
@@ -36,24 +40,14 @@ type MessageLike = {
   audio_url?: string;
 };
 
+type MaskLike = {
+  context?: MessageLike[];
+};
+
+const CHATGPT_NEXT_WEB_FILE_CACHE = "chatgpt-next-web-file";
+
 function isCacheMediaUrl(url?: string) {
   return typeof url === "string" && url.includes(CACHE_URL_PREFIX);
-}
-
-function blobToDataUrl(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Failed to convert blob to data URL"));
-      }
-    };
-    reader.onerror = () =>
-      reject(reader.error ?? new Error("Failed to convert blob to data URL"));
-    reader.readAsDataURL(blob);
-  });
 }
 
 function normalizeCacheUrl(url: string) {
@@ -61,7 +55,38 @@ function normalizeCacheUrl(url: string) {
   return new URL(url, window.location.origin).toString();
 }
 
-async function loadCacheMediaBlob(url: string) {
+function getCacheMediaKey(url: string) {
+  try {
+    const origin =
+      typeof window === "undefined"
+        ? "http://localhost"
+        : window.location.origin;
+    const parsed = new URL(url, origin);
+    const pathPrefix = `${CACHE_URL_PREFIX}/`;
+    if (!parsed.pathname.startsWith(pathPrefix)) return "";
+    const relative = parsed.pathname.slice(pathPrefix.length);
+    if (!relative) return "";
+    return encodeURIComponent(relative);
+  } catch {
+    return "";
+  }
+}
+
+function normalizeCacheMediaUrlForState(url: string) {
+  try {
+    const origin =
+      typeof window === "undefined"
+        ? "http://localhost"
+        : window.location.origin;
+    const parsed = new URL(url, origin);
+    if (!parsed.pathname.startsWith(CACHE_URL_PREFIX)) return url;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return url;
+  }
+}
+
+async function loadLocalCacheMediaBlob(url: string) {
   const normalizedUrl = normalizeCacheUrl(url);
 
   if (typeof caches !== "undefined") {
@@ -84,39 +109,19 @@ async function loadCacheMediaBlob(url: string) {
   return await res.blob();
 }
 
-async function convertCacheMediaUrl(
-  url: string,
-  resolvedUrls: Map<string, string>,
-) {
-  if (!isCacheMediaUrl(url)) return url;
-  if (resolvedUrls.has(url)) {
-    return resolvedUrls.get(url)!;
-  }
-
-  try {
-    const blob = await loadCacheMediaBlob(url);
-    const dataUrl = await blobToDataUrl(blob);
-    resolvedUrls.set(url, dataUrl);
-    return dataUrl;
-  } catch (error) {
-    resolvedUrls.set(url, url);
-    console.warn("[Sync] failed to materialize cache media", { url, error });
-    return url;
-  }
-}
-
-async function materializeMessageMedia(
+function collectMessageMediaUrls(
   messages: MessageLike[] | undefined,
-  resolvedUrls: Map<string, string>,
+  mediaUrls: Set<string>,
 ) {
   if (!messages || messages.length === 0) return;
 
   for (const message of messages) {
     if (isCacheMediaUrl(message.audio_url)) {
-      message.audio_url = await convertCacheMediaUrl(
+      const normalizedUrl = normalizeCacheMediaUrlForState(
         message.audio_url as string,
-        resolvedUrls,
       );
+      message.audio_url = normalizedUrl;
+      mediaUrls.add(normalizedUrl);
     }
 
     if (!Array.isArray(message.content)) continue;
@@ -125,42 +130,139 @@ async function materializeMessageMedia(
       if (part?.type !== "image_url") continue;
       const url = part?.image_url?.url;
       if (!isCacheMediaUrl(url)) continue;
-      if (!part.image_url) continue;
-      part.image_url.url = await convertCacheMediaUrl(
-        url as string,
-        resolvedUrls,
-      );
+      const normalizedUrl = normalizeCacheMediaUrlForState(url as string);
+      if (part.image_url) {
+        part.image_url.url = normalizedUrl;
+      }
+      mediaUrls.add(normalizedUrl);
     }
   }
 }
 
-async function inlineCacheMediaForWebdavSync(appState: AppState) {
-  const resolvedUrls = new Map<string, string>();
+function collectCacheMediaUrls(appState: AppState) {
+  const mediaUrls = new Set<string>();
   const chatState = appState[StoreKey.Chat];
 
   for (const session of chatState.sessions) {
-    await materializeMessageMedia(
+    collectMessageMediaUrls(
       session.messages as MessageLike[],
-      resolvedUrls,
+      mediaUrls,
     );
-    await materializeMessageMedia(
+    collectMessageMediaUrls(
       session.mask?.context as MessageLike[] | undefined,
-      resolvedUrls,
+      mediaUrls,
     );
   }
 
-  if (resolvedUrls.size > 0) {
-    console.info("[Sync] inlined cache media for WebDAV sync", {
-      count: resolvedUrls.size,
-    });
+  const masks = (appState[StoreKey.Mask]?.masks ?? {}) as Record<
+    string,
+    MaskLike
+  >;
+  for (const mask of Object.values(masks)) {
+    collectMessageMediaUrls(mask.context, mediaUrls);
   }
+
+  return Array.from(mediaUrls);
 }
 
-async function getLocalAppStateForUpload(provider: ProviderType) {
+async function hasLocalCacheMedia(url: string) {
+  if (typeof caches === "undefined") return false;
+  const normalizedUrl = normalizeCacheUrl(url);
+  const cached =
+    (await caches.match(normalizedUrl)) ?? (await caches.match(url));
+  return !!cached;
+}
+
+async function putLocalCacheMedia(url: string, blob: Blob) {
+  if (typeof caches === "undefined") return;
+  const cache = await caches.open(CHATGPT_NEXT_WEB_FILE_CACHE);
+  const normalizedUrl = normalizeCacheUrl(url);
+  const headers: Record<string, string> = {
+    "cache-control": "no-cache",
+    server: "WebDAV-Sync",
+    "content-length": String(blob.size),
+  };
+  if (blob.type) {
+    headers["content-type"] = blob.type;
+  }
+  await cache.put(new Request(normalizedUrl), new Response(blob, { headers }));
+}
+
+async function uploadCacheMediaForWebdav(
+  appState: AppState,
+  client: SyncClient,
+) {
+  if (!client.uploadMedia) return;
+  const mediaUrls = collectCacheMediaUrls(appState);
+  if (mediaUrls.length === 0) return;
+
+  let successCount = 0;
+
+  for (const mediaUrl of mediaUrls) {
+    const mediaKey = getCacheMediaKey(mediaUrl);
+    if (!mediaKey) continue;
+
+    try {
+      const blob = await loadLocalCacheMediaBlob(mediaUrl);
+      await client.uploadMedia(mediaKey, blob, blob.type || undefined);
+      successCount += 1;
+    } catch (error) {
+      console.warn("[Sync] failed to upload cache media to WebDAV", {
+        mediaUrl,
+        error,
+      });
+    }
+  }
+
+  console.info("[Sync] upload cache media to WebDAV done", {
+    total: mediaUrls.length,
+    successCount,
+  });
+}
+
+async function hydrateCacheMediaFromWebdav(
+  remoteState: AppState,
+  client: SyncClient,
+) {
+  if (!client.downloadMedia || typeof caches === "undefined") return;
+  const mediaUrls = collectCacheMediaUrls(remoteState);
+  if (mediaUrls.length === 0) return;
+
+  let restoreCount = 0;
+
+  for (const mediaUrl of mediaUrls) {
+    if (await hasLocalCacheMedia(mediaUrl)) continue;
+
+    const mediaKey = getCacheMediaKey(mediaUrl);
+    if (!mediaKey) continue;
+
+    try {
+      const blob = await client.downloadMedia(mediaKey);
+      if (!blob) continue;
+      await putLocalCacheMedia(mediaUrl, blob);
+      restoreCount += 1;
+    } catch (error) {
+      console.warn("[Sync] failed to hydrate cache media from WebDAV", {
+        mediaUrl,
+        error,
+      });
+    }
+  }
+
+  console.info("[Sync] hydrate cache media from WebDAV done", {
+    total: mediaUrls.length,
+    restoreCount,
+  });
+}
+
+async function getLocalAppStateForUpload(
+  provider: ProviderType,
+  client: SyncClient,
+) {
   const state = getLocalAppStateForSync();
 
   if (provider === ProviderType.WebDAV) {
-    await inlineCacheMediaForWebdavSync(state);
+    await uploadCacheMediaForWebdav(state, client);
   }
 
   return state;
@@ -311,7 +413,10 @@ export const useSyncStore = createPersistStore(
       try {
         const remoteState = await client.get(config.username);
         if (!remoteState || remoteState === "") {
-          const latestLocalState = await getLocalAppStateForUpload(provider);
+          const latestLocalState = await getLocalAppStateForUpload(
+            provider,
+            client,
+          );
           await client.set(config.username, JSON.stringify(latestLocalState));
           console.log(
             "[Sync] Remote state is empty, using local state instead.",
@@ -320,6 +425,9 @@ export const useSyncStore = createPersistStore(
         }
 
         const parsedRemoteState = JSON.parse(remoteState) as AppState;
+        if (provider === ProviderType.WebDAV) {
+          await hydrateCacheMediaFromWebdav(parsedRemoteState, client);
+        }
         const latestLocalState = getLocalAppState();
         mergeAppState(latestLocalState, parsedRemoteState);
         setLocalAppState(latestLocalState);
@@ -328,7 +436,10 @@ export const useSyncStore = createPersistStore(
         throw e;
       }
 
-      const latestLocalState = await getLocalAppStateForUpload(provider);
+      const latestLocalState = await getLocalAppStateForUpload(
+        provider,
+        client,
+      );
       await client.set(config.username, JSON.stringify(latestLocalState));
 
       set({ lastSyncTime: Date.now(), lastProvider: provider });
