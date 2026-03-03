@@ -1,5 +1,10 @@
 import { getClientConfig } from "../config/client";
-import { ApiPath, STORAGE_KEY, StoreKey } from "../constant";
+import {
+  ApiPath,
+  CACHE_URL_PREFIX,
+  STORAGE_KEY,
+  StoreKey,
+} from "../constant";
 import { createPersistStore } from "../utils/store";
 import {
   AppState,
@@ -18,6 +23,148 @@ import {
   refreshUcanSession,
 } from "../plugins/ucan-session";
 import { getUcanRootCapsKey, getWebdavAudience } from "../plugins/ucan";
+
+type ImageUrlPart = {
+  type?: string;
+  image_url?: {
+    url?: string;
+  };
+};
+
+type MessageLike = {
+  content?: unknown;
+  audio_url?: string;
+};
+
+function isCacheMediaUrl(url?: string) {
+  return typeof url === "string" && url.includes(CACHE_URL_PREFIX);
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to convert blob to data URL"));
+      }
+    };
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Failed to convert blob to data URL"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function normalizeCacheUrl(url: string) {
+  if (typeof window === "undefined") return url;
+  return new URL(url, window.location.origin).toString();
+}
+
+async function loadCacheMediaBlob(url: string) {
+  const normalizedUrl = normalizeCacheUrl(url);
+
+  if (typeof caches !== "undefined") {
+    // Prefer CacheStorage to avoid depending on ServiceWorker interception.
+    const cached =
+      (await caches.match(normalizedUrl)) ?? (await caches.match(url));
+    if (cached) {
+      return await cached.blob();
+    }
+  }
+
+  const res = await fetch(url, {
+    method: "GET",
+    mode: "cors",
+    credentials: "include",
+  });
+  if (!res.ok) {
+    throw new Error(`load cache media failed: ${res.status} ${res.statusText}`);
+  }
+  return await res.blob();
+}
+
+async function convertCacheMediaUrl(
+  url: string,
+  resolvedUrls: Map<string, string>,
+) {
+  if (!isCacheMediaUrl(url)) return url;
+  if (resolvedUrls.has(url)) {
+    return resolvedUrls.get(url)!;
+  }
+
+  try {
+    const blob = await loadCacheMediaBlob(url);
+    const dataUrl = await blobToDataUrl(blob);
+    resolvedUrls.set(url, dataUrl);
+    return dataUrl;
+  } catch (error) {
+    resolvedUrls.set(url, url);
+    console.warn("[Sync] failed to materialize cache media", { url, error });
+    return url;
+  }
+}
+
+async function materializeMessageMedia(
+  messages: MessageLike[] | undefined,
+  resolvedUrls: Map<string, string>,
+) {
+  if (!messages || messages.length === 0) return;
+
+  for (const message of messages) {
+    if (isCacheMediaUrl(message.audio_url)) {
+      message.audio_url = await convertCacheMediaUrl(
+        message.audio_url as string,
+        resolvedUrls,
+      );
+    }
+
+    if (!Array.isArray(message.content)) continue;
+
+    for (const part of message.content as ImageUrlPart[]) {
+      if (part?.type !== "image_url") continue;
+      const url = part?.image_url?.url;
+      if (!isCacheMediaUrl(url)) continue;
+      if (!part.image_url) continue;
+      part.image_url.url = await convertCacheMediaUrl(
+        url as string,
+        resolvedUrls,
+      );
+    }
+  }
+}
+
+async function inlineCacheMediaForWebdavSync(appState: AppState) {
+  const resolvedUrls = new Map<string, string>();
+  const chatState = appState[StoreKey.Chat];
+
+  for (const session of chatState.sessions) {
+    await materializeMessageMedia(
+      session.messages as MessageLike[],
+      resolvedUrls,
+    );
+    await materializeMessageMedia(
+      session.mask?.context as MessageLike[] | undefined,
+      resolvedUrls,
+    );
+  }
+
+  if (resolvedUrls.size > 0) {
+    console.info("[Sync] inlined cache media for WebDAV sync", {
+      count: resolvedUrls.size,
+    });
+  }
+}
+
+async function getLocalAppStateForUpload(provider: ProviderType) {
+  const state = getLocalAppStateForSync();
+
+  if (provider === ProviderType.WebDAV) {
+    await inlineCacheMediaForWebdavSync(state);
+  }
+
+  return state;
+}
 
 export type WebDavAuthType = "basic" | "ucan";
 
@@ -164,7 +311,7 @@ export const useSyncStore = createPersistStore(
       try {
         const remoteState = await client.get(config.username);
         if (!remoteState || remoteState === "") {
-          const latestLocalState = getLocalAppStateForSync();
+          const latestLocalState = await getLocalAppStateForUpload(provider);
           await client.set(config.username, JSON.stringify(latestLocalState));
           console.log(
             "[Sync] Remote state is empty, using local state instead.",
@@ -181,7 +328,7 @@ export const useSyncStore = createPersistStore(
         throw e;
       }
 
-      const latestLocalState = getLocalAppStateForSync();
+      const latestLocalState = await getLocalAppStateForUpload(provider);
       await client.set(config.username, JSON.stringify(latestLocalState));
 
       set({ lastSyncTime: Date.now(), lastProvider: provider });
