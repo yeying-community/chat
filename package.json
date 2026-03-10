@@ -15,7 +15,7 @@
     "app:build": "npm run mask && npx tauri build",
     "app:clear": "npx tauri dev",
     "prompts": "node ./scripts/fetch-prompts.mjs",
-    "prepare": "husky install",
+    "prepare": "husky",
     "proxy-dev": "sh ./scripts/init-proxy.sh && proxychains -f ./scripts/proxychains.conf npm run dev",
     "test": "node --no-warnings --experimental-vm-modules ./node_modules/.bin/jest --watch",
     "test:ci": "node --no-warnings --experimental-vm-modules ./node_modules/.bin/jest --ci"
