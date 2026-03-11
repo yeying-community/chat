@@ -598,11 +598,30 @@ export function MaskPage() {
                   </div>
                   <div className={styles["mask-title"]}>
                     <div className={styles["mask-name"]}>{m.name}</div>
+                    {m.category && (
+                      <div className={styles["mask-category"]}>
+                        {m.category}
+                      </div>
+                    )}
+                    {m.description && (
+                      <div className={styles["mask-description"]}>
+                        {m.description}
+                      </div>
+                    )}
                     <div className={clsx(styles["mask-info"], "one-line")}>
                       {`${Locale.Mask.Item.Info(m.context.length)} / ${
                         ALL_LANG_OPTIONS[m.lang]
                       } / ${m.modelConfig.model}`}
                     </div>
+                    {!!m.starters?.length && (
+                      <div className={styles["mask-starters"]}>
+                        {m.starters.slice(0, 2).map((starter) => (
+                          <div key={starter} className={styles["mask-starter"]}>
+                            {starter}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className={styles["mask-actions"]}>
