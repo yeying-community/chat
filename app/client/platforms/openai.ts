@@ -259,6 +259,365 @@ async function getHeadersWithRouterUcan(url: string) {
   return headers;
 }
 
+function isResponsesPath(path: string) {
+  return path.includes("/v1/responses");
+}
+
+function normalizeResponsesTextFormat(responseFormat: any) {
+  if (!responseFormat || typeof responseFormat !== "object") return undefined;
+  if (!responseFormat.type) return undefined;
+  const format: Record<string, any> = {
+    type: responseFormat.type,
+  };
+  if (
+    responseFormat.type === "json_schema" &&
+    responseFormat.json_schema &&
+    typeof responseFormat.json_schema === "object"
+  ) {
+    const schema = responseFormat.json_schema;
+    ["name", "schema", "strict", "description"].forEach((key) => {
+      if (schema[key] !== undefined) format[key] = schema[key];
+    });
+  }
+  return format;
+}
+
+function getResponsesTextContentType(role: string) {
+  return role === "assistant" ? "output_text" : "input_text";
+}
+
+function normalizeResponsesInputContent(content: any, role = "user") {
+  const textType = getResponsesTextContentType(role);
+  if (typeof content === "string") {
+    return [
+      {
+        type: textType,
+        text: content,
+      },
+    ];
+  }
+  if (!Array.isArray(content)) return content;
+
+  let changed = false;
+  const converted = content.map((part: any) => {
+    if (!part || typeof part !== "object") return part;
+    const partType = typeof part.type === "string" ? part.type : "";
+    if (
+      partType === "text" ||
+      partType === "input_text" ||
+      partType === "output_text"
+    ) {
+      changed = true;
+      return {
+        type: textType,
+        text: typeof part.text === "string" ? part.text : "",
+      };
+    }
+    if (partType === "image_url") {
+      let url = "";
+      let detail = "";
+      if (typeof part.image_url === "string") {
+        url = part.image_url;
+      } else if (part.image_url && typeof part.image_url === "object") {
+        if (typeof part.image_url.url === "string") {
+          url = part.image_url.url;
+        }
+        if (typeof part.image_url.detail === "string") {
+          detail = part.image_url.detail;
+        }
+      }
+      if (!url) return part;
+      changed = true;
+      return {
+        type: "input_image",
+        image_url: url,
+        ...(detail ? { detail } : {}),
+      };
+    }
+    return part;
+  });
+
+  return changed ? converted : content;
+}
+
+function normalizeResponsesInputMessages(input: any) {
+  if (!Array.isArray(input)) return input;
+  let changed = false;
+  const normalized = input.map((item: any) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+    if (!Object.prototype.hasOwnProperty.call(item, "content")) return item;
+    const role = typeof item.role === "string" ? item.role : "user";
+    const nextContent = normalizeResponsesInputContent(item.content, role);
+    if (nextContent === item.content) return item;
+    changed = true;
+    return {
+      ...item,
+      content: nextContent,
+    };
+  });
+  return changed ? normalized : input;
+}
+
+function hasResponsesImageInput(input: any): boolean {
+  if (!Array.isArray(input)) return false;
+  return input.some((item: any) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return false;
+    if (!Array.isArray(item.content)) return false;
+    return item.content.some((part: any) => {
+      const partType = typeof part?.type === "string" ? part.type : "";
+      return partType === "input_image" || partType === "image_url";
+    });
+  });
+}
+
+function toResponsesTools(tools: any[]) {
+  return (tools || []).map((tool) => {
+    if (!tool || typeof tool !== "object") return tool;
+    if (tool.type !== "function") return tool;
+    if (!tool.function || typeof tool.function !== "object") return tool;
+    const fn = tool.function;
+    const normalized: Record<string, any> = {
+      type: "function",
+    };
+    if (typeof fn.name === "string" && fn.name) normalized.name = fn.name;
+    if (typeof fn.description === "string" && fn.description) {
+      normalized.description = fn.description;
+    }
+    if (fn.parameters !== undefined) normalized.parameters = fn.parameters;
+    if (fn.strict !== undefined) normalized.strict = fn.strict;
+    return normalized;
+  });
+}
+
+function extractResponsesInstructionText(content: any): string {
+  if (typeof content === "string") return content.trim();
+  if (!Array.isArray(content)) return "";
+  const texts = content
+    .map((part: any) => {
+      if (!part || typeof part !== "object") return "";
+      if (part.type === "text" || part.type === "input_text") {
+        return typeof part.text === "string" ? part.text : "";
+      }
+      return "";
+    })
+    .filter(Boolean);
+  return texts.join("\n").trim();
+}
+
+function buildResponsesInputAndInstructions(
+  messages: Array<{ role: string; content: any }>,
+) {
+  const instructions: string[] = [];
+  const input: Array<{ role: string; content: any }> = [];
+  for (const message of messages) {
+    const role = typeof message.role === "string" ? message.role : "user";
+    if (role === "system" || role === "developer") {
+      const text = extractResponsesInstructionText(message.content);
+      if (text) instructions.push(text);
+      continue;
+    }
+    input.push({
+      role,
+      content: message.content,
+    });
+  }
+  return {
+    instructions: instructions.join("\n\n").trim(),
+    input: normalizeResponsesInputMessages(input),
+  };
+}
+
+function toResponsesFunctionOutputs(toolCallResult: any[]) {
+  return (toolCallResult || [])
+    .map((result: any) => {
+      const callId =
+        typeof result?.tool_call_id === "string" ? result.tool_call_id : "";
+      if (!callId) return null;
+      let output = result?.content;
+      if (typeof output !== "string") {
+        try {
+          output = JSON.stringify(output ?? "");
+        } catch {
+          output = String(output ?? "");
+        }
+      }
+      return {
+        type: "function_call_output",
+        call_id: callId,
+        output,
+      };
+    })
+    .filter(Boolean);
+}
+
+const RESPONSES_ALLOWED_FIELDS = new Set([
+  "background",
+  "context_management",
+  "conversation",
+  "include",
+  "input",
+  "instructions",
+  "max_output_tokens",
+  "max_tool_calls",
+  "metadata",
+  "model",
+  "parallel_tool_calls",
+  "previous_response_id",
+  "prompt",
+  "prompt_cache_key",
+  "prompt_cache_retention",
+  "reasoning",
+  "safety_identifier",
+  "service_tier",
+  "store",
+  "stream",
+  "stream_options",
+  "temperature",
+  "text",
+  "tool_choice",
+  "tools",
+  "top_p",
+  "truncation",
+  "user",
+]);
+
+function isReasoningModel(model: string) {
+  const id = model.toLowerCase().trim();
+  if (!id) return false;
+  return id.startsWith("gpt-5") || id.startsWith("o1") || id.startsWith("o3");
+}
+
+function toResponsesPayload(payload: Record<string, any>) {
+  const source = { ...payload };
+  const normalized: Record<string, any> = {};
+  const assign = (key: string, value: any) => {
+    if (value !== undefined) normalized[key] = value;
+  };
+
+  assign("model", source.model);
+  assign("background", source.background);
+  assign("context_management", source.context_management);
+  assign("conversation", source.conversation);
+  assign("include", source.include);
+  assign("instructions", source.instructions);
+  assign("metadata", source.metadata);
+  assign("previous_response_id", source.previous_response_id);
+  assign("prompt", source.prompt);
+  assign("prompt_cache_key", source.prompt_cache_key);
+  assign("prompt_cache_retention", source.prompt_cache_retention);
+  assign("safety_identifier", source.safety_identifier);
+  assign("service_tier", source.service_tier);
+  assign("store", source.store);
+  assign("temperature", source.temperature);
+  assign("top_p", source.top_p);
+  assign("truncation", source.truncation);
+  assign("user", source.user);
+
+  if (source.input !== undefined) {
+    assign("input", normalizeResponsesInputMessages(source.input));
+  }
+
+  let maxOutputTokens = source.max_output_tokens;
+  if (maxOutputTokens === undefined) {
+    if (typeof source.max_completion_tokens === "number") {
+      maxOutputTokens = source.max_completion_tokens;
+    } else if (typeof source.max_tokens === "number") {
+      maxOutputTokens = source.max_tokens;
+    }
+  }
+  assign("max_output_tokens", maxOutputTokens);
+
+  if (source.stream !== undefined) {
+    assign("stream", source.stream);
+  }
+  if (source.stream === true && source.stream_options !== undefined) {
+    assign("stream_options", source.stream_options);
+  }
+
+  if (
+    source.reasoning !== undefined &&
+    isReasoningModel(String(source.model ?? ""))
+  ) {
+    assign("reasoning", source.reasoning);
+  }
+
+  const normalizedTools = Array.isArray(source.tools) ? source.tools : [];
+  if (normalizedTools.length > 0) {
+    assign("tools", normalizedTools);
+    assign("tool_choice", source.tool_choice);
+    assign("parallel_tool_calls", source.parallel_tool_calls);
+    assign("max_tool_calls", source.max_tool_calls);
+  }
+
+  let text =
+    source.text && typeof source.text === "object"
+      ? { ...source.text }
+      : undefined;
+  if (source.response_format !== undefined) {
+    const format = normalizeResponsesTextFormat(source.response_format);
+    if (format) {
+      text = { ...(text ?? {}), format };
+    }
+  }
+  if (text && Object.keys(text).length > 0) {
+    assign("text", text);
+  }
+
+  const sanitized: Record<string, any> = {};
+  Object.keys(normalized).forEach((key) => {
+    if (!RESPONSES_ALLOWED_FIELDS.has(key)) return;
+    if (normalized[key] === undefined) return;
+    sanitized[key] = normalized[key];
+  });
+  return sanitized;
+}
+
+function extractResponsesTextFromOutput(output: any): string {
+  if (!Array.isArray(output)) return "";
+  const texts: string[] = [];
+  output.forEach((item: any) => {
+    if (typeof item?.output_text === "string" && item.output_text) {
+      texts.push(item.output_text);
+    }
+    if (Array.isArray(item?.content)) {
+      item.content.forEach((c: any) => {
+        if (typeof c?.output_text === "string" && c.output_text) {
+          texts.push(c.output_text);
+        } else if (typeof c?.text === "string" && c.text) {
+          texts.push(c.text);
+        }
+      });
+    } else if (typeof item?.text === "string" && item.text) {
+      texts.push(item.text);
+    }
+  });
+  return texts.join("\n\n");
+}
+
+function extractResponsesStreamFallbackText(payload: any): string {
+  if (!payload || typeof payload !== "object") return "";
+  if (typeof payload.output_text === "string" && payload.output_text) {
+    return payload.output_text;
+  }
+  if (typeof payload.text === "string" && payload.text) {
+    return payload.text;
+  }
+  if (typeof payload.delta === "string" && payload.delta) {
+    return payload.delta;
+  }
+  if (payload.response && typeof payload.response === "object") {
+    if (
+      typeof payload.response.output_text === "string" &&
+      payload.response.output_text
+    ) {
+      return payload.response.output_text;
+    }
+    const nested = extractResponsesTextFromOutput(payload.response.output);
+    if (nested) return nested;
+  }
+  return extractResponsesTextFromOutput(payload.output);
+}
+
 export class ChatGPTApi implements LLMApi {
   private disableListModels = false;
 
@@ -303,18 +662,12 @@ export class ChatGPTApi implements LLMApi {
 
   async extractMessage(res: any) {
     // handle responses api output
+    if (typeof res?.output_text === "string" && res.output_text) {
+      return res.output_text;
+    }
     if (Array.isArray(res?.output)) {
-      const texts: string[] = [];
-      res.output.forEach((item: any) => {
-        if (item?.content) {
-          item.content.forEach((c: any) => {
-            if (c?.text) texts.push(c.text);
-          });
-        } else if (item?.text) {
-          texts.push(item.text);
-        }
-      });
-      if (texts.length > 0) return texts.join("\n\n");
+      const outputText = extractResponsesTextFromOutput(res.output);
+      if (outputText) return outputText;
     }
     if (res.error) {
       return "```\n" + JSON.stringify(res, null, 4) + "\n```";
@@ -387,9 +740,6 @@ export class ChatGPTApi implements LLMApi {
         providerName: options.config.providerName,
       },
     };
-
-    let requestPayload: RequestPayload | DalleRequestPayload | any;
-
     const resolvedModel = mapOpenAIModelName(options.config.model);
     const isDalle3 = _isDalle3(resolvedModel);
     const isO1OrO3 =
@@ -397,76 +747,31 @@ export class ChatGPTApi implements LLMApi {
       resolvedModel.startsWith("o3") ||
       resolvedModel.startsWith("o4-mini");
     const isGpt5 = resolvedModel.startsWith("gpt-5");
-    if (isDalle3) {
-      const prompt = getMessageTextContent(
-        options.messages.slice(-1)?.pop() as any,
-      );
-      requestPayload = {
-        model: resolvedModel,
-        prompt,
-        // URLs are only valid for 60 minutes after the image has been generated.
-        response_format: "b64_json", // using b64_json, and save image in CacheStorage
-        n: 1,
-        size: options.config?.size ?? "1024x1024",
-        quality: options.config?.quality ?? "standard",
-        style: options.config?.style ?? "vivid",
-      };
-    } else {
-      const visionModel = isVisionModel(options.config.model);
-      const messages: ChatOptions["messages"] = [];
-      for (const v of options.messages) {
-        const content = visionModel
-          ? await preProcessImageContent(v.content)
-          : getMessageTextContent(v);
-        if (!(isO1OrO3 && v.role === "system"))
-          messages.push({ role: v.role, content });
-      }
-
-      // O1 not support image, tools (plugin in ChatGPTNextWeb) and system, stream, logprobs, temperature, top_p, n, presence_penalty, frequency_penalty yet.
-      requestPayload = {
-        messages,
-        stream: options.config.stream,
-        model: resolvedModel,
-        temperature: !isO1OrO3 ? modelConfig.temperature : 1,
-        presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
-        frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
-        top_p: !isO1OrO3 ? modelConfig.top_p : 1,
-        // max_tokens: Math.max(modelConfig.max_tokens, 1024),
-        // Please do not ask me why not send max_tokens, no reason, this param is just shit, I dont want to explain anymore.
-      };
-
-      if (!isGpt5 && isO1OrO3) {
-        // by default the o1/o3 models will not attempt to produce output that includes markdown formatting
-        // manually add "Formatting re-enabled" developer message to encourage markdown inclusion in model responses
-        // (https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/reasoning?tabs=python-secure#markdown-output)
-        requestPayload["messages"].unshift({
-          role: "developer",
-          content: "Formatting re-enabled",
-        });
-
-        // o1/o3 uses max_completion_tokens to control the number of tokens (https://platform.openai.com/docs/guides/reasoning#controlling-costs)
-        requestPayload["max_completion_tokens"] = modelConfig.max_tokens;
-      }
-
-      // add max_tokens to vision model
-      if (visionModel && !isO1OrO3 && !isGpt5) {
-        requestPayload["max_tokens"] = Math.max(modelConfig.max_tokens, 4000);
-      }
-
-      if (isGpt5) {
-        // Router-side gpt-5 models may reject legacy params; ensure none are attached
-        delete (requestPayload as any).max_tokens;
-        delete (requestPayload as any).max_completion_tokens;
-      }
-    }
-
-    console.log("[Request] openai payload: ", requestPayload);
-
     const shouldStream = !isDalle3 && !!options.config.stream;
     const controller = new AbortController();
     options.onController?.(controller);
+    let index = -1;
+    let sawResponsesDelta = false;
+    let latestResponsesId = "";
+    const responsesToolIndexByOutput = new Map<number, number>();
+    const responsesToolIndexByItemId = new Map<string, number>();
 
     try {
+      let tools: any[] = [];
+      let funcs: Record<string, Function> = {};
+      if (shouldStream) {
+        const toolPair = usePluginStore
+          .getState()
+          .getAsTools(
+            useChatStore.getState().currentSession().mask?.plugin || [],
+          ) as [any[], Record<string, Function>];
+        tools = toolPair[0] ?? [];
+        funcs = toolPair[1] ?? {};
+      }
+
+      const useResponsesEndpoint =
+        !isDalle3 && modelConfig.providerName !== ServiceProvider.Azure;
+
       let chatPath = "";
       if (modelConfig.providerName === ServiceProvider.Azure) {
         // find model, and get displayName as deployName
@@ -495,29 +800,286 @@ export class ChatGPTApi implements LLMApi {
         );
       } else {
         chatPath = this.path(
-          isDalle3 ? OpenaiPath.ImagePath : OpenaiPath.ChatPath,
+          isDalle3
+            ? OpenaiPath.ImagePath
+            : useResponsesEndpoint
+              ? OpenaiPath.ResponsePath
+              : OpenaiPath.ChatPath,
         );
       }
+
+      const requestTools = useResponsesEndpoint
+        ? toResponsesTools(tools)
+        : tools;
+      let requestPayload:
+        | RequestPayload
+        | DalleRequestPayload
+        | Record<string, any>;
+
+      if (isDalle3) {
+        const prompt = getMessageTextContent(
+          options.messages.slice(-1)?.pop() as any,
+        );
+        requestPayload = {
+          model: resolvedModel,
+          prompt,
+          // URLs are only valid for 60 minutes after the image has been generated.
+          response_format: "b64_json", // using b64_json, and save image in CacheStorage
+          n: 1,
+          size: options.config?.size ?? "1024x1024",
+          quality: options.config?.quality ?? "standard",
+          style: options.config?.style ?? "vivid",
+        };
+      } else {
+        const visionModel = isVisionModel(options.config.model);
+        const messages: Array<{ role: string; content: any }> = [];
+        for (const v of options.messages) {
+          const content = visionModel
+            ? await preProcessImageContent(v.content)
+            : getMessageTextContent(v);
+          if (!(isO1OrO3 && v.role === "system")) {
+            messages.push({ role: v.role, content });
+          }
+        }
+
+        if (useResponsesEndpoint) {
+          const { instructions, input } =
+            buildResponsesInputAndInstructions(messages);
+          const hasImageInput = hasResponsesImageInput(input);
+          const responsesPayload: Record<string, any> = {
+            model: resolvedModel,
+            input,
+            stream: options.config.stream,
+            max_output_tokens: modelConfig.max_tokens,
+          };
+          if (!isO1OrO3 && !hasImageInput) {
+            responsesPayload.temperature = modelConfig.temperature;
+            responsesPayload.top_p = modelConfig.top_p;
+          }
+          if (instructions) {
+            responsesPayload.instructions = instructions;
+          }
+          if (requestTools.length > 0) {
+            responsesPayload.tools = requestTools;
+            responsesPayload.tool_choice = "auto";
+            responsesPayload.parallel_tool_calls = true;
+          }
+          requestPayload = toResponsesPayload(responsesPayload);
+        } else {
+          const chatPayload: RequestPayload = {
+            messages: messages as RequestPayload["messages"],
+            stream: options.config.stream,
+            model: resolvedModel,
+            temperature: !isO1OrO3 ? modelConfig.temperature : 1,
+            presence_penalty: !isO1OrO3 ? modelConfig.presence_penalty : 0,
+            frequency_penalty: !isO1OrO3 ? modelConfig.frequency_penalty : 0,
+            top_p: !isO1OrO3 ? modelConfig.top_p : 1,
+          };
+          if (!isGpt5 && isO1OrO3) {
+            chatPayload.messages.unshift({
+              role: "developer",
+              content: "Formatting re-enabled",
+            });
+            chatPayload.max_completion_tokens = modelConfig.max_tokens;
+          }
+          if (visionModel && !isO1OrO3 && !isGpt5) {
+            chatPayload.max_tokens = Math.max(modelConfig.max_tokens, 4000);
+          }
+          if (isGpt5) {
+            delete (chatPayload as any).max_tokens;
+            delete (chatPayload as any).max_completion_tokens;
+          }
+          requestPayload = chatPayload;
+        }
+      }
+
+      console.log("[Request] openai payload: ", requestPayload);
+      console.log("[Request] openai endpoint:", chatPath, {
+        stream: shouldStream,
+        responses: isResponsesPath(chatPath),
+        tools: requestTools.length,
+      });
+
       if (shouldStream) {
-        let index = -1;
-        const [tools, funcs] = usePluginStore
-          .getState()
-          .getAsTools(
-            useChatStore.getState().currentSession().mask?.plugin || [],
-          );
-        // console.log("getAsTools", tools, funcs);
+        const ensureResponsesToolCall = (
+          runTools: ChatMessageTool[],
+          outputIndex: number,
+          itemId: string,
+          callId: string,
+          name: string,
+        ) => {
+          let toolIndex = -1;
+          if (
+            Number.isInteger(outputIndex) &&
+            responsesToolIndexByOutput.has(outputIndex)
+          ) {
+            toolIndex = responsesToolIndexByOutput.get(outputIndex) ?? -1;
+          }
+          if (
+            toolIndex < 0 &&
+            itemId &&
+            responsesToolIndexByItemId.has(itemId)
+          ) {
+            toolIndex = responsesToolIndexByItemId.get(itemId) ?? -1;
+          }
+          if (toolIndex < 0) {
+            toolIndex = runTools.length;
+            runTools.push({
+              id: callId || itemId || `response_tool_${runTools.length}`,
+              type: "function",
+              function: {
+                name: name || "",
+                arguments: "",
+              },
+            });
+          }
+          if (Number.isInteger(outputIndex) && outputIndex >= 0) {
+            responsesToolIndexByOutput.set(outputIndex, toolIndex);
+          }
+          if (itemId) {
+            responsesToolIndexByItemId.set(itemId, toolIndex);
+          }
+          const current = runTools[toolIndex];
+          if (!current.function) {
+            current.function = {
+              name: "",
+              arguments: "",
+            };
+          }
+          if (callId) {
+            current.id = callId;
+          }
+          if (name) {
+            current.function.name = name;
+          }
+          return toolIndex;
+        };
+
         const chatHeaders = await getHeadersWithRouterUcan(chatPath);
         streamWithThink(
           chatPath,
           requestPayload,
           chatHeaders,
-          tools as any,
+          requestTools as any,
           funcs,
           controller,
           // parseSSE
           (text: string, runTools: ChatMessageTool[]) => {
-            // console.log("parseSSE", text, runTools);
             const json = JSON.parse(text);
+            if (useResponsesEndpoint) {
+              const eventType = typeof json?.type === "string" ? json.type : "";
+              if (!eventType.startsWith("response.")) {
+                return { isThinking: false, content: "" };
+              }
+
+              const responseId =
+                typeof json?.response?.id === "string" ? json.response.id : "";
+              if (responseId) {
+                latestResponsesId = responseId;
+              }
+
+              if (
+                eventType === "response.output_item.added" ||
+                eventType === "response.output_item.done"
+              ) {
+                const item = json?.item;
+                if (item?.type === "function_call") {
+                  const outputIndex =
+                    typeof json?.output_index === "number"
+                      ? json.output_index
+                      : -1;
+                  const itemId = typeof item?.id === "string" ? item.id : "";
+                  const callId =
+                    typeof item?.call_id === "string" ? item.call_id : "";
+                  const name = typeof item?.name === "string" ? item.name : "";
+                  const argumentsText =
+                    typeof item?.arguments === "string" ? item.arguments : "";
+                  const toolIndex = ensureResponsesToolCall(
+                    runTools,
+                    outputIndex,
+                    itemId,
+                    callId,
+                    name,
+                  );
+                  if (argumentsText) {
+                    runTools[toolIndex].function!.arguments = argumentsText;
+                  }
+                }
+              }
+
+              if (eventType === "response.function_call_arguments.delta") {
+                const outputIndex =
+                  typeof json?.output_index === "number"
+                    ? json.output_index
+                    : -1;
+                const itemId =
+                  typeof json?.item_id === "string" ? json.item_id : "";
+                const callId =
+                  typeof json?.call_id === "string" ? json.call_id : "";
+                const toolIndex = ensureResponsesToolCall(
+                  runTools,
+                  outputIndex,
+                  itemId,
+                  callId,
+                  "",
+                );
+                if (typeof json?.delta === "string") {
+                  const prev = runTools[toolIndex].function?.arguments ?? "";
+                  runTools[toolIndex].function!.arguments = prev + json.delta;
+                }
+              }
+
+              if (eventType === "response.function_call_arguments.done") {
+                const outputIndex =
+                  typeof json?.output_index === "number"
+                    ? json.output_index
+                    : -1;
+                const itemId =
+                  typeof json?.item_id === "string" ? json.item_id : "";
+                const callId =
+                  typeof json?.call_id === "string" ? json.call_id : "";
+                const toolIndex = ensureResponsesToolCall(
+                  runTools,
+                  outputIndex,
+                  itemId,
+                  callId,
+                  "",
+                );
+                if (typeof json?.arguments === "string") {
+                  runTools[toolIndex].function!.arguments = json.arguments;
+                }
+              }
+
+              const reasoningContent =
+                eventType === "response.reasoning_summary_text.delta" ||
+                eventType === "response.reasoning_text.delta"
+                  ? extractResponsesStreamFallbackText(json)
+                  : "";
+              if (reasoningContent) {
+                return {
+                  isThinking: true,
+                  content: reasoningContent,
+                };
+              }
+
+              const content = extractResponsesStreamFallbackText(json);
+              if (eventType === "response.output_text.delta" && content) {
+                sawResponsesDelta = true;
+              }
+              if (
+                sawResponsesDelta &&
+                (eventType === "response.output_text" ||
+                  eventType === "response.output_text.done" ||
+                  eventType === "response.completed")
+              ) {
+                return { isThinking: false, content: "" };
+              }
+              return {
+                isThinking: false,
+                content: content ?? "",
+              };
+            }
+
             const choices = json.choices as Array<{
               delta: {
                 content: string;
@@ -526,51 +1088,59 @@ export class ChatGPTApi implements LLMApi {
               };
             }>;
 
-            if (!choices?.length) return { isThinking: false, content: "" };
-
-            const tool_calls = choices[0]?.delta?.tool_calls;
-            if (tool_calls?.length > 0) {
-              const id = tool_calls[0]?.id;
-              const args = tool_calls[0]?.function?.arguments;
-              if (id) {
-                index += 1;
-                runTools.push({
-                  id,
-                  type: tool_calls[0]?.type,
-                  function: {
-                    name: tool_calls[0]?.function?.name as string,
-                    arguments: args,
-                  },
-                });
-              } else {
-                // @ts-ignore
-                runTools[index]["function"]["arguments"] += args;
+            if (choices?.length) {
+              const tool_calls = choices[0]?.delta?.tool_calls;
+              if (tool_calls?.length > 0) {
+                const id = tool_calls[0]?.id;
+                const args = tool_calls[0]?.function?.arguments;
+                if (id) {
+                  index += 1;
+                  runTools.push({
+                    id,
+                    type: tool_calls[0]?.type,
+                    function: {
+                      name: tool_calls[0]?.function?.name as string,
+                      arguments: args,
+                    },
+                  });
+                } else if (
+                  runTools[index]?.function &&
+                  typeof args === "string"
+                ) {
+                  const prev = runTools[index].function?.arguments ?? "";
+                  runTools[index].function!.arguments = prev + args;
+                }
               }
-            }
 
-            const reasoning = choices[0]?.delta?.reasoning_content;
-            const content = choices[0]?.delta?.content;
+              const reasoning = choices[0]?.delta?.reasoning_content;
+              const content = choices[0]?.delta?.content;
 
-            // Skip if both content and reasoning_content are empty or null
-            if (
-              (!reasoning || reasoning.length === 0) &&
-              (!content || content.length === 0)
-            ) {
+              // Skip if both content and reasoning_content are empty or null
+              if (
+                (!reasoning || reasoning.length === 0) &&
+                (!content || content.length === 0)
+              ) {
+                return {
+                  isThinking: false,
+                  content: "",
+                };
+              }
+
+              if (reasoning && reasoning.length > 0) {
+                return {
+                  isThinking: true,
+                  content: reasoning,
+                };
+              } else if (content && content.length > 0) {
+                return {
+                  isThinking: false,
+                  content: content,
+                };
+              }
+
               return {
                 isThinking: false,
                 content: "",
-              };
-            }
-
-            if (reasoning && reasoning.length > 0) {
-              return {
-                isThinking: true,
-                content: reasoning,
-              };
-            } else if (content && content.length > 0) {
-              return {
-                isThinking: false,
-                content: content,
               };
             }
 
@@ -587,14 +1157,40 @@ export class ChatGPTApi implements LLMApi {
           ) => {
             // reset index value
             index = -1;
-            // @ts-ignore
-            requestPayload?.messages?.splice(
-              // @ts-ignore
-              requestPayload?.messages?.length,
-              0,
+            if (useResponsesEndpoint) {
+              responsesToolIndexByItemId.clear();
+              responsesToolIndexByOutput.clear();
+              const outputs = toResponsesFunctionOutputs(toolCallResult);
+              (requestPayload as any).input = outputs;
+              if (latestResponsesId) {
+                (requestPayload as any).previous_response_id =
+                  latestResponsesId;
+              }
+              delete (requestPayload as any).messages;
+              return;
+            }
+            if (Array.isArray((requestPayload as any)?.messages)) {
+              (requestPayload as any).messages.splice(
+                (requestPayload as any).messages.length,
+                0,
+                toolCallMessage,
+                ...toolCallResult,
+              );
+              return;
+            }
+            if (Array.isArray((requestPayload as any)?.input)) {
+              (requestPayload as any).input.splice(
+                (requestPayload as any).input.length,
+                0,
+                toolCallMessage,
+                ...toolCallResult,
+              );
+              return;
+            }
+            (requestPayload as any).input = [
               toolCallMessage,
               ...toolCallResult,
-            );
+            ];
           },
           options,
         );
