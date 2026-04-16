@@ -5,6 +5,7 @@ import {
 } from "@/app/constant";
 import { MultimodalContent, RequestMessage } from "@/app/client/api";
 import Locale from "@/app/locales";
+import { getTimeoutMSByModel } from "@/app/utils";
 import {
   EventStreamContentType,
   fetchEventSource,
@@ -72,7 +73,10 @@ export function compressImage(file: Blob, maxSize: number): Promise<string> {
 
 export async function preProcessImageContentBase(
   content: RequestMessage["content"],
-  transformImageUrl: (url: string) => Promise<{ [key: string]: any }>,
+  transformImageUrl: (
+    url: string,
+    detail?: string,
+  ) => Promise<{ [key: string]: any }>,
 ) {
   if (typeof content === "string") {
     return content;
@@ -82,7 +86,11 @@ export async function preProcessImageContentBase(
     if (part?.type == "image_url" && part?.image_url?.url) {
       try {
         const url = await cacheImageToBase64Image(part?.image_url?.url);
-        result.push(await transformImageUrl(url));
+        const detail =
+          typeof part.image_url?.detail === "string"
+            ? part.image_url.detail
+            : undefined;
+        result.push(await transformImageUrl(url, detail));
       } catch (error) {
         console.error("Error processing image URL:", error);
       }
@@ -96,9 +104,12 @@ export async function preProcessImageContentBase(
 export async function preProcessImageContent(
   content: RequestMessage["content"],
 ) {
-  return preProcessImageContentBase(content, async (url) => ({
+  return preProcessImageContentBase(content, async (url, detail) => ({
     type: "image_url",
-    image_url: { url },
+    image_url: {
+      url,
+      ...(detail ? { detail } : {}),
+    },
   })) as Promise<MultimodalContent[] | string>;
 }
 
@@ -167,8 +178,7 @@ function uploadImageFallback(file: Blob): Promise<string> {
 function isServiceWorkerReadyForCacheUpload() {
   const swEnabled = typeof window !== "undefined" && !!window._SW_ENABLED;
   const swControlled =
-    typeof navigator !== "undefined" &&
-    !!navigator.serviceWorker?.controller;
+    typeof navigator !== "undefined" && !!navigator.serviceWorker?.controller;
   return swEnabled && swControlled;
 }
 
@@ -233,6 +243,20 @@ function normalizeStreamError(error: unknown): Error {
   }
 }
 
+function resolveStreamTimeoutMS(requestPayload: any): number {
+  const model = String(requestPayload?.model ?? "").trim();
+  if (!model) return REQUEST_TIMEOUT_MS;
+  return getTimeoutMSByModel(model);
+}
+
+function buildStreamTimeoutError(timeoutMS: number): Error {
+  return new Error(
+    `request timed out after ${Math.round(
+      timeoutMS / 1000,
+    )}s while waiting for server response`,
+  );
+}
+
 export function stream(
   chatPath: string,
   requestPayload: any,
@@ -251,17 +275,24 @@ export function stream(
   let responseText = "";
   let remainText = "";
   let finished = false;
+  let hasStreamError = false;
   let running = false;
   let runTools: any[] = [];
   let responseRes: Response;
+  const streamTimeoutMS = resolveStreamTimeoutMS(requestPayload);
+  const reportError = (error: unknown) => {
+    if (hasStreamError) return;
+    hasStreamError = true;
+    options?.onError?.(normalizeStreamError(error));
+  };
 
   // animate response to make it looks smooth
   function animateResponseText() {
     if (finished || controller.signal.aborted) {
       responseText += remainText;
       console.log("[Response Animation] finished");
-      if (responseText?.length === 0) {
-        options.onError?.(new Error("empty response from server"));
+      if (responseText?.length === 0 && !hasStreamError) {
+        reportError(new Error("empty response from server"));
       }
       return;
     }
@@ -348,7 +379,7 @@ export function stream(
           })
           .catch((error) => {
             running = false;
-            options?.onError?.(normalizeStreamError(error));
+            reportError(error);
             finish();
           });
         return;
@@ -379,10 +410,12 @@ export function stream(
       signal: controller.signal,
       headers,
     };
-    const requestTimeoutId = setTimeout(
-      () => controller.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    let timeoutTriggered = false;
+    const requestTimeoutId = setTimeout(() => {
+      timeoutTriggered = true;
+      reportError(buildStreamTimeoutError(streamTimeoutMS));
+      controller.abort();
+    }, streamTimeoutMS);
     void fetchEventSource(chatPath, {
       fetch: tauriFetch as any,
       ...chatPayload,
@@ -448,13 +481,19 @@ export function stream(
       },
       onerror(e) {
         clearTimeout(requestTimeoutId);
-        throw normalizeStreamError(e);
+        throw timeoutTriggered
+          ? buildStreamTimeoutError(streamTimeoutMS)
+          : normalizeStreamError(e);
       },
       openWhenHidden: true,
     }).catch((error) => {
       clearTimeout(requestTimeoutId);
       if (finished) return;
-      options?.onError?.(normalizeStreamError(error));
+      reportError(
+        timeoutTriggered
+          ? buildStreamTimeoutError(streamTimeoutMS)
+          : normalizeStreamError(error),
+      );
       finish();
     });
   }
@@ -486,9 +525,16 @@ export function streamWithThink(
   let responseText = "";
   let remainText = "";
   let finished = false;
+  let hasStreamError = false;
   let running = false;
   let runTools: any[] = [];
   let responseRes: Response;
+  const streamTimeoutMS = resolveStreamTimeoutMS(requestPayload);
+  const reportError = (error: unknown) => {
+    if (hasStreamError) return;
+    hasStreamError = true;
+    options?.onError?.(normalizeStreamError(error));
+  };
   let isInThinkingMode = false;
   let lastIsThinking = false;
   let lastIsThinkingTagged = false; //between <think> and </think> tags
@@ -498,8 +544,8 @@ export function streamWithThink(
     if (finished || controller.signal.aborted) {
       responseText += remainText;
       console.log("[Response Animation] finished");
-      if (responseText?.length === 0) {
-        options.onError?.(new Error("empty response from server"));
+      if (responseText?.length === 0 && !hasStreamError) {
+        reportError(new Error("empty response from server"));
       }
       return;
     }
@@ -586,7 +632,7 @@ export function streamWithThink(
           })
           .catch((error) => {
             running = false;
-            options?.onError?.(normalizeStreamError(error));
+            reportError(error);
             finish();
           });
         return;
@@ -617,10 +663,12 @@ export function streamWithThink(
       signal: controller.signal,
       headers,
     };
-    const requestTimeoutId = setTimeout(
-      () => controller.abort(),
-      REQUEST_TIMEOUT_MS,
-    );
+    let timeoutTriggered = false;
+    const requestTimeoutId = setTimeout(() => {
+      timeoutTriggered = true;
+      reportError(buildStreamTimeoutError(streamTimeoutMS));
+      controller.abort();
+    }, streamTimeoutMS);
     void fetchEventSource(chatPath, {
       fetch: tauriFetch as any,
       ...chatPayload,
@@ -737,13 +785,19 @@ export function streamWithThink(
       },
       onerror(e) {
         clearTimeout(requestTimeoutId);
-        throw normalizeStreamError(e);
+        throw timeoutTriggered
+          ? buildStreamTimeoutError(streamTimeoutMS)
+          : normalizeStreamError(e);
       },
       openWhenHidden: true,
     }).catch((error) => {
       clearTimeout(requestTimeoutId);
       if (finished) return;
-      options?.onError?.(normalizeStreamError(error));
+      reportError(
+        timeoutTriggered
+          ? buildStreamTimeoutError(streamTimeoutMS)
+          : normalizeStreamError(error),
+      );
       finish();
     });
   }

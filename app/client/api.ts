@@ -38,6 +38,7 @@ export interface MultimodalContent {
   text?: string;
   image_url?: {
     url: string;
+    detail?: "low" | "high" | "auto" | string;
   };
 }
 
