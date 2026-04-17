@@ -25,6 +25,7 @@ import { XAIApi } from "./platforms/xai";
 import { ChatGLMApi } from "./platforms/glm";
 import { SiliconflowApi } from "./platforms/siliconflow";
 import { Ai302Api } from "./platforms/ai302";
+import { RouterApi } from "./platforms/router";
 
 export const ROLES = ["system", "user", "assistant"] as const;
 export type MessageRole = (typeof ROLES)[number];
@@ -38,6 +39,7 @@ export interface MultimodalContent {
   text?: string;
   image_url?: {
     url: string;
+    detail?: "low" | "high" | "auto" | string;
   };
 }
 
@@ -176,6 +178,9 @@ export class ClientApi {
         break;
       case ModelProvider["302.AI"]:
         this.llm = new Ai302Api();
+        break;
+      case ModelProvider.Router:
+        this.llm = new RouterApi();
         break;
       default:
         this.llm = new ChatGPTApi();
@@ -399,4 +404,8 @@ export function getClientApi(provider: ServiceProvider): ClientApi {
     default:
       return new ClientApi(ModelProvider.GPT);
   }
+}
+
+export function getRouterClientApi(): ClientApi {
+  return new ClientApi(ModelProvider.Router);
 }

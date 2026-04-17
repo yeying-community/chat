@@ -13,16 +13,52 @@ import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
 import { useAccessStore } from "./store";
 import { ModelSize } from "./typing";
 
-export function trimTopic(topic: string) {
-  // Fix an issue where double quotes still show in the Indonesian language
-  // This will remove the specified punctuation from the end of the string
-  // and also trim quotes from both the start and end if they exist.
-  return (
-    topic
-      // fix for gemini
-      .replace(/^["“”*]+|["“”*]+$/g, "")
-      .replace(/[，。！？”“"、,.!?*]*$/, "")
-  );
+function sanitizeTopicByLang(topic: string, lang?: string): string {
+  if (!topic) return "";
+
+  const cleaned = topic.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+
+  if (lang === "cn" || lang === "tw") {
+    return cleaned
+      .replace(/[^\p{Script=Han}\p{Script=Latin}\p{Number}\s]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  if (lang === "jp") {
+    return cleaned
+      .replace(
+        /[^\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Latin}\p{Number}\s]/gu,
+        "",
+      )
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  if (lang === "ko") {
+    return cleaned
+      .replace(
+        /[^\p{Script=Hangul}\p{Script=Han}\p{Script=Latin}\p{Number}\s]/gu,
+        "",
+      )
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return cleaned;
+}
+
+export function trimTopic(topic: string, lang?: string) {
+  // Fix an issue where double quotes still show in the Indonesian language.
+  // Also trim trailing punctuation and enforce language-aware script filtering.
+  const cleaned = topic
+    // fix for gemini
+    .replace(/^["“”*]+|["“”*]+$/g, "")
+    .replace(/[，。！？”“"、,.!?*]*$/, "")
+    .trim();
+
+  return sanitizeTopicByLang(cleaned, lang);
 }
 
 export async function copyToClipboard(text: string) {
@@ -301,6 +337,7 @@ export function getTimeoutMSByModel(model: string) {
   if (
     model.startsWith("dall-e") ||
     model.startsWith("dalle") ||
+    model.startsWith("gpt-5") ||
     model.startsWith("o1") ||
     model.startsWith("o3") ||
     model.includes("deepseek-r") ||

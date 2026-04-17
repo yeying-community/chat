@@ -1,4 +1,5 @@
 import {
+  getMessageImages,
   getMessageTextContent,
   isDalle3,
   safeLocalStorage,
@@ -157,11 +158,40 @@ function getSummarizeModel(
   return [currentModel, providerName];
 }
 
-function countMessages(msgs: ChatMessage[]) {
+function countMessages(msgs: RequestMessage[]) {
   return msgs.reduce(
     (pre, cur) => pre + estimateTokenLength(getMessageTextContent(cur)),
     0,
   );
+}
+
+function estimateMessageContextCost(message: RequestMessage): number {
+  const textCost = estimateTokenLength(getMessageTextContent(message));
+  const imageCost = getMessageImages(message).reduce((sum, url) => {
+    if (!url) return sum;
+    if (url.startsWith("data:")) {
+      // Data URLs can be very large and should consume meaningful context budget.
+      return sum + Math.max(1024, Math.ceil(url.length / 8));
+    }
+    // Remote image URLs still carry multimodal processing cost.
+    return sum + 256;
+  }, 0);
+  return textCost + imageCost;
+}
+
+function toTextOnlyMessage(message: RequestMessage): RequestMessage | null {
+  const text = getMessageTextContent(message).trim();
+  if (!text) return null;
+  return {
+    role: message.role,
+    content: text,
+  };
+}
+
+function toTextOnlyMessages(messages: RequestMessage[]): RequestMessage[] {
+  return messages
+    .map((message) => toTextOnlyMessage(message))
+    .filter((message): message is RequestMessage => Boolean(message));
 }
 
 function fillTemplateWith(input: string, modelConfig: ModelConfig) {
@@ -484,7 +514,10 @@ export const useChatStore = createPersistStore(
             ...(content ? [{ type: "text" as const, text: content }] : []),
             ...attachImages.map((url) => ({
               type: "image_url" as const,
-              image_url: { url },
+              image_url: {
+                url,
+                detail: "low" as const,
+              },
             })),
           ];
         }
@@ -701,7 +734,7 @@ export const useChatStore = createPersistStore(
         ) {
           const msg = messages[i];
           if (!msg || msg.isError) continue;
-          tokenCount += estimateTokenLength(getMessageTextContent(msg));
+          tokenCount += estimateMessageContextCost(msg);
           reversedRecentMessages.push(msg);
         }
         // concat all messages
@@ -757,56 +790,59 @@ export const useChatStore = createPersistStore(
 
         // remove error messages if any
         const messages = session.messages;
+        const nonErrorMessages = messages.filter((msg) => !msg.isError);
+        const nonErrorTextMessages = toTextOnlyMessages(nonErrorMessages);
 
         // should summarize topic after chating more than 50 words
         const SUMMARIZE_MIN_LEN = 50;
         if (
           (config.enableAutoGenerateTitle &&
             session.topic === DEFAULT_TOPIC &&
-            countMessages(messages) >= SUMMARIZE_MIN_LEN) ||
+            countMessages(nonErrorTextMessages) >= SUMMARIZE_MIN_LEN) ||
           refreshTitle
         ) {
           const startIndex = Math.max(
             0,
-            messages.length - modelConfig.historyMessageCount,
+            nonErrorMessages.length - modelConfig.historyMessageCount,
           );
-          const topicMessages = messages
-            .slice(
-              startIndex < messages.length ? startIndex : messages.length - 1,
-              messages.length,
-            )
-            .concat(
-              createMessage({
-                role: "user",
-                content: Locale.Store.Prompt.Topic,
-              }),
-            );
-          api.llm.chat({
-            messages: topicMessages,
-            config: {
-              model,
-              stream: false,
-              providerName,
-            },
-            onFinish(message, responseRes) {
-              if (responseRes?.status === 200) {
-                get().updateTargetSession(
-                  session,
-                  (session) =>
-                    (session.topic =
-                      message.length > 0 ? trimTopic(message) : DEFAULT_TOPIC),
-                );
-              }
-            },
-          });
+          const topicContext = toTextOnlyMessages(
+            nonErrorMessages.slice(startIndex, nonErrorMessages.length),
+          );
+          if (topicContext.length > 0) {
+            const topicMessages = topicContext.concat({
+              role: "user",
+              content: Locale.Store.Prompt.Topic,
+            });
+            api.llm.chat({
+              messages: topicMessages,
+              config: {
+                model,
+                stream: false,
+                providerName,
+              },
+              onFinish(message, responseRes) {
+                if (responseRes?.status === 200) {
+                  const title = trimTopic(message, getLang());
+                  get().updateTargetSession(
+                    session,
+                    (session) =>
+                      (session.topic =
+                        title.length > 0 ? title : DEFAULT_TOPIC),
+                  );
+                }
+              },
+            });
+          }
         }
         const summarizeIndex = Math.max(
           session.lastSummarizeIndex,
           session.clearContextIndex ?? 0,
         );
-        let toBeSummarizedMsgs = messages
-          .filter((msg) => !msg.isError)
-          .slice(summarizeIndex);
+        let toBeSummarizedMsgs = toTextOnlyMessages(
+          messages
+            .slice(summarizeIndex)
+            .filter((msg) => !msg.isError),
+        );
 
         const historyMsgLength = countMessages(toBeSummarizedMsgs);
 
@@ -817,9 +853,12 @@ export const useChatStore = createPersistStore(
           );
         }
         const memoryPrompt = get().getMemoryPrompt();
-        if (memoryPrompt) {
+        const textMemoryPrompt = memoryPrompt
+          ? toTextOnlyMessage(memoryPrompt)
+          : null;
+        if (textMemoryPrompt) {
           // add memory prompt
-          toBeSummarizedMsgs.unshift(memoryPrompt);
+          toBeSummarizedMsgs.unshift(textMemoryPrompt);
         }
 
         const lastSummarizeIndex = session.messages.length;
@@ -841,11 +880,10 @@ export const useChatStore = createPersistStore(
           const { max_tokens, ...modelcfg } = modelConfig;
           api.llm.chat({
             messages: toBeSummarizedMsgs.concat(
-              createMessage({
+              {
                 role: "system",
                 content: Locale.Store.Prompt.Summarize,
-                date: "",
-              }),
+              },
             ),
             config: {
               ...modelcfg,

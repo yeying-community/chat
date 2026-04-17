@@ -14,23 +14,23 @@ Chat（UCAN 定制版）
 
 # 文档索引
 
-- 用户手册（中文）：`docs/user-manual-cn.md`
-- User Manual (EN)：`docs/user-manual-en.md`
-- FAQ（中文）：`docs/faq-cn.md`
-- FAQ (EN)：`docs/faq-en.md`
-- Cloudflare Pages（中文）：`docs/cloudflare-pages-cn.md`
-- Cloudflare Pages (EN)：`docs/cloudflare-pages-en.md`
-- 同步聊天记录（中文）：`docs/synchronise-chat-logs-cn.md`
-- Sync Chat Logs (EN)：`docs/synchronise-chat-logs-en.md`
-- 架构 / 部署 / 安全（中文）：`docs/architecture-cn.md`
-- Architecture / Deployment / Security (EN)：`docs/architecture-en.md`
-- Router/WebDAV 集成（中文）：`docs/router-webdav-integration-cn.md`
-- Router/WebDAV Integration (EN)：`docs/router-webdav-integration-en.md`
-- WebDAV 同步方案（中文）：`docs/webdav-sync-plan-cn.md`
-- WebDAV Sync Plan (EN)：`docs/webdav-sync-plan-en.md`
-- 移动端登录与双后端鉴权（中文）：`docs/mobile-login-auth-plan-cn.md`
-- 部署（中文，Vercel）：`docs/vercel-cn.md`
-- Translation Guide (EN)：`docs/translation.md`
+- 用户手册：`docs/用户手册.md`
+- 常见问题：`docs/常见问题.md`
+- 架构 / 部署 / 安全清单：`docs/架构部署安全清单.md`
+- 模型端点选择与支持机制：`docs/模型端点选择与支持机制.md`
+- 用户登录总览：`docs/用户登录.md`
+- 登录页前置方案评估：`docs/登录页前置方案评估.md`
+- 移动端登录与双后端鉴权方案：`docs/移动端登录与双后端鉴权方案.md`
+- Router 与 WebDAV 集成说明：`docs/Router与WebDAV集成说明.md`
+- WebDAV 同步方案（UCAN）：`docs/WebDAV同步方案UCAN.md`
+- 同步聊天记录：`docs/同步聊天记录.md`
+- UCAN 与 SIWE 权限设计（可扩展版）：`docs/UCAN与SIWE权限设计可扩展版.md`
+- Cloudflare Pages 部署指南：`docs/CloudflarePages部署指南.md`
+- Vercel 使用说明：`docs/Vercel使用说明.md`
+- 文生图与上传图片聊天工作流实现说明：`docs/文生图与上传图片聊天工作流实现说明.md`
+- MCP 启用机制与演进：`docs/MCP启用机制与演进.md`
+- 新增翻译指南：`docs/新增翻译指南.md`
+- 新用户使用流程：`docs/用户使用流程.md`
 
 # 环境要求
 
