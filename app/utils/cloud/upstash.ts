@@ -112,6 +112,22 @@ export function createUpstashClient(store: SyncStore) {
       await this.redisSet(chunkCountKey(storeKey), index.toString());
     },
 
+    async del(key: string) {
+      const storeKey = resolveStoreKey(key);
+      const rawCount = await this.redisGet(chunkCountKey(storeKey));
+      const chunkCount = Number(rawCount);
+      if (Number.isInteger(chunkCount) && chunkCount > 0) {
+        await Promise.all(
+          new Array(chunkCount)
+            .fill(0)
+            .map((_, i) =>
+              this.redisCommand("del", [chunkIndexKey(storeKey, i)]),
+            ),
+        );
+      }
+      await this.redisCommand("del", [chunkCountKey(storeKey)]);
+    },
+
     async acquireLock(key: string, owner: string, ttlMs: number) {
       const lockKey = resolveStoreKey(key);
       return await this.redisSetNxWithTtl(lockKey, owner, ttlMs);

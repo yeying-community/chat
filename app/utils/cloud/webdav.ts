@@ -328,6 +328,24 @@ function createBasicWebDavClient(store: SyncStore) {
       console.log("[WebDav] set key = ", key, res.status, res.statusText);
     },
 
+    async del(key: string) {
+      const statePath = resolveBasicStateFilePath(key);
+      const httpMethod = store.useProxy ? "GET" : "DELETE";
+      const proxyMethod = store.useProxy ? "DELETE" : "";
+      const res = await fetch(
+        this.path(statePath, proxyUrl, proxyMethod, endpoint),
+        {
+          method: httpMethod,
+          headers: this.headers(),
+        },
+      );
+      if (![200, 204, 404].includes(res.status)) {
+        throw new Error(
+          `WebDav del key failed (${key}): ${res.status} ${res.statusText}`,
+        );
+      }
+    },
+
     async requestLockPath(
       targetPath: string,
       method: "GET" | "PUT" | "MKCOL" | "DELETE",
@@ -742,6 +760,17 @@ function createUcanWebDavClient(store: SyncStore) {
       const { client, filePath } = await getUcanWebDavClient(store);
       const statePath = resolveUcanStateFilePath(filePath, key);
       await client.upload(statePath, value, "application/json");
+    },
+
+    async del(key: string) {
+      const { client, filePath } = await getUcanWebDavClient(store);
+      const statePath = resolveUcanStateFilePath(filePath, key);
+      try {
+        await client.remove(statePath);
+      } catch (error) {
+        if (String(error).includes("404")) return;
+        throw error;
+      }
     },
 
     async readLockMeta(lockMetaPath: string) {

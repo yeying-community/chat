@@ -22,6 +22,7 @@ type SyncClientConfig = {
 export type SyncClient = {
   get: (key: string) => Promise<string>;
   set: (key: string, value: string) => Promise<void>;
+  del: (key: string) => Promise<void>;
   check: () => Promise<boolean>;
   acquireLock: (key: string, owner: string, ttlMs: number) => Promise<boolean>;
   releaseLock: (key: string, owner: string) => Promise<void>;

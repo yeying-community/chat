@@ -28,6 +28,7 @@ type SyncTxnHead = {
   payloadHash: string;
   payloadBytes: number;
   committedAt: number;
+  prevTxId?: string;
 };
 
 type SyncTxnEnvelope = {
@@ -58,7 +59,9 @@ function isSyncTxnHead(value: unknown): value is SyncTxnHead {
     typeof head.payloadHash === "string" &&
     head.payloadHash.length > 0 &&
     Number.isFinite(head.payloadBytes) &&
-    Number.isFinite(head.committedAt)
+    Number.isFinite(head.committedAt) &&
+    (head.prevTxId === undefined ||
+      (typeof head.prevTxId === "string" && head.prevTxId.length > 0))
   );
 }
 
@@ -170,6 +173,20 @@ async function validateTxnEnvelope(
   return envelope;
 }
 
+async function loadLatestValidTxnHead(
+  client: SyncClient,
+  baseKey: string,
+): Promise<SyncTxnHead | null> {
+  const headRefs = await loadLatestTxnHead(client, baseKey);
+  for (const ref of headRefs) {
+    const envelope = await validateTxnEnvelope(client, baseKey, ref);
+    if (envelope) {
+      return ref.head;
+    }
+  }
+  return null;
+}
+
 export function resolveSyncStateBaseKey(
   provider: ProviderType,
   config: { username?: string },
@@ -247,6 +264,10 @@ export async function writeSyncState(
 ): Promise<void> {
   const normalizedBaseKey = normalizeStateKey(baseKey);
   const writeLayout = TXN_LAYOUT;
+  const latestCommittedHead = await loadLatestValidTxnHead(
+    client,
+    normalizedBaseKey,
+  );
   const txId = createTxId();
   const payloadBytes = utf8BytesLength(payload);
   const payloadHash = await sha256Hex(payload);
@@ -281,6 +302,7 @@ export async function writeSyncState(
     payloadHash,
     payloadBytes,
     committedAt,
+    prevTxId: latestCommittedHead?.txId,
   };
   const serializedHead = JSON.stringify(head);
   await client.set(writeLayout.buildHeadKey(normalizedBaseKey), serializedHead);
@@ -291,5 +313,24 @@ export async function writeSyncState(
     );
   } catch (error) {
     console.warn("[Sync] failed to write backup transaction head", error);
+  }
+
+  // Keep the latest two committed payloads: current + previous.
+  // Delete the older one to avoid unbounded growth of txn data objects.
+  const staleTxId = latestCommittedHead?.prevTxId;
+  if (
+    staleTxId &&
+    staleTxId !== txId &&
+    staleTxId !== latestCommittedHead?.txId
+  ) {
+    try {
+      await client.del(writeLayout.buildDataKey(normalizedBaseKey, staleTxId));
+    } catch (error) {
+      console.warn("[Sync] failed to cleanup stale transaction payload", {
+        baseKey: normalizedBaseKey,
+        staleTxId,
+        error,
+      });
+    }
   }
 }
