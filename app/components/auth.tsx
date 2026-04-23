@@ -23,7 +23,7 @@ import {
   applyCentralAuthorizeExchange,
   createCentralAuthorizeRequest,
   exchangeCentralAuthorizeCode,
-  getDefaultCentralClientId,
+  getCentralAppId,
   setUcanAuthMode,
   UCAN_AUTH_MODE_CENTRAL,
   UCAN_AUTH_MODE_WALLET,
@@ -187,7 +187,7 @@ export function AuthPage() {
       try {
         const result = await exchangeCentralAuthorizeCode({
           code,
-          clientId: getDefaultCentralClientId(),
+          appId: getCentralAppId(),
           redirectUri,
         });
         applyCentralAuthorizeExchange(result, { emit: false });
@@ -224,7 +224,7 @@ export function AuthPage() {
     try {
       const request = await createCentralAuthorizeRequest({
         address,
-        clientId: getDefaultCentralClientId(),
+        appId: getCentralAppId(),
         redirectUri,
         state: redirectPath,
         audience: routerAudience,

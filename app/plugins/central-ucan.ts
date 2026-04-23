@@ -31,7 +31,7 @@ export type CentralAuthorizeRequestResult = {
   status: string;
   subject: string;
   subjectHint: string;
-  clientId: string;
+  appId: string;
   redirectUri: string;
   state?: string;
   audience: string;
@@ -45,7 +45,7 @@ export type CentralAuthorizeRequestResult = {
 export type CentralAuthorizeExchangeResult = {
   requestId: string;
   subject: string;
-  clientId: string;
+  appId: string;
   redirectUri: string;
   state?: string;
   token: string;
@@ -170,13 +170,17 @@ function buildApiUrl(path: string, baseUrlOverride?: string) {
   return `${base}${normalizedPath}`;
 }
 
-export function getDefaultCentralClientId() {
+export function getCentralAppId() {
   const config = getClientConfig();
-  return (
-    config?.centralUcanAppId?.trim() ||
-    config?.centralUcanClientId?.trim() ||
-    "chat-web"
-  );
+  return config?.centralUcanAppId?.trim() || "";
+}
+
+function resolveCentralAppId(appId?: string) {
+  const resolved = (appId || getCentralAppId()).trim();
+  if (!resolved) {
+    throw new Error("未配置 CENTRAL_UCAN_APP_ID");
+  }
+  return resolved;
 }
 
 export function getUcanAuthMode(): UcanAuthMode {
@@ -290,7 +294,7 @@ export function getCentralUcanExpiresAt(): number | null {
 
 export async function createCentralAuthorizeRequest(input: {
   address: string;
-  clientId?: string;
+  appId?: string;
   redirectUri: string;
   state?: string;
   audience?: string;
@@ -299,6 +303,7 @@ export async function createCentralAuthorizeRequest(input: {
   requestTtlMs?: number;
   baseUrl?: string;
 }): Promise<CentralAuthorizeRequestResult> {
+  const resolvedAppId = resolveCentralAppId(input.appId);
   const response = await fetch(
     buildApiUrl("/api/v1/public/auth/totp/authorize/request", input.baseUrl),
     {
@@ -307,7 +312,7 @@ export async function createCentralAuthorizeRequest(input: {
       credentials: "include",
       body: JSON.stringify({
         address: input.address,
-        clientId: input.clientId || getDefaultCentralClientId(),
+        appId: resolvedAppId,
         redirectUri: input.redirectUri,
         state: input.state || undefined,
         audience: input.audience || undefined,
@@ -328,15 +333,19 @@ export async function createCentralAuthorizeRequest(input: {
     }
     throw new Error(message);
   }
-  return parseEnvelope<CentralAuthorizeRequestResult>(text, "创建中心化授权请求失败");
+  return parseEnvelope<CentralAuthorizeRequestResult>(
+    text,
+    "创建中心化授权请求失败",
+  );
 }
 
 export async function exchangeCentralAuthorizeCode(input: {
   code: string;
-  clientId?: string;
+  appId?: string;
   redirectUri: string;
   baseUrl?: string;
 }): Promise<CentralAuthorizeExchangeResult> {
+  const resolvedAppId = resolveCentralAppId(input.appId);
   const response = await fetch(
     buildApiUrl("/api/v1/public/auth/totp/authorize/exchange", input.baseUrl),
     {
@@ -345,7 +354,7 @@ export async function exchangeCentralAuthorizeCode(input: {
       credentials: "include",
       body: JSON.stringify({
         code: input.code,
-        clientId: input.clientId || getDefaultCentralClientId(),
+        appId: resolvedAppId,
         redirectUri: input.redirectUri,
       }),
     },
@@ -361,7 +370,10 @@ export async function exchangeCentralAuthorizeCode(input: {
     }
     throw new Error(message);
   }
-  return parseEnvelope<CentralAuthorizeExchangeResult>(text, "中心化授权码兑换失败");
+  return parseEnvelope<CentralAuthorizeExchangeResult>(
+    text,
+    "中心化授权码兑换失败",
+  );
 }
 
 export function applyCentralAuthorizeExchange(
