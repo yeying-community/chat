@@ -12,6 +12,16 @@ function splitWebdavUrl(raw: string): { baseUrl: string; prefix: string } {
   }
 }
 
+type UcanLoginForceMode = "auto" | "wallet" | "central";
+
+function normalizeUcanLoginForceMode(raw?: string): UcanLoginForceMode {
+  const mode = (raw || "").trim().toLowerCase();
+  if (mode === "wallet" || mode === "central") {
+    return mode;
+  }
+  return "auto";
+}
+
 export const getBuildConfig = () => {
   if (typeof process === "undefined") {
     throw Error(
@@ -59,12 +69,9 @@ export const getBuildConfig = () => {
     "http://127.0.0.1:8100";
   const centralUcanAppId =
     process.env.CENTRAL_UCAN_APP_ID?.trim() || "";
-  const centralUcanClientId =
-    centralUcanAppId ||
-    process.env.CENTRAL_UCAN_CLIENT_ID?.trim() ||
-    "chat-web";
-  const centralUcanAppName =
-    process.env.CENTRAL_UCAN_APP_NAME?.trim() || "chat-web";
+  const ucanLoginForceMode = normalizeUcanLoginForceMode(
+    process.env.UCAN_LOGIN_FORCE_MODE,
+  );
 
   const commitInfo = (() => {
     try {
@@ -99,8 +106,7 @@ export const getBuildConfig = () => {
     routerBackendUrl,
     centralUcanAuthBaseUrl,
     centralUcanAppId,
-    centralUcanClientId,
-    centralUcanAppName,
+    ucanLoginForceMode,
   };
 };
 

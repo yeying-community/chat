@@ -23,7 +23,7 @@ import {
   applyCentralAuthorizeExchange,
   createCentralAuthorizeRequest,
   exchangeCentralAuthorizeCode,
-  getDefaultCentralClientId,
+  getCentralAppId,
   setUcanAuthMode,
   UCAN_AUTH_MODE_CENTRAL,
   UCAN_AUTH_MODE_WALLET,
@@ -34,6 +34,7 @@ import { notifyError, notifyInfo, notifySuccess } from "../plugins/show_window";
 const storage = safeLocalStorage();
 const WALLET_HISTORY_KEY = "walletAccountHistory";
 const WALLET_HISTORY_LIMIT = 10;
+type UcanLoginForceMode = "auto" | "wallet" | "central";
 
 function normalizeAccount(account?: string | null) {
   return (account ?? "").trim();
@@ -102,6 +103,14 @@ function normalizeRedirectPath(raw: string | null | undefined) {
 function getCentralRedirectUri() {
   if (typeof window === "undefined") return "";
   return `${window.location.origin}/central-ucan-callback.html`;
+}
+
+function getUcanLoginForceMode(): UcanLoginForceMode {
+  const mode = (getClientConfig()?.ucanLoginForceMode || "").trim().toLowerCase();
+  if (mode === "wallet" || mode === "central") {
+    return mode;
+  }
+  return "auto";
 }
 
 export function AuthPage() {
@@ -178,7 +187,7 @@ export function AuthPage() {
       try {
         const result = await exchangeCentralAuthorizeCode({
           code,
-          clientId: getDefaultCentralClientId(),
+          appId: getCentralAppId(),
           redirectUri,
         });
         applyCentralAuthorizeExchange(result, { emit: false });
@@ -215,7 +224,7 @@ export function AuthPage() {
     try {
       const request = await createCentralAuthorizeRequest({
         address,
-        clientId: getDefaultCentralClientId(),
+        appId: getCentralAppId(),
         redirectUri,
         state: redirectPath,
         audience: routerAudience,
@@ -234,14 +243,26 @@ export function AuthPage() {
   const handlePrimaryLogin = async () => {
     if (centralLoading) return;
     const preferredAddress = normalizeAccount(selectedWalletAccount);
+    const forceMode = getUcanLoginForceMode();
+
+    if (forceMode === "central") {
+      await handleCentralAuthorizeLogin(preferredAddress);
+      return;
+    }
+
     try {
       await waitForWallet();
       setUcanAuthMode(UCAN_AUTH_MODE_WALLET, { emit: false });
       await connectWallet(preferredAddress || undefined);
       return;
-    } catch {
+    } catch (error) {
+      if (forceMode === "wallet") {
+        notifyError(`❌钱包登录失败: ${error}`);
+        return;
+      }
       // wallet not available, fallback to centralized UCAN service
     }
+
     await handleCentralAuthorizeLogin(preferredAddress);
   };
 

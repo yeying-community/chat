@@ -102,8 +102,7 @@ declare global {
       YEYING_BACKEND_URL?: string;
       CENTRAL_UCAN_AUTH_BASE_URL?: string;
       CENTRAL_UCAN_APP_ID?: string;
-      CENTRAL_UCAN_CLIENT_ID?: string;
-      CENTRAL_UCAN_APP_NAME?: string;
+      UCAN_LOGIN_FORCE_MODE?: "auto" | "wallet" | "central";
     }
   }
 }
