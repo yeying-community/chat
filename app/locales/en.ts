@@ -42,7 +42,7 @@ const en: LocaleType = {
       },
     },
     Actions: {
-      ChatList: "Go To Chat List",
+      ChatList: "View Chat List",
       CompressedHistory: "Compressed History Memory Prompt",
       Export: "Export All Messages as Markdown",
       Copy: "Copy",
