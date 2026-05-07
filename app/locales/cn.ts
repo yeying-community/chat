@@ -41,7 +41,7 @@ const cn = {
       },
     },
     Actions: {
-      ChatList: "查看消息列表",
+      ChatList: "查看会话列表",
       CompressedHistory: "查看压缩后的历史 Prompt",
       Export: "导出聊天记录",
       Copy: "复制",

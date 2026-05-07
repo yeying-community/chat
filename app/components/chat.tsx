@@ -15,6 +15,7 @@ import RenameIcon from "../icons/rename.svg";
 import EditIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
 import ReturnIcon from "../icons/return.svg";
+import HistoryIcon from "../icons/history.svg";
 import CopyIcon from "../icons/copy.svg";
 import SpeakIcon from "../icons/speak.svg";
 import SpeakStopIcon from "../icons/speak-stop.svg";
@@ -1711,9 +1712,10 @@ function ChatView() {
             <div className="window-actions">
               <div className={"window-action-button"}>
                 <IconButton
-                  icon={<ReturnIcon />}
+                  icon={<HistoryIcon />}
                   bordered
                   title={Locale.Chat.Actions.ChatList}
+                  aria={Locale.Chat.Actions.ChatList}
                   onClick={() => navigate(Path.Home)}
                 />
               </div>
