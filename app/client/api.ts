@@ -211,13 +211,21 @@ export function normalizeSupportedEndpoints(
 
 export function selectPreferredTextEndpoint(
   endpoints?: readonly string[],
+  options?: {
+    preferResponses?: boolean;
+  },
 ): string | undefined {
   const normalized = normalizeSupportedEndpoints(endpoints);
   if (normalized.length === 0) return undefined;
-  const order = [
-    SupportedTextEndpoint.Responses,
-    SupportedTextEndpoint.ChatCompletions,
-  ];
+  const order = options?.preferResponses
+    ? [
+        SupportedTextEndpoint.Responses,
+        SupportedTextEndpoint.ChatCompletions,
+      ]
+    : [
+        SupportedTextEndpoint.ChatCompletions,
+        SupportedTextEndpoint.Responses,
+      ];
   for (const endpoint of order) {
     if (normalized.includes(endpoint)) return endpoint;
   }

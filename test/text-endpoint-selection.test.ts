@@ -1,0 +1,27 @@
+import {
+  selectPreferredTextEndpoint,
+  SupportedTextEndpoint,
+} from "../app/client/api";
+
+describe("selectPreferredTextEndpoint", () => {
+  test("prefers chat completions by default when both endpoints are supported", () => {
+    const endpoint = selectPreferredTextEndpoint([
+      SupportedTextEndpoint.Responses,
+      SupportedTextEndpoint.ChatCompletions,
+    ]);
+
+    expect(endpoint).toBe(SupportedTextEndpoint.ChatCompletions);
+  });
+
+  test("prefers responses when explicitly requested", () => {
+    const endpoint = selectPreferredTextEndpoint(
+      [
+        SupportedTextEndpoint.ChatCompletions,
+        SupportedTextEndpoint.Responses,
+      ],
+      { preferResponses: true },
+    );
+
+    expect(endpoint).toBe(SupportedTextEndpoint.Responses);
+  });
+});

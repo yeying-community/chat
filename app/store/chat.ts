@@ -202,6 +202,9 @@ function toTextOnlyMessages(messages: RequestMessage[]): RequestMessage[] {
 function resolveRuntimeModelRouting(
   modelName: string,
   providerName: ServiceProvider,
+  options?: {
+    preferResponses?: boolean;
+  },
 ) {
   const models = useAppConfig.getState().models ?? [];
   const selectedModel =
@@ -213,7 +216,9 @@ function resolveRuntimeModelRouting(
   const supportedEndpoints = normalizeSupportedEndpoints(
     selectedModel?.supportedEndpoints,
   );
-  const endpointPath = selectPreferredTextEndpoint(supportedEndpoints);
+  const endpointPath = selectPreferredTextEndpoint(supportedEndpoints, {
+    preferResponses: options?.preferResponses,
+  });
 
   let requestProvider = providerName;
   if (endpointPath === SupportedTextEndpoint.Messages) {
@@ -228,6 +233,10 @@ function resolveRuntimeModelRouting(
     supportedEndpoints,
     ownedBy: selectedModel?.ownedBy,
   };
+}
+
+function hasNonImageDocumentAttachment(attachments: MultimodalContent[]): boolean {
+  return attachments.some((item) => item.type === "file_url");
 }
 
 function fillTemplateWith(input: string, modelConfig: ModelConfig) {
@@ -540,15 +549,17 @@ export const useChatStore = createPersistStore(
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
         const normalizedAttachments = attachments ?? [];
-        const hasFileAttachment = normalizedAttachments.some(
-          (item) => item.type === "file_url",
-        );
+        const hasDocumentAttachment =
+          hasNonImageDocumentAttachment(normalizedAttachments);
         const routing = resolveRuntimeModelRouting(
           modelConfig.model,
           modelConfig.providerName,
+          {
+            preferResponses: hasDocumentAttachment,
+          },
         );
         if (
-          hasFileAttachment &&
+          hasDocumentAttachment &&
           routing.endpointPath &&
           routing.endpointPath !== SupportedTextEndpoint.Responses
         ) {
