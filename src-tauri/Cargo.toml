@@ -7,7 +7,7 @@ license = "mit"
 repository = ""
 default-run = "chat"
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.86"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,7 +25,6 @@ reqwest = "0.11.18"
 futures-util = "0.3.30"
 bytes = "1.7.2"
 tauri-plugin-dialog = "2.6.0"
-tauri-plugin-shell = "2.3.4"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-clipboard-manager = "2.3.2"

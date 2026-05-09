@@ -19,10 +19,6 @@ const DANGER_CONFIG = {
   visionModels: serverConfig.visionModels,
 };
 
-declare global {
-  type DangerConfig = typeof DANGER_CONFIG;
-}
-
 async function handle() {
   return NextResponse.json(DANGER_CONFIG);
 }
