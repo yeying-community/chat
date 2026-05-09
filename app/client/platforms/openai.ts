@@ -34,6 +34,7 @@ import {
   LLMUsage,
   MultimodalContent,
   normalizeModelEndpointPath,
+  SupportedEndpoint,
   SupportedTextEndpoint,
   SpeechOptions,
 } from "../api";
@@ -319,12 +320,13 @@ function isResponsesPath(path: string) {
   return path.includes("/v1/responses");
 }
 
-function resolveOpenAITextEndpointPath(
+function resolveOpenAIEndpointPath(
   endpointPath?: string,
 ): string | undefined {
   const normalized = normalizeModelEndpointPath(endpointPath);
   if (!normalized) return undefined;
   if (
+    normalized !== SupportedEndpoint.ImagesGenerations &&
     normalized !== SupportedTextEndpoint.Responses &&
     normalized !== SupportedTextEndpoint.ChatCompletions
   ) {
@@ -350,6 +352,14 @@ function normalizeResponsesTextFormat(responseFormat: any) {
     });
   }
   return format;
+}
+
+function buildRequestTimeoutError(timeoutMS: number): Error {
+  return new Error(
+    `request timed out after ${Math.round(
+      timeoutMS / 1000,
+    )}s while waiting for server response`,
+  );
 }
 
 function getResponsesTextContentType(role: string) {
@@ -838,12 +848,15 @@ export class ChatGPTApi implements LLMApi {
     };
     const resolvedModel = mapOpenAIModelName(options.config.model);
     const isDalle3 = _isDalle3(resolvedModel);
+    const endpointPath = resolveOpenAIEndpointPath(options.config.endpointPath);
+    const useImageGenerationEndpoint =
+      endpointPath === SupportedEndpoint.ImagesGenerations || isDalle3;
     const isO1OrO3 =
       resolvedModel.startsWith("o1") ||
       resolvedModel.startsWith("o3") ||
       resolvedModel.startsWith("o4-mini");
     const isGpt5 = resolvedModel.startsWith("gpt-5");
-    const shouldStream = !isDalle3 && !!options.config.stream;
+    const shouldStream = !useImageGenerationEndpoint && !!options.config.stream;
     const controller = new AbortController();
     options.onController?.(controller);
     let index = -1;
@@ -865,11 +878,8 @@ export class ChatGPTApi implements LLMApi {
         funcs = toolPair[1] ?? {};
       }
 
-      const endpointPath = resolveOpenAITextEndpointPath(
-        options.config.endpointPath,
-      );
       const useResponsesEndpoint =
-        !isDalle3 &&
+        !useImageGenerationEndpoint &&
         modelConfig.providerName !== ServiceProvider.Azure &&
         (endpointPath
           ? endpointPath === SupportedTextEndpoint.Responses
@@ -896,7 +906,7 @@ export class ChatGPTApi implements LLMApi {
             model?.provider?.providerName === ServiceProvider.Azure,
         );
         chatPath = this.path(
-          (isDalle3 ? Azure.ImagePath : Azure.ChatPath)(
+          (useImageGenerationEndpoint ? Azure.ImagePath : Azure.ChatPath)(
             (model?.displayName ?? model?.name) as string,
             useCustomConfig ? useAccessStore.getState().azureApiVersion : "",
           ),
@@ -908,7 +918,7 @@ export class ChatGPTApi implements LLMApi {
             ? OpenaiPath.ResponsePath
             : OpenaiPath.ChatPath;
         chatPath = this.path(
-          isDalle3
+          useImageGenerationEndpoint
             ? OpenaiPath.ImagePath
             : textPath,
         );
@@ -922,20 +932,23 @@ export class ChatGPTApi implements LLMApi {
         | DalleRequestPayload
         | Record<string, any>;
 
-      if (isDalle3) {
+      if (useImageGenerationEndpoint) {
         const prompt = getMessageTextContent(
           options.messages.slice(-1)?.pop() as any,
         );
-        requestPayload = {
+        const imagePayload: Record<string, any> = {
           model: resolvedModel,
           prompt,
           // URLs are only valid for 60 minutes after the image has been generated.
           response_format: "b64_json", // using b64_json, and save image in CacheStorage
           n: 1,
           size: options.config?.size ?? "1024x1024",
-          quality: options.config?.quality ?? "standard",
-          style: options.config?.style ?? "vivid",
         };
+        if (isDalle3) {
+          imagePayload.quality = options.config?.quality ?? "standard";
+          imagePayload.style = options.config?.style ?? "vivid";
+        }
+        requestPayload = imagePayload;
       } else {
         const visionModel = isVisionModel(options.config.model);
         const messages: Array<{ role: string; content: any }> = [];
@@ -1316,21 +1329,27 @@ export class ChatGPTApi implements LLMApi {
         };
 
         // make a fetch request
+        const timeoutMS = getTimeoutMSByModel(options.config.model);
         const requestTimeoutId = setTimeout(
-          () => controller.abort(),
-          getTimeoutMSByModel(options.config.model),
+          () => controller.abort(buildRequestTimeoutError(timeoutMS)),
+          timeoutMS,
         );
-
-        const res = await fetch(chatPath, chatPayload);
-        clearTimeout(requestTimeoutId);
-
-        const resJson = await res.json();
-        const message = await this.extractMessage(resJson);
-        options.onFinish(message, res);
+        try {
+          const res = await fetch(chatPath, chatPayload);
+          const resJson = await res.json();
+          const message = await this.extractMessage(resJson);
+          options.onFinish(message, res);
+        } finally {
+          clearTimeout(requestTimeoutId);
+        }
       }
     } catch (e) {
       console.log("[Request] failed to make a chat request", e);
-      options.onError?.(e as Error);
+      const timeoutError =
+        controller.signal.aborted && controller.signal.reason instanceof Error
+          ? controller.signal.reason
+          : (e as Error);
+      options.onError?.(timeoutError);
     }
   }
   async usage() {

@@ -348,6 +348,7 @@ export function getTimeoutMSByModel(model: string) {
   if (
     model.startsWith("dall-e") ||
     model.startsWith("dalle") ||
+    model.startsWith("gpt-image") ||
     model.startsWith("gpt-5") ||
     model.startsWith("o1") ||
     model.startsWith("o3") ||

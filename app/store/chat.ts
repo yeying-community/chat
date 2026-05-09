@@ -1,7 +1,6 @@
 import {
   getMessageImages,
   getMessageTextContent,
-  isDalle3,
   safeLocalStorage,
   trimTopic,
 } from "../utils";
@@ -16,8 +15,9 @@ import type {
 import {
   getClientApi,
   normalizeSupportedEndpoints,
-  selectPreferredTextEndpoint,
+  selectPreferredRequestEndpoint,
   SupportedTextEndpoint,
+  supportsTextEndpoint,
 } from "../client/api";
 import { ChatControllerPool } from "../client/controller";
 import { showToast } from "../components/ui-lib";
@@ -216,7 +216,7 @@ function resolveRuntimeModelRouting(
   const supportedEndpoints = normalizeSupportedEndpoints(
     selectedModel?.supportedEndpoints,
   );
-  const endpointPath = selectPreferredTextEndpoint(supportedEndpoints, {
+  const endpointPath = selectPreferredRequestEndpoint(supportedEndpoints, {
     preferResponses: options?.preferResponses,
   });
 
@@ -838,8 +838,11 @@ export const useChatStore = createPersistStore(
         const config = useAppConfig.getState();
         const session = targetSession;
         const modelConfig = session.mask.modelConfig;
-        // skip summarize when using dalle3?
-        if (isDalle3(modelConfig.model)) {
+        const currentRouting = resolveRuntimeModelRouting(
+          modelConfig.model,
+          modelConfig.providerName,
+        );
+        if (!supportsTextEndpoint(currentRouting.supportedEndpoints)) {
           return;
         }
 
