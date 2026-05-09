@@ -8,6 +8,7 @@
 - 桌面端采用 **Tauri v2**
 - 当前仓库只维护 **V2**，不再兼容 Tauri v1
 - macOS 本地已验证 `npm run app:build` 可以稳定产出 `.app` 和 `.dmg`
+- GitHub Actions 已补入 Windows / Ubuntu 桌面构建验证链路，但尚未作为正式发布平台对外分发
 
 ## 目标边界
 
@@ -347,15 +348,25 @@ npm run app:build:release
 
 - [.github/workflows/app.yml](../.github/workflows/app.yml)
 
-当前流程只覆盖已经验证过的 macOS 发布链路，约定如下：
+当前 GitHub Actions 已拆成三条桌面链路：
+
+- macOS：正式发布链路
+- Windows：构建验证链路
+- Ubuntu：构建验证链路
+
+具体约定如下：
 
 - `workflow_dispatch`
-  - 运行桌面发布构建
+  - 运行 macOS 正式发布构建
+  - 运行 Windows 构建验证
+  - 运行 Ubuntu 构建验证
   - 上传 workflow artifacts
 - `release.published`
-  - 运行桌面发布构建
-  - 生成 `latest.json`
-  - 上传 release assets
+  - 运行 macOS 正式发布构建
+  - 运行 Windows 构建验证
+  - 运行 Ubuntu 构建验证
+  - 生成 macOS `latest.json`
+  - 上传 macOS release assets
 
 当前 CI 至少需要配置以下 secrets：
 
@@ -371,7 +382,7 @@ npm run app:build:release
 - `APPLE_PASSWORD`
 - `APPLE_TEAM_ID`
 
-CI 上传的关键产物包括：
+macOS CI 上传的关键产物包括：
 
 - `.dmg`
 - `.app.tar.gz`
@@ -379,6 +390,28 @@ CI 上传的关键产物包括：
 - `latest.json`
 
 其中 `latest.json` 由 [scripts/generate-updater-manifest.mjs](../scripts/generate-updater-manifest.mjs) 生成，供 updater 静态分发使用。
+
+Windows 验证链路当前上传的产物包括：
+
+- `chat.exe`
+- Tauri 在 `bundle/` 下生成的 Windows 安装包或可执行产物
+- 对应签名产物（若生成）
+
+当前 Windows 仍属于“构建验证”，还没有接入正式 release asset 分发、代码签名和 Windows updater 发布说明。
+
+Ubuntu 验证链路当前上传的产物包括：
+
+- `chat`
+- Tauri 在 `bundle/` 下生成的 `.deb`
+- Tauri 在 `bundle/` 下生成的 `.AppImage`
+- 对应签名产物（若生成）
+
+当前 Ubuntu 的目标策略已经收敛为：
+
+- `.deb`：Ubuntu 安装分发
+- `.AppImage`：Linux updater 相关产物
+
+但 Ubuntu 仍属于“构建验证”，还没有接入正式 release asset 分发和 Ubuntu updater 发布说明。
 
 ## 发布建议
 
@@ -396,9 +429,10 @@ CI 上传的关键产物包括：
 
 1. macOS 签名与 notarization
 2. Windows 签名
-3. updater 私钥注入与 `latest.json` 产物发布
-4. CI 中按平台拆分构建任务
-5. 发布产物命名、归档和校验流程
+3. Ubuntu `.deb` / `.AppImage` 产物的实际 CI 验证
+4. updater 私钥注入与 `latest.json` 产物发布
+5. CI 中按平台拆分构建任务
+6. 发布产物命名、归档和校验流程
 
 ## 故障排查
 

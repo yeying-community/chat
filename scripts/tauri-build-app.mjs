@@ -73,6 +73,9 @@ async function withReleaseUpdaterConfig(callback) {
   const releaseConfig = {
     bundle: {
       createUpdaterArtifacts: true,
+      ...(process.platform === "linux"
+        ? { targets: ["deb", "appimage"] }
+        : {}),
     },
   };
 
@@ -85,6 +88,23 @@ async function withReleaseUpdaterConfig(callback) {
       await fs.unlink(tempConfigPath);
     } catch {}
   }
+}
+
+async function buildTauri(configPath) {
+  const args = ["tauri", "build"];
+
+  if (process.platform === "linux") {
+    if (configPath) {
+      args.push("--config", configPath);
+    }
+  } else {
+    args.push("--bundles", "app");
+    if (configPath) {
+      args.push("--config", configPath);
+    }
+  }
+
+  await run("npx", args);
 }
 
 async function buildDmg() {
@@ -154,10 +174,10 @@ if (releaseMode) {
   console.log(`[Tauri] updater release build enabled via ${signingKeySource}`);
 
   await withReleaseUpdaterConfig(async (configPath) => {
-    await run("npx", ["tauri", "build", "--bundles", "app", "--config", configPath]);
+    await buildTauri(configPath);
   });
 } else {
-  await run("npx", ["tauri", "build", "--bundles", "app"]);
+  await buildTauri();
 }
 
 if (process.platform === "darwin") {
