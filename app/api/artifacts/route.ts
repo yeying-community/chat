@@ -2,6 +2,8 @@ import md5 from "spark-md5";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSideConfig } from "@/app/config/server";
 
+export const dynamic = "force-static";
+
 async function handle(req: NextRequest) {
   const serverConfig = getServerSideConfig();
   const storeUrl = () =>

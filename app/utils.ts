@@ -7,6 +7,13 @@ import {
   REQUEST_TIMEOUT_MS_FOR_THINKING,
   ServiceProvider,
 } from "./constant";
+import {
+  checkForAppUpdate,
+  isDesktopAppRuntime,
+  saveWithDialog,
+  writeClipboardText,
+  writeTextFile,
+} from "./tauri";
 // import { fetch as tauriFetch, ResponseType } from "@tauri-apps/api/http";
 import { fetch as tauriStreamFetch } from "./utils/stream";
 import { VISION_MODEL_REGEXES, EXCLUDE_VISION_MODEL_REGEXES } from "./constant";
@@ -63,8 +70,8 @@ export function trimTopic(topic: string, lang?: string) {
 
 export async function copyToClipboard(text: string) {
   try {
-    if (window.__TAURI__) {
-      window.__TAURI__.writeText(text);
+    if (isDesktopAppRuntime()) {
+      await writeClipboardText(text);
     } else {
       await navigator.clipboard.writeText(text);
     }
@@ -87,8 +94,8 @@ export async function copyToClipboard(text: string) {
 }
 
 export async function downloadAs(text: string, filename: string) {
-  if (window.__TAURI__) {
-    const result = await window.__TAURI__.dialog.save({
+  if (isDesktopAppRuntime()) {
+    const result = await saveWithDialog({
       defaultPath: `${filename}`,
       filters: [
         {
@@ -104,7 +111,7 @@ export async function downloadAs(text: string, filename: string) {
 
     if (result !== null) {
       try {
-        await window.__TAURI__.fs.writeTextFile(result, text);
+        await writeTextFile(result, text);
         showToast(Locale.Download.Success);
       } catch (error) {
         showToast(Locale.Download.Failed);
@@ -403,7 +410,7 @@ export function fetch(
   url: string,
   options?: Record<string, unknown>,
 ): Promise<any> {
-  if (window.__TAURI__) {
+  if (isDesktopAppRuntime()) {
     return tauriStreamFetch(url, options);
   }
   return window.fetch(url, options);
@@ -506,13 +513,12 @@ export function getOperationId(operation: {
 
 export function clientUpdate() {
   // this a wild for updating client app
-  return window.__TAURI__?.updater
-    .checkUpdate()
-    .then((updateResult) => {
-      if (updateResult.shouldUpdate) {
-        window.__TAURI__?.updater
-          .installUpdate()
-          .then((result) => {
+  return checkForAppUpdate()
+    .then((update) => {
+      if (update) {
+        update
+          .downloadAndInstall()
+          .then(() => {
             showToast(Locale.Settings.Update.Success);
           })
           .catch((e) => {

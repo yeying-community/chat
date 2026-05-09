@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getServerSideConfig } from "../../config/server";
 
+export const dynamic = "force-static";
+
 const serverConfig = getServerSideConfig();
 
 // Danger! Do not hard code any secret value here!

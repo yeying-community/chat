@@ -10,6 +10,12 @@ import { clientUpdate } from "../utils";
 import ChatGptIcon from "../icons/chatgpt.png";
 import Locale from "../locales";
 import { ClientApi } from "../client/api";
+import {
+  isDesktopAppRuntime,
+  isNotificationPermissionGranted,
+  requestNotificationPermission,
+  sendNotification,
+} from "../tauri";
 
 const ONE_MINUTE = 60 * 1000;
 const isApp = !!getClientConfig()?.isApp;
@@ -89,22 +95,20 @@ export const useUpdateStore = createPersistStore(
         set(() => ({
           remoteVersion: remoteId,
         }));
-        if (window.__TAURI__?.notification && isApp) {
+        if (isDesktopAppRuntime() && isApp) {
           // Check if notification permission is granted
-          await window.__TAURI__?.notification
-            .isPermissionGranted()
+          await isNotificationPermissionGranted()
             .then((granted) => {
               if (!granted) {
                 return;
               } else {
                 // Request permission to show notifications
-                window.__TAURI__?.notification
-                  .requestPermission()
+                requestNotificationPermission()
                   .then((permission) => {
                     if (permission === "granted") {
                       if (version === remoteId) {
                         // Show a notification using Tauri
-                        window.__TAURI__?.notification.sendNotification({
+                        sendNotification({
                           title: "Chat",
                           body: `${Locale.Settings.Update.IsLatest}`,
                           icon: `${ChatGptIcon.src}`,
@@ -114,7 +118,7 @@ export const useUpdateStore = createPersistStore(
                         const updateMessage =
                           Locale.Settings.Update.FoundUpdate(`${remoteId}`);
                         // Show a notification for the new version using Tauri
-                        window.__TAURI__?.notification.sendNotification({
+                        sendNotification({
                           title: "Chat",
                           body: updateMessage,
                           icon: `${ChatGptIcon.src}`,

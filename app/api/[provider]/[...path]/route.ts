@@ -17,6 +17,12 @@ import { handle as chatglmHandler } from "../../glm";
 import { handle as proxyHandler } from "../../proxy";
 import { handle as ai302Handler } from "../../302ai";
 
+export const dynamic = "force-static";
+
+export function generateStaticParams() {
+  return [];
+}
+
 async function handle(
   req: NextRequest,
   { params }: { params: Promise<{ provider: string; path: string[] }> },
