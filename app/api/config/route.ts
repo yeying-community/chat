@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getServerSideConfig } from "../../config/server";
 
+export const dynamic = "force-static";
+
 const serverConfig = getServerSideConfig();
 
 // Danger! Do not hard code any secret value here!
@@ -16,10 +18,6 @@ const DANGER_CONFIG = {
   defaultModel: serverConfig.defaultModel,
   visionModels: serverConfig.visionModels,
 };
-
-declare global {
-  type DangerConfig = typeof DANGER_CONFIG;
-}
 
 async function handle() {
   return NextResponse.json(DANGER_CONFIG);

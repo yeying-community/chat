@@ -23,6 +23,7 @@ import {
   base64Image2Blob,
   streamWithThink,
 } from "@/app/utils/chat";
+import { uploadFileToWebDavAndCreateShareLink } from "@/app/utils/cloud/webdav";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
 import { ModelSize, DalleQuality, DalleStyle } from "@/app/typing";
 
@@ -34,6 +35,7 @@ import {
   LLMUsage,
   MultimodalContent,
   normalizeModelEndpointPath,
+  SupportedEndpoint,
   SupportedTextEndpoint,
   SpeechOptions,
 } from "../api";
@@ -70,6 +72,7 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
+import { useSyncStore } from "@/app/store/sync";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -114,6 +117,31 @@ type CachedInvocationToken = {
   nbf?: number;
 };
 let cachedRouterInvocationToken: CachedInvocationToken | null = null;
+
+async function uploadGeneratedImageAndGetStableUrl(b64Json: string) {
+  const imageBlob = base64Image2Blob(b64Json, "image/png");
+
+  try {
+    const syncStore = useSyncStore.getState();
+    const uploaded = await uploadFileToWebDavAndCreateShareLink({
+      store: syncStore,
+      file: imageBlob,
+      fileName: `generated-${Date.now()}.png`,
+      expiresValue: 0,
+      expiresUnit: "day",
+    });
+    if (uploaded.url) {
+      return uploaded.url;
+    }
+  } catch (error) {
+    console.warn(
+      "[OpenAI] upload generated image to WebDAV failed, fallback to local cache",
+      error,
+    );
+  }
+
+  return await uploadImage(imageBlob);
+}
 
 const ROUTER_BACKEND_HOST = (() => {
   try {
@@ -319,12 +347,11 @@ function isResponsesPath(path: string) {
   return path.includes("/v1/responses");
 }
 
-function resolveOpenAITextEndpointPath(
-  endpointPath?: string,
-): string | undefined {
+function resolveOpenAIEndpointPath(endpointPath?: string): string | undefined {
   const normalized = normalizeModelEndpointPath(endpointPath);
   if (!normalized) return undefined;
   if (
+    normalized !== SupportedEndpoint.ImagesGenerations &&
     normalized !== SupportedTextEndpoint.Responses &&
     normalized !== SupportedTextEndpoint.ChatCompletions
   ) {
@@ -350,6 +377,14 @@ function normalizeResponsesTextFormat(responseFormat: any) {
     });
   }
   return format;
+}
+
+function buildRequestTimeoutError(timeoutMS: number): Error {
+  return new Error(
+    `request timed out after ${Math.round(
+      timeoutMS / 1000,
+    )}s while waiting for server response`,
+  );
 }
 
 function getResponsesTextContentType(role: string) {
@@ -773,8 +808,7 @@ export class ChatGPTApi implements LLMApi {
       let url = res.data?.at(0)?.url ?? "";
       const b64_json = res.data?.at(0)?.b64_json ?? "";
       if (!url && b64_json) {
-        // uploadImage
-        url = await uploadImage(base64Image2Blob(b64_json, "image/png"));
+        url = await uploadGeneratedImageAndGetStableUrl(b64_json);
       }
       return [
         {
@@ -785,7 +819,15 @@ export class ChatGPTApi implements LLMApi {
         },
       ];
     }
-    return res.choices?.at(0)?.message?.content ?? res;
+    const messageContent = res.choices?.at(0)?.message?.content;
+    if (typeof messageContent === "string" || Array.isArray(messageContent)) {
+      return messageContent;
+    }
+    try {
+      return JSON.stringify(res, null, 2);
+    } catch {
+      return String(res);
+    }
   }
 
   async speech(options: SpeechOptions): Promise<ArrayBuffer> {
@@ -838,12 +880,15 @@ export class ChatGPTApi implements LLMApi {
     };
     const resolvedModel = mapOpenAIModelName(options.config.model);
     const isDalle3 = _isDalle3(resolvedModel);
+    const endpointPath = resolveOpenAIEndpointPath(options.config.endpointPath);
+    const useImageGenerationEndpoint =
+      endpointPath === SupportedEndpoint.ImagesGenerations || isDalle3;
     const isO1OrO3 =
       resolvedModel.startsWith("o1") ||
       resolvedModel.startsWith("o3") ||
       resolvedModel.startsWith("o4-mini");
     const isGpt5 = resolvedModel.startsWith("gpt-5");
-    const shouldStream = !isDalle3 && !!options.config.stream;
+    const shouldStream = !useImageGenerationEndpoint && !!options.config.stream;
     const controller = new AbortController();
     options.onController?.(controller);
     let index = -1;
@@ -865,11 +910,8 @@ export class ChatGPTApi implements LLMApi {
         funcs = toolPair[1] ?? {};
       }
 
-      const endpointPath = resolveOpenAITextEndpointPath(
-        options.config.endpointPath,
-      );
       const useResponsesEndpoint =
-        !isDalle3 &&
+        !useImageGenerationEndpoint &&
         modelConfig.providerName !== ServiceProvider.Azure &&
         (endpointPath
           ? endpointPath === SupportedTextEndpoint.Responses
@@ -896,7 +938,7 @@ export class ChatGPTApi implements LLMApi {
             model?.provider?.providerName === ServiceProvider.Azure,
         );
         chatPath = this.path(
-          (isDalle3 ? Azure.ImagePath : Azure.ChatPath)(
+          (useImageGenerationEndpoint ? Azure.ImagePath : Azure.ChatPath)(
             (model?.displayName ?? model?.name) as string,
             useCustomConfig ? useAccessStore.getState().azureApiVersion : "",
           ),
@@ -908,9 +950,7 @@ export class ChatGPTApi implements LLMApi {
             ? OpenaiPath.ResponsePath
             : OpenaiPath.ChatPath;
         chatPath = this.path(
-          isDalle3
-            ? OpenaiPath.ImagePath
-            : textPath,
+          useImageGenerationEndpoint ? OpenaiPath.ImagePath : textPath,
         );
       }
 
@@ -922,20 +962,23 @@ export class ChatGPTApi implements LLMApi {
         | DalleRequestPayload
         | Record<string, any>;
 
-      if (isDalle3) {
+      if (useImageGenerationEndpoint) {
         const prompt = getMessageTextContent(
           options.messages.slice(-1)?.pop() as any,
         );
-        requestPayload = {
+        const imagePayload: Record<string, any> = {
           model: resolvedModel,
           prompt,
           // URLs are only valid for 60 minutes after the image has been generated.
           response_format: "b64_json", // using b64_json, and save image in CacheStorage
           n: 1,
           size: options.config?.size ?? "1024x1024",
-          quality: options.config?.quality ?? "standard",
-          style: options.config?.style ?? "vivid",
         };
+        if (isDalle3) {
+          imagePayload.quality = options.config?.quality ?? "standard";
+          imagePayload.style = options.config?.style ?? "vivid";
+        }
+        requestPayload = imagePayload;
       } else {
         const visionModel = isVisionModel(options.config.model);
         const messages: Array<{ role: string; content: any }> = [];
@@ -1316,21 +1359,27 @@ export class ChatGPTApi implements LLMApi {
         };
 
         // make a fetch request
+        const timeoutMS = getTimeoutMSByModel(options.config.model);
         const requestTimeoutId = setTimeout(
-          () => controller.abort(),
-          getTimeoutMSByModel(options.config.model),
+          () => controller.abort(buildRequestTimeoutError(timeoutMS)),
+          timeoutMS,
         );
-
-        const res = await fetch(chatPath, chatPayload);
-        clearTimeout(requestTimeoutId);
-
-        const resJson = await res.json();
-        const message = await this.extractMessage(resJson);
-        options.onFinish(message, res);
+        try {
+          const res = await fetch(chatPath, chatPayload);
+          const resJson = await res.json();
+          const message = await this.extractMessage(resJson);
+          options.onFinish(message, res);
+        } finally {
+          clearTimeout(requestTimeoutId);
+        }
       }
     } catch (e) {
       console.log("[Request] failed to make a chat request", e);
-      options.onError?.(e as Error);
+      const timeoutError =
+        controller.signal.aborted && controller.signal.reason instanceof Error
+          ? controller.signal.reason
+          : (e as Error);
+      options.onError?.(timeoutError);
     }
   }
   async usage() {

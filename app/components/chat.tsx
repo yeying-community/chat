@@ -14,7 +14,6 @@ import BrainIcon from "../icons/brain.svg";
 import RenameIcon from "../icons/rename.svg";
 import EditIcon from "../icons/rename.svg";
 import ExportIcon from "../icons/share.svg";
-import ReturnIcon from "../icons/return.svg";
 import HistoryIcon from "../icons/history.svg";
 import CopyIcon from "../icons/copy.svg";
 import SpeakIcon from "../icons/speak.svg";
@@ -67,6 +66,7 @@ import {
   autoGrowTextArea,
   copyToClipboard,
   getMessageAttachments,
+  getMessageContentLength,
   getMessageImages,
   getMessageTextContent,
   isDalle3,
@@ -558,7 +558,10 @@ export function ChatActions(props: {
     const defaultModel = filteredModels.find((m) => m.isDefault);
 
     if (defaultModel) {
-      const arr = [defaultModel, ...filteredModels.filter((m) => m !== defaultModel)];
+      const arr = [
+        defaultModel,
+        ...filteredModels.filter((m) => m !== defaultModel),
+      ];
       return arr;
     } else {
       return filteredModels;
@@ -584,13 +587,11 @@ export function ChatActions(props: {
       ];
     }
     return models.map((m) => ({
-        title: `${m.displayName}${
-          m?.provider?.providerName
-            ? " (" + m?.provider?.providerName + ")"
-            : ""
-        }`,
-        value: `${m.name}@${m?.provider?.providerName}`,
-      }));
+      title: `${m.displayName}${
+        m?.provider?.providerName ? " (" + m?.provider?.providerName + ")" : ""
+      }`,
+      value: `${m.name}@${m?.provider?.providerName}`,
+    }));
   }, [models]);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showPluginSelector, setShowPluginSelector] = useState(false);
@@ -1814,7 +1815,9 @@ function ChatView() {
                   const isContext = i < context.length;
                   const showActions =
                     i > 0 &&
-                    !(message.preview || message.content.length === 0) &&
+                    !(
+                      message.preview || getMessageContentLength(message) === 0
+                    ) &&
                     !isContext;
                   const showTyping = message.preview || message.streaming;
                   const messageImages = getMessageImages(message);
@@ -1998,7 +2001,7 @@ function ChatView() {
                               content={getMessageTextContent(message)}
                               loading={
                                 (message.preview || message.streaming) &&
-                                message.content.length === 0 &&
+                                getMessageContentLength(message) === 0 &&
                                 !isUser
                               }
                               //   onContextMenu={(e) => onRightClick(e, message)} // hard to use
@@ -2012,6 +2015,7 @@ function ChatView() {
                               defaultShow={i >= messages.length - 6}
                             />
                             {messageImages.length == 1 && (
+                              // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 className={styles["chat-message-item-image"]}
                                 src={messageImages[0]}
@@ -2029,6 +2033,7 @@ function ChatView() {
                               >
                                 {messageImages.map((image, index) => {
                                   return (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img
                                       className={
                                         styles["chat-message-item-image-multi"]
@@ -2118,7 +2123,9 @@ function ChatView() {
                   <div className={styles["attach-images"]}>
                     {attachContents.map((item, index) => {
                       const imageUrl =
-                        item.type === "image_url" ? item.image_url?.url || "" : "";
+                        item.type === "image_url"
+                          ? item.image_url?.url || ""
+                          : "";
                       const fileName =
                         item.type === "file_url"
                           ? item.file_url?.name || "PDF"

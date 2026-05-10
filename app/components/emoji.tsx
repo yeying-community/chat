@@ -1,4 +1,7 @@
-import EmojiPicker, { EmojiStyle, Theme as EmojiTheme } from "emoji-picker-react";
+import EmojiPicker, {
+  EmojiStyle,
+  Theme as EmojiTheme,
+} from "emoji-picker-react";
 
 import { ModelType } from "../store";
 
@@ -17,7 +20,7 @@ import BotIconGrok from "../icons/llm-icons/grok.svg";
 import BotIconHunyuan from "../icons/llm-icons/hunyuan.svg";
 import BotIconDoubao from "../icons/llm-icons/doubao.svg";
 import BotIconChatglm from "../icons/llm-icons/chatglm.svg";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { notifyError, notifySuccess } from "../plugins/show_window";
 import styles from "./emoji.module.scss";
 import {
@@ -154,15 +157,12 @@ export function Avatar(props: {
 
 export function EmojiAvatar(props: { avatar: string; size?: number }) {
   const size = props.size ?? 18;
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const nativeEmoji = useMemo(
     () => unifiedToNativeEmoji(props.avatar),
     [props.avatar],
   );
-
-  useEffect(() => {
-    setLoadFailed(false);
-  }, [props.avatar]);
+  const loadFailed = failedAvatar === props.avatar;
 
   if (loadFailed) {
     return (
@@ -173,13 +173,14 @@ export function EmojiAvatar(props: { avatar: string; size?: number }) {
   }
 
   return (
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={getEmojiUrl(props.avatar, EmojiStyle.APPLE)}
       alt={nativeEmoji || props.avatar}
       width={size}
       height={size}
       loading="lazy"
-      onError={() => setLoadFailed(true)}
+      onError={() => setFailedAvatar(props.avatar)}
     />
   );
 }
@@ -192,6 +193,7 @@ export function AddressAvatar(props: { address: string; size?: number }) {
   }, [props.address, size]);
 
   if (!dataUrl) return null;
+  // eslint-disable-next-line @next/next/no-img-element
   return <img src={dataUrl} width={size} height={size} alt="" />;
 }
 

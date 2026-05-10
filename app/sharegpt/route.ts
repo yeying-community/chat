@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const SHARE_GPT_URL = "https://sharegpt.com/api/conversations";
 
+export const dynamic = "force-static";
+
 export async function POST(req: NextRequest) {
   const headers = new Headers();
   const contentType = req.headers.get("content-type");

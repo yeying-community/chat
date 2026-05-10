@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const GOOGLE_FONTS_BASE_URL = "https://fonts.googleapis.com";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },

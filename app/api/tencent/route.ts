@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/api/auth";
 import { getHeader } from "@/app/utils/tencent";
 
+export const dynamic = "force-static";
+
 const serverConfig = getServerSideConfig();
 
 async function handle(req: NextRequest) {

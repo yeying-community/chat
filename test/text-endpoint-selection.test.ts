@@ -1,5 +1,7 @@
 import {
+  selectPreferredRequestEndpoint,
   selectPreferredTextEndpoint,
+  SupportedEndpoint,
   SupportedTextEndpoint,
 } from "../app/client/api";
 
@@ -23,5 +25,13 @@ describe("selectPreferredTextEndpoint", () => {
     );
 
     expect(endpoint).toBe(SupportedTextEndpoint.Responses);
+  });
+
+  test("falls back to image generations when only the image endpoint is supported", () => {
+    const endpoint = selectPreferredRequestEndpoint([
+      SupportedEndpoint.ImagesGenerations,
+    ]);
+
+    expect(endpoint).toBe(SupportedEndpoint.ImagesGenerations);
   });
 });

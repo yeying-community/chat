@@ -164,6 +164,11 @@ export const SupportedTextEndpoint = {
   Messages: "/v1/messages",
 } as const;
 
+export const SupportedEndpoint = {
+  ...SupportedTextEndpoint,
+  ImagesGenerations: "/v1/images/generations",
+} as const;
+
 export function normalizeModelEndpointPath(
   endpointPath?: string,
 ): string | undefined {
@@ -228,6 +233,32 @@ export function selectPreferredTextEndpoint(
       ];
   for (const endpoint of order) {
     if (normalized.includes(endpoint)) return endpoint;
+  }
+  return undefined;
+}
+
+export function supportsTextEndpoint(endpoints?: readonly string[]): boolean {
+  return selectPreferredTextEndpoint(endpoints) !== undefined;
+}
+
+export function supportsImageGenerationEndpoint(
+  endpoints?: readonly string[],
+): boolean {
+  return normalizeSupportedEndpoints(endpoints).includes(
+    SupportedEndpoint.ImagesGenerations,
+  );
+}
+
+export function selectPreferredRequestEndpoint(
+  endpoints?: readonly string[],
+  options?: {
+    preferResponses?: boolean;
+  },
+): string | undefined {
+  const preferredTextEndpoint = selectPreferredTextEndpoint(endpoints, options);
+  if (preferredTextEndpoint) return preferredTextEndpoint;
+  if (supportsImageGenerationEndpoint(endpoints)) {
+    return SupportedEndpoint.ImagesGenerations;
   }
   return undefined;
 }
