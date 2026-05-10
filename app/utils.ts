@@ -280,6 +280,9 @@ export function getMessageTextContent(message: RequestMessage) {
   if (typeof message.content === "string") {
     return message.content;
   }
+  if (!Array.isArray(message.content)) {
+    return "";
+  }
   for (const c of message.content) {
     if (c.type === "text") {
       return c.text ?? "";
@@ -293,6 +296,8 @@ export function getMessageTextContentWithoutThinking(message: RequestMessage) {
 
   if (typeof message.content === "string") {
     content = message.content;
+  } else if (!Array.isArray(message.content)) {
+    content = "";
   } else {
     for (const c of message.content) {
       if (c.type === "text") {
@@ -314,6 +319,9 @@ export function getMessageImages(message: RequestMessage): string[] {
   if (typeof message.content === "string") {
     return [];
   }
+  if (!Array.isArray(message.content)) {
+    return [];
+  }
   const urls: string[] = [];
   for (const c of message.content) {
     if (c.type === "image_url") {
@@ -329,9 +337,22 @@ export function getMessageAttachments(
   if (typeof message.content === "string") {
     return [];
   }
+  if (!Array.isArray(message.content)) {
+    return [];
+  }
   return message.content
     .filter((item) => item.type === "image_url" || item.type === "file_url")
     .map((item) => ({ ...item }));
+}
+
+export function getMessageContentLength(message: RequestMessage): number {
+  if (typeof message.content === "string") {
+    return message.content.length;
+  }
+  if (Array.isArray(message.content)) {
+    return message.content.length;
+  }
+  return 0;
 }
 
 export function isVisionModel(model: string) {

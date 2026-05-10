@@ -819,7 +819,15 @@ export class ChatGPTApi implements LLMApi {
         },
       ];
     }
-    return res.choices?.at(0)?.message?.content ?? res;
+    const messageContent = res.choices?.at(0)?.message?.content;
+    if (typeof messageContent === "string" || Array.isArray(messageContent)) {
+      return messageContent;
+    }
+    try {
+      return JSON.stringify(res, null, 2);
+    } catch {
+      return String(res);
+    }
   }
 
   async speech(options: SpeechOptions): Promise<ArrayBuffer> {

@@ -66,6 +66,7 @@ import {
   autoGrowTextArea,
   copyToClipboard,
   getMessageAttachments,
+  getMessageContentLength,
   getMessageImages,
   getMessageTextContent,
   isDalle3,
@@ -1814,7 +1815,9 @@ function ChatView() {
                   const isContext = i < context.length;
                   const showActions =
                     i > 0 &&
-                    !(message.preview || message.content.length === 0) &&
+                    !(
+                      message.preview || getMessageContentLength(message) === 0
+                    ) &&
                     !isContext;
                   const showTyping = message.preview || message.streaming;
                   const messageImages = getMessageImages(message);
@@ -1998,7 +2001,7 @@ function ChatView() {
                               content={getMessageTextContent(message)}
                               loading={
                                 (message.preview || message.streaming) &&
-                                message.content.length === 0 &&
+                                getMessageContentLength(message) === 0 &&
                                 !isUser
                               }
                               //   onContextMenu={(e) => onRightClick(e, message)} // hard to use

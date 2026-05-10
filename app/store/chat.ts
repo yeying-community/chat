@@ -1,6 +1,7 @@
 import {
   getMessageImages,
   getMessageTextContent,
+  getMessageContentLength,
   safeLocalStorage,
   trimTopic,
 } from "../utils";
@@ -235,8 +236,40 @@ function resolveRuntimeModelRouting(
   };
 }
 
-function hasNonImageDocumentAttachment(attachments: MultimodalContent[]): boolean {
+function hasNonImageDocumentAttachment(
+  attachments: MultimodalContent[],
+): boolean {
   return attachments.some((item) => item.type === "file_url");
+}
+
+function isMultimodalContentArray(
+  value: unknown,
+): value is MultimodalContent[] {
+  if (!Array.isArray(value)) return false;
+  return value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const type = (item as { type?: unknown }).type;
+    return type === "text" || type === "image_url" || type === "file_url";
+  });
+}
+
+function normalizeMessageContent(
+  content: unknown,
+): string | MultimodalContent[] {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (isMultimodalContentArray(content)) {
+    return content.map((item) => ({ ...item }));
+  }
+  if (content == null) {
+    return "";
+  }
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
 }
 
 function fillTemplateWith(input: string, modelConfig: ModelConfig) {
@@ -549,8 +582,9 @@ export const useChatStore = createPersistStore(
         const session = get().currentSession();
         const modelConfig = session.mask.modelConfig;
         const normalizedAttachments = attachments ?? [];
-        const hasDocumentAttachment =
-          hasNonImageDocumentAttachment(normalizedAttachments);
+        const hasDocumentAttachment = hasNonImageDocumentAttachment(
+          normalizedAttachments,
+        );
         const routing = resolveRuntimeModelRouting(
           modelConfig.model,
           modelConfig.providerName,
@@ -563,7 +597,9 @@ export const useChatStore = createPersistStore(
           routing.endpointPath &&
           routing.endpointPath !== SupportedTextEndpoint.Responses
         ) {
-          showToast("当前模型不支持文件附件，请切换到支持 /v1/responses 的模型");
+          showToast(
+            "当前模型不支持文件附件，请切换到支持 /v1/responses 的模型",
+          );
           return;
         }
 
@@ -581,7 +617,7 @@ export const useChatStore = createPersistStore(
 
         let userMessage: ChatMessage = createMessage({
           role: "user",
-          content: mContent,
+          content: normalizeMessageContent(mContent),
           isMcpResponse,
         });
 
@@ -608,7 +644,7 @@ export const useChatStore = createPersistStore(
         get().updateTargetSession(session, (session) => {
           const savedUserMessage = {
             ...userMessage,
-            content: mContent,
+            content: normalizeMessageContent(mContent),
           };
           session.messages = session.messages.concat([
             savedUserMessage,
@@ -642,8 +678,8 @@ export const useChatStore = createPersistStore(
           async onFinish(message) {
             botMessage.streaming = false;
             botMessage.status = "done";
-            if (message) {
-              botMessage.content = message;
+            if (message !== undefined && message !== null) {
+              botMessage.content = normalizeMessageContent(message);
               botMessage.date = new Date().toLocaleString();
               get().onNewMessage(botMessage, session);
             }
@@ -915,9 +951,7 @@ export const useChatStore = createPersistStore(
           session.clearContextIndex ?? 0,
         );
         let toBeSummarizedMsgs = toTextOnlyMessages(
-          messages
-            .slice(summarizeIndex)
-            .filter((msg) => !msg.isError),
+          messages.slice(summarizeIndex).filter((msg) => !msg.isError),
         );
 
         const historyMsgLength = countMessages(toBeSummarizedMsgs);
@@ -955,12 +989,10 @@ export const useChatStore = createPersistStore(
            **/
           const { max_tokens, ...modelcfg } = modelConfig;
           api.llm.chat({
-            messages: toBeSummarizedMsgs.concat(
-              {
-                role: "system",
-                content: Locale.Store.Prompt.Summarize,
-              },
-            ),
+            messages: toBeSummarizedMsgs.concat({
+              role: "system",
+              content: Locale.Store.Prompt.Summarize,
+            }),
             config: {
               ...modelcfg,
               stream: true,
@@ -991,7 +1023,7 @@ export const useChatStore = createPersistStore(
 
       updateStat(message: ChatMessage, session: ChatSession) {
         get().updateTargetSession(session, (session) => {
-          session.stat.charCount += message.content.length;
+          session.stat.charCount += getMessageContentLength(message);
           // TODO: should update chat count and word count
         });
       },
@@ -1065,7 +1097,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.5,
+    version: 3.6,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -1134,6 +1166,19 @@ export const useChatStore = createPersistStore(
       }
       if (version < 3.5) {
         newState.deletedMessages = {};
+      }
+      if (version < 3.6) {
+        newState.sessions.forEach((s) => {
+          s.messages.forEach((m) => {
+            m.content = normalizeMessageContent(m.content);
+          });
+          if (Array.isArray(s.mask?.context)) {
+            s.mask.context = s.mask.context.map((m) => ({
+              ...m,
+              content: normalizeMessageContent(m.content),
+            }));
+          }
+        });
       }
 
       return newState as any;
