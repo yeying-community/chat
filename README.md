@@ -18,12 +18,8 @@ Chat（UCAN 定制版）
 - 常见问题：`docs/常见问题.md`
 - 架构 / 部署 / 安全清单：`docs/架构部署安全清单.md`
 - 模型端点选择与支持机制：`docs/模型端点选择与支持机制.md`
-- 用户登录总览：`docs/用户登录.md`
-- 登录页前置方案评估：`docs/登录页前置方案评估.md`
-- 移动端登录与双后端鉴权方案：`docs/移动端登录与双后端鉴权方案.md`
-- Router 与 WebDAV 集成说明：`docs/Router与WebDAV集成说明.md`
+- 用户登录方案：`docs/用户登录方案.md`
 - 数据同步：`docs/数据同步方案.md`
-- UCAN 与 SIWE 权限设计（可扩展版）：`docs/UCAN与SIWE权限设计可扩展版.md`
 - Cloudflare Pages 部署指南：`docs/CloudflarePages部署指南.md`
 - Vercel 使用说明：`docs/Vercel使用说明.md`
 - 文生图与上传图片聊天工作流实现说明：`docs/文生图与上传图片聊天工作流实现说明.md`
