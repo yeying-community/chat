@@ -23,6 +23,7 @@ import {
   base64Image2Blob,
   streamWithThink,
 } from "@/app/utils/chat";
+import { uploadFileToWebDavAndCreateShareLink } from "@/app/utils/cloud/webdav";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
 import { ModelSize, DalleQuality, DalleStyle } from "@/app/typing";
 
@@ -71,6 +72,7 @@ import {
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
+import { useSyncStore } from "@/app/store/sync";
 
 export interface OpenAIListModelResponse {
   object: string;
@@ -115,6 +117,31 @@ type CachedInvocationToken = {
   nbf?: number;
 };
 let cachedRouterInvocationToken: CachedInvocationToken | null = null;
+
+async function uploadGeneratedImageAndGetStableUrl(b64Json: string) {
+  const imageBlob = base64Image2Blob(b64Json, "image/png");
+
+  try {
+    const syncStore = useSyncStore.getState();
+    const uploaded = await uploadFileToWebDavAndCreateShareLink({
+      store: syncStore,
+      file: imageBlob,
+      fileName: `generated-${Date.now()}.png`,
+      expiresValue: 0,
+      expiresUnit: "day",
+    });
+    if (uploaded.url) {
+      return uploaded.url;
+    }
+  } catch (error) {
+    console.warn(
+      "[OpenAI] upload generated image to WebDAV failed, fallback to local cache",
+      error,
+    );
+  }
+
+  return await uploadImage(imageBlob);
+}
 
 const ROUTER_BACKEND_HOST = (() => {
   try {
@@ -320,9 +347,7 @@ function isResponsesPath(path: string) {
   return path.includes("/v1/responses");
 }
 
-function resolveOpenAIEndpointPath(
-  endpointPath?: string,
-): string | undefined {
+function resolveOpenAIEndpointPath(endpointPath?: string): string | undefined {
   const normalized = normalizeModelEndpointPath(endpointPath);
   if (!normalized) return undefined;
   if (
@@ -783,8 +808,7 @@ export class ChatGPTApi implements LLMApi {
       let url = res.data?.at(0)?.url ?? "";
       const b64_json = res.data?.at(0)?.b64_json ?? "";
       if (!url && b64_json) {
-        // uploadImage
-        url = await uploadImage(base64Image2Blob(b64_json, "image/png"));
+        url = await uploadGeneratedImageAndGetStableUrl(b64_json);
       }
       return [
         {
@@ -918,9 +942,7 @@ export class ChatGPTApi implements LLMApi {
             ? OpenaiPath.ResponsePath
             : OpenaiPath.ChatPath;
         chatPath = this.path(
-          useImageGenerationEndpoint
-            ? OpenaiPath.ImagePath
-            : textPath,
+          useImageGenerationEndpoint ? OpenaiPath.ImagePath : textPath,
         );
       }
 
