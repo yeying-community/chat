@@ -4,6 +4,7 @@ import {
   ACCESS_CODE_PREFIX,
   ApiPath,
   OPENAI_BASE_URL,
+  OpenaiPath,
   ServiceProvider,
 } from "@/app/constant";
 import { getClientConfig } from "@/app/config/client";
@@ -55,6 +56,26 @@ type RouterModelListResponse = {
   data?: RouterModelCard[];
 };
 
+type RouterProviderModelDetail = {
+  model?: string;
+  type?: string;
+  status?: string;
+  description?: string;
+  supported_endpoints?: string[];
+};
+
+type RouterProviderCatalogItem = {
+  id?: string;
+  name?: string;
+  models?: RouterProviderModelDetail[];
+  sort_order?: number;
+};
+
+type RouterProviderCatalogResponse = {
+  success?: boolean;
+  data?: RouterProviderCatalogItem[];
+};
+
 const ROUTER_HOST = "llm.yeying.pub";
 const INVOCATION_TOKEN_SKEW_MS = 5 * 1000;
 
@@ -80,7 +101,9 @@ const ROUTER_BACKEND_HOST = (() => {
 function isRouterUrl(url: string): boolean {
   try {
     const base =
-      typeof window === "undefined" ? "http://localhost" : window.location.origin;
+      typeof window === "undefined"
+        ? "http://localhost"
+        : window.location.origin;
     const parsed = new URL(url, base);
     return (
       parsed.host.includes(ROUTER_HOST) ||
@@ -119,7 +142,9 @@ function decodeBase64Url(input: string): string | null {
   }
 }
 
-function decodeUcanPayload(token: string): { exp?: number; nbf?: number } | null {
+function decodeUcanPayload(
+  token: string,
+): { exp?: number; nbf?: number } | null {
   const parts = token.split(".");
   if (parts.length < 2) return null;
   const decoded = decodeBase64Url(parts[1]);
@@ -363,17 +388,18 @@ function resolveProviderNameFromOwnedBy(
   return ServiceProvider.OpenAI;
 }
 
-function providerId(providerName: ServiceProvider): string {
-  switch (providerName) {
+function providerId(providerName: ServiceProvider | string): string {
+  const normalized = providerName.trim();
+  switch (normalized) {
     case ServiceProvider["302.AI"]:
       return "302ai";
     default:
-      return providerName.toLowerCase();
+      return normalized.toLowerCase();
   }
 }
 
-function providerSort(providerName: ServiceProvider): number {
-  switch (providerName) {
+function providerSort(providerName: ServiceProvider | string): number {
+  switch (providerName.trim()) {
     case ServiceProvider.OpenAI:
       return 1;
     case ServiceProvider.Anthropic:
@@ -387,6 +413,60 @@ function providerSort(providerName: ServiceProvider): number {
     default:
       return 100;
   }
+}
+
+function modelNameFromProviderDetail(
+  detail: RouterProviderModelDetail,
+): string {
+  return detail.model?.trim() || "";
+}
+
+function buildModelsFromProviderCatalog(
+  items: RouterProviderCatalogItem[],
+): LLMModel[] {
+  const seen = new Set<string>();
+  const finalList: LLMModel[] = [];
+  let seq = 1000;
+
+  for (const item of items) {
+    const providerID = item.id?.trim();
+    if (!providerID) continue;
+    const providerName = item.name?.trim() || providerID;
+    const sorted =
+      typeof item.sort_order === "number" && Number.isFinite(item.sort_order)
+        ? item.sort_order
+        : providerSort(providerName);
+
+    for (const detail of item.models || []) {
+      const name = modelNameFromProviderDetail(detail);
+      if (!name) continue;
+      const key = `${name}@${providerID}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      finalList.push({
+        name,
+        displayName: name,
+        available: true,
+        sorted: seq++,
+        ownedBy: providerID,
+        supportedEndpoints: normalizeSupportedEndpoints(
+          detail.supported_endpoints,
+        ),
+        modelType: detail.type?.trim() || undefined,
+        status: detail.status?.trim() || undefined,
+        description: detail.description?.trim() || undefined,
+        provider: {
+          id: providerID,
+          providerName,
+          providerType: providerID,
+          sorted,
+        },
+      });
+    }
+  }
+
+  return finalList;
 }
 
 export class RouterApi implements LLMApi {
@@ -429,17 +509,44 @@ export class RouterApi implements LLMApi {
   }
 
   async models(): Promise<LLMModel[]> {
-    const listPath = this.path("v1/models");
+    const catalogPath = this.path(OpenaiPath.ProviderModelCatalogPath);
+    const listPath = this.path(OpenaiPath.ListModelPath);
     const accessStore = useAccessStore.getState();
     const hasAccessCode =
-      accessStore.enabledAccessControl() && accessStore.accessCode.trim() !== "";
+      accessStore.enabledAccessControl() &&
+      accessStore.accessCode.trim() !== "";
     const hasApiKey = accessStore.openaiApiKey.trim() !== "";
     const shouldSkipRouterFetch =
-      isRouterUrl(listPath) && !isUcanMetaValid() && !hasApiKey && !hasAccessCode;
+      isRouterUrl(listPath) &&
+      !isUcanMetaValid() &&
+      !hasApiKey &&
+      !hasAccessCode;
 
     if (shouldSkipRouterFetch) {
       console.info("[Router Models] skip fetch before UCAN login");
       return [];
+    }
+
+    try {
+      const headers = await getHeadersWithRouterUcan(catalogPath);
+      const res = await fetch(catalogPath, {
+        method: "GET",
+        headers,
+      });
+
+      if (res.ok) {
+        const resJson = (await res.json()) as RouterProviderCatalogResponse;
+        const models = buildModelsFromProviderCatalog(resJson.data ?? []);
+        if (models.length > 0) {
+          return models;
+        }
+      } else {
+        console.warn(
+          `[Router Models] provider catalog fetch failed: ${res.status}`,
+        );
+      }
+    } catch (error) {
+      console.warn("[Router Models] failed to fetch provider catalog", error);
     }
 
     try {
