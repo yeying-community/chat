@@ -536,25 +536,7 @@ export function ChatActions(props: {
     session.mask.modelConfig?.providerName || ServiceProvider.OpenAI;
   const allModels = useAllModels();
   const models = useMemo(() => {
-    console.log(
-      "[ModelSelector] allModels",
-      allModels.map((m) => ({
-        name: m.name,
-        displayName: m.displayName,
-        available: m.available,
-        provider: m.provider?.providerName,
-      })),
-    );
     const filteredModels = allModels.filter((m) => m.available);
-    console.log(
-      "[ModelSelector] filteredModels",
-      filteredModels.map((m) => ({
-        name: m.name,
-        displayName: m.displayName,
-        available: m.available,
-        provider: m.provider?.providerName,
-      })),
-    );
     const defaultModel = filteredModels.find((m) => m.isDefault);
 
     if (defaultModel) {
