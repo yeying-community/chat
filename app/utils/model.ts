@@ -1,4 +1,4 @@
-import { DEFAULT_MODELS, ServiceProvider } from "../constant";
+import { ServiceProvider } from "../constant";
 import { LLMModel } from "../client/api";
 
 const CustomSeq = {
@@ -22,13 +22,23 @@ const customProvider = (providerName: string) => ({
   sorted: CustomSeq.next(providerName),
 });
 
+function serviceProviderId(providerName: ServiceProvider | string) {
+  if (providerName === ServiceProvider["302.AI"]) return "302ai";
+  return providerName.toLowerCase();
+}
+
 const providerMap = (() => {
   const map = new Map<string, LLMModel["provider"]>();
-  for (const model of DEFAULT_MODELS) {
-    const provider = model.provider as LLMModel["provider"];
+  Object.values(ServiceProvider).forEach((providerName, index) => {
+    const provider = {
+      id: serviceProviderId(providerName),
+      providerName,
+      providerType: serviceProviderId(providerName),
+      sorted: index + 1,
+    };
     map.set(provider.id.toLowerCase(), provider);
     map.set(provider.providerName.toLowerCase(), provider);
-  }
+  });
   return map;
 })();
 
@@ -36,7 +46,9 @@ function normalizeProviderId(providerName?: string): string | undefined {
   return normalizeProviderName(providerName)?.toLowerCase();
 }
 
-export function normalizeProviderName(providerName?: string): string | undefined {
+export function normalizeProviderName(
+  providerName?: string,
+): string | undefined {
   if (!providerName) return undefined;
   const trimmed = providerName.trim();
   if (trimmed.length === 0) return undefined;
@@ -50,7 +62,9 @@ export function normalizeModelProvider(
   provider: LLMModel["provider"] | string | undefined | null,
 ): LLMModel["provider"] {
   if (provider && typeof provider === "object") {
-    const providerId = String(provider.id ?? "").trim().toLowerCase();
+    const providerId = String(provider.id ?? "")
+      .trim()
+      .toLowerCase();
     const providerName = normalizeProviderName(provider.providerName);
     const knownProvider =
       providerMap.get(providerId) ||
@@ -75,8 +89,9 @@ export function normalizeModelProvider(
   }
 
   const name =
-    normalizeProviderName(typeof provider === "string" ? provider : undefined) ??
-    ServiceProvider.OpenAI;
+    normalizeProviderName(
+      typeof provider === "string" ? provider : undefined,
+    ) ?? ServiceProvider.OpenAI;
   const knownProvider = providerMap.get(name.toLowerCase());
 
   if (knownProvider) return { ...knownProvider };
@@ -293,7 +308,7 @@ export function isModelAvailableInServer(
   const fullName = `${modelName}@${
     normalizeProviderId(providerName) ?? providerName
   }`;
-  const modelTable = collectModelTable(DEFAULT_MODELS, customModels);
+  const modelTable = collectModelTable([], customModels);
   return modelTable[fullName]?.available === false;
 }
 
@@ -334,7 +349,7 @@ export function isModelNotavailableInServer(
     return true;
   }
 
-  const modelTable = collectModelTable(DEFAULT_MODELS, customModels);
+  const modelTable = collectModelTable([], customModels);
 
   const providerNamesArray = Array.isArray(providerNames)
     ? providerNames

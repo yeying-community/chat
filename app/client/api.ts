@@ -121,6 +121,9 @@ export interface LLMModel {
   sorted: number;
   ownedBy?: string;
   supportedEndpoints?: string[];
+  modelType?: string;
+  status?: string;
+  description?: string;
 }
 
 export interface LLMModelProvider {
@@ -223,14 +226,8 @@ export function selectPreferredTextEndpoint(
   const normalized = normalizeSupportedEndpoints(endpoints);
   if (normalized.length === 0) return undefined;
   const order = options?.preferResponses
-    ? [
-        SupportedTextEndpoint.Responses,
-        SupportedTextEndpoint.ChatCompletions,
-      ]
-    : [
-        SupportedTextEndpoint.ChatCompletions,
-        SupportedTextEndpoint.Responses,
-      ];
+    ? [SupportedTextEndpoint.Responses, SupportedTextEndpoint.ChatCompletions]
+    : [SupportedTextEndpoint.ChatCompletions, SupportedTextEndpoint.Responses];
   for (const endpoint of order) {
     if (normalized.includes(endpoint)) return endpoint;
   }
@@ -404,8 +401,7 @@ export function getHeaders(
     const isDeepSeek = providerName === ServiceProvider.DeepSeek;
     const isXAI = providerName === ServiceProvider.XAI;
     const isChatGLM = providerName === ServiceProvider.ChatGLM;
-    const isSiliconFlow =
-      providerName === ServiceProvider.SiliconFlow;
+    const isSiliconFlow = providerName === ServiceProvider.SiliconFlow;
     const isAI302 = providerName === ServiceProvider["302.AI"];
     const isEnabledAccessControl = accessStore.enabledAccessControl();
     const apiKey = isGoogle
