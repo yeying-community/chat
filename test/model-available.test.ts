@@ -1,7 +1,7 @@
 import { isModelNotavailableInServer } from "../app/utils/model";
 
 describe("isModelNotavailableInServer", () => {
-  test("test model will return false, which means the model is available", () => {
+  test("returns true for unknown models when no router/custom model list is present", () => {
     const customModels = "";
     const modelName = "gpt-4";
     const providerNames = "OpenAI";
@@ -10,7 +10,7 @@ describe("isModelNotavailableInServer", () => {
       modelName,
       providerNames,
     );
-    expect(result).toBe(false);
+    expect(result).toBe(true);
   });
 
   test("test model will return true when model is not available in custom models", () => {
