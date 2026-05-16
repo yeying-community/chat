@@ -389,11 +389,11 @@ const da: PartialLocaleType = {
           SubTitle: "Kan ikke ændres, se .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
-          Title: "ByteDance-nøgle",
-          SubTitle: "Din egen nøgle til ByteDance",
-          Placeholder: "ByteDance API Key",
+          Title: "volcengine-nøgle",
+          SubTitle: "Din egen nøgle til volcengine",
+          Placeholder: "volcengine API Key",
         },
         Endpoint: {
           Title: "Adresse",

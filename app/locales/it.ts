@@ -412,11 +412,11 @@ const it: PartialLocaleType = {
             "Non supporta configurazioni personalizzate, andare su .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Chiave dell'interfaccia",
-          SubTitle: "Utilizza una chiave API ByteDance personalizzata",
-          Placeholder: "API Key ByteDance",
+          SubTitle: "Utilizza una chiave API volcengine personalizzata",
+          Placeholder: "API Key volcengine",
         },
         Endpoint: {
           Title: "Indirizzo dell'interfaccia",

@@ -393,11 +393,11 @@ const ar: PartialLocaleType = {
           SubTitle: "لا يدعم التخصيص، انتقل إلى .env للتكوين",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "مفتاح الواجهة",
-          SubTitle: "استخدم مفتاح ByteDance API مخصص",
-          Placeholder: "مفتاح ByteDance API",
+          SubTitle: "استخدم مفتاح volcengine API مخصص",
+          Placeholder: "مفتاح volcengine API",
         },
         Endpoint: {
           Title: "عنوان الواجهة",

@@ -22,7 +22,7 @@ import {
   useAppConfig,
   useChatStore,
 } from "../store";
-import { MultimodalContent, ROLES } from "../client/api";
+import { LLMModel, MultimodalContent, ROLES } from "../client/api";
 import {
   Input,
   List,
@@ -30,6 +30,7 @@ import {
   Modal,
   Popover,
   Select,
+  Selector,
   showConfirm,
 } from "./ui-lib";
 import { Avatar, AvatarPicker } from "./emoji";
@@ -37,7 +38,7 @@ import Locale, { AllLangs, ALL_LANG_OPTIONS, Lang } from "../locales";
 import { useNavigate } from "react-router-dom";
 
 import chatStyle from "./chat.module.scss";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   copyToClipboard,
   downloadAs,
@@ -57,6 +58,13 @@ import {
 import { getMessageTextContent } from "../utils";
 import clsx from "clsx";
 import { Markdown } from "./markdown";
+import { useMaskProviderModels } from "../utils/hooks";
+import {
+  buildModelCandidateValue,
+  filterModelsByCandidates,
+  getModelProvider,
+  normalizeModelCandidates,
+} from "../utils/model";
 
 // drag and drop helper function
 function reorder<T>(list: T[], startIndex: number, endIndex: number): T[] {
@@ -89,8 +97,51 @@ export function MaskConfig(props: {
   extraListItems?: ReactNode;
   readonly?: boolean;
   shouldSyncFromGlobal?: boolean;
+  modelOptions?: LLMModel[];
 }) {
   const [showPicker, setShowPicker] = useState(false);
+  const [showCandidateModelSelector, setShowCandidateModelSelector] =
+    useState(false);
+  const maskProviderModels = useMaskProviderModels();
+  const selectedCandidateModels = useMemo(
+    () => normalizeModelCandidates(props.mask.candidateModels),
+    [props.mask.candidateModels],
+  );
+  const selectedCandidateValues = useMemo(
+    () =>
+      selectedCandidateModels.map((candidate) =>
+        buildModelCandidateValue(candidate),
+      ),
+    [selectedCandidateModels],
+  );
+  const baseModelOptions = props.modelOptions ?? maskProviderModels;
+  const maskModelOptions = useMemo(() => {
+    if (selectedCandidateModels.length === 0) {
+      return baseModelOptions;
+    }
+    return filterModelsByCandidates(baseModelOptions, selectedCandidateModels);
+  }, [baseModelOptions, selectedCandidateModels]);
+  const candidateModelSummary =
+    maskProviderModels.length === 0
+      ? Locale.SearchChat.Page.Loading
+      : selectedCandidateModels.length === 0
+        ? "No restriction"
+        : `${selectedCandidateModels.length} models selected`;
+  const candidateModelSelectorItems = useMemo(
+    () =>
+      maskProviderModels.map((model) => ({
+        title: `${model.displayName}${
+          model.provider?.providerName
+            ? ` (${model.provider.providerName})`
+            : ""
+        }`,
+        value: buildModelCandidateValue({
+          model: model.name,
+          providerName: model.provider?.id ?? model.provider?.providerName,
+        }),
+      })),
+    [maskProviderModels],
+  );
 
   const readonlyContextMarkdown = props.mask.context
     .map((message, index) => {
@@ -204,6 +255,18 @@ export function MaskConfig(props: {
           ></input>
         </ListItem>
         <ListItem
+          title="Candidate Models"
+          subTitle="Only these models can be used by chat sessions created from this mask"
+        >
+          <input
+            aria-label="Candidate Models"
+            type="text"
+            readOnly
+            value={candidateModelSummary}
+            onClick={() => setShowCandidateModelSelector(true)}
+          ></input>
+        </ListItem>
+        <ListItem
           title={Locale.Mask.Config.HideContext.Title}
           subTitle={Locale.Mask.Config.HideContext.SubTitle}
         >
@@ -302,9 +365,34 @@ export function MaskConfig(props: {
         <ModelConfigList
           modelConfig={{ ...props.mask.modelConfig }}
           updateConfig={updateConfig}
+          modelOptions={maskModelOptions}
+          strictModelSelection
         />
         {props.extraListItems}
       </List>
+      {showCandidateModelSelector && (
+        <Selector
+          multiple
+          defaultSelectedValue={selectedCandidateValues}
+          items={candidateModelSelectorItems}
+          onClose={() => setShowCandidateModelSelector(false)}
+          onSelection={(selection) => {
+            const candidates = normalizeModelCandidates(
+              selection.map((value) => {
+                const [model, providerName] = getModelProvider(value);
+                return {
+                  model,
+                  providerName,
+                };
+              }),
+            );
+            props.updateMask((mask) => {
+              mask.candidateModels = candidates;
+              mask.syncGlobalConfig = false;
+            });
+          }}
+        />
+      )}
     </>
   );
 }
@@ -672,8 +760,9 @@ export function MaskPage() {
                     icon={<AddIcon />}
                     text={Locale.Mask.Item.Chat}
                     onClick={() => {
-                      chatStore.newSession(m);
-                      navigate(Path.Chat);
+                      if (chatStore.newSession(m) !== false) {
+                        navigate(Path.Chat);
+                      }
                     }}
                   />
                   {m.builtin ? (

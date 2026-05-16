@@ -7,7 +7,7 @@ import {
   ANTHROPIC_BASE_URL,
   GEMINI_BASE_URL,
   BAIDU_BASE_URL,
-  BYTEDANCE_BASE_URL,
+  VOLCENGINE_BASE_URL,
   ALIBABA_BASE_URL,
   TENCENT_BASE_URL,
   MOONSHOT_BASE_URL,
@@ -94,7 +94,7 @@ const DEFAULT_ANTHROPIC_URL = isApp ? ANTHROPIC_BASE_URL : ApiPath.Anthropic;
 
 const DEFAULT_BAIDU_URL = isApp ? BAIDU_BASE_URL : ApiPath.Baidu;
 
-const DEFAULT_BYTEDANCE_URL = isApp ? BYTEDANCE_BASE_URL : ApiPath.ByteDance;
+const DEFAULT_VOLCENGINE_URL = isApp ? VOLCENGINE_BASE_URL : ApiPath.Volcengine;
 
 const DEFAULT_ALIBABA_URL = isApp ? ALIBABA_BASE_URL : ApiPath.Alibaba;
 
@@ -150,9 +150,9 @@ const DEFAULT_ACCESS_STATE = {
   baiduApiKey: "",
   baiduSecretKey: "",
 
-  // bytedance
-  bytedanceUrl: DEFAULT_BYTEDANCE_URL,
-  bytedanceApiKey: "",
+  // volcengine
+  volcengineUrl: DEFAULT_VOLCENGINE_URL,
+  volcengineApiKey: "",
 
   // alibaba
   alibabaUrl: DEFAULT_ALIBABA_URL,
@@ -265,8 +265,8 @@ export const useAccessStore = createPersistStore(
       return ensure(get(), ["baiduApiKey", "baiduSecretKey"]);
     },
 
-    isValidByteDance() {
-      return ensure(get(), ["bytedanceApiKey"]);
+    isValidVolcengine() {
+      return ensure(get(), ["volcengineApiKey"]);
     },
 
     isValidAlibaba() {
@@ -312,7 +312,7 @@ export const useAccessStore = createPersistStore(
         this.isValidGoogle() ||
         this.isValidAnthropic() ||
         this.isValidBaidu() ||
-        this.isValidByteDance() ||
+        this.isValidVolcengine() ||
         this.isValidAlibaba() ||
         this.isValidTencent() ||
         this.isValidMoonshot() ||

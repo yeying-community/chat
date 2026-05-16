@@ -403,11 +403,11 @@ const tr: PartialLocaleType = {
           SubTitle: "Özelleştirilmiş yapılandırma için .env'ye gidin",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "API Anahtarı",
-          SubTitle: "Özelleştirilmiş ByteDance API Anahtarı kullanın",
-          Placeholder: "ByteDance API Anahtarı",
+          SubTitle: "Özelleştirilmiş volcengine API Anahtarı kullanın",
+          Placeholder: "volcengine API Anahtarı",
         },
         Endpoint: {
           Title: "API Adresi",

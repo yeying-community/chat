@@ -1,5 +1,5 @@
 import { ServiceProvider } from "../constant";
-import { LLMModel } from "../client/api";
+import { LLMModel, LLMModelProvider, ModelCandidate } from "../client/api";
 
 const CustomSeq = {
   val: -1000, //To ensure the custom model located at front, start from -1000, refer to constant.ts
@@ -28,7 +28,7 @@ function serviceProviderId(providerName: ServiceProvider | string) {
 }
 
 const providerMap = (() => {
-  const map = new Map<string, LLMModel["provider"]>();
+  const map = new Map<string, LLMModelProvider>();
   Object.values(ServiceProvider).forEach((providerName, index) => {
     const provider = {
       id: serviceProviderId(providerName),
@@ -43,7 +43,18 @@ const providerMap = (() => {
 })();
 
 function normalizeProviderId(providerName?: string): string | undefined {
-  return normalizeProviderName(providerName)?.toLowerCase();
+  if (!providerName) return undefined;
+  const trimmed = providerName.trim();
+  if (trimmed.length === 0) return undefined;
+  const normalized = trimmed.toLowerCase();
+
+  if (normalized === "302.ai") return "302ai";
+
+  const serviceProvider = Object.values(ServiceProvider).find(
+    (p) => p.toLowerCase() === normalized,
+  );
+
+  return serviceProvider ? serviceProviderId(serviceProvider) : normalized;
 }
 
 export function normalizeProviderName(
@@ -52,25 +63,38 @@ export function normalizeProviderName(
   if (!providerName) return undefined;
   const trimmed = providerName.trim();
   if (trimmed.length === 0) return undefined;
+  const normalized = trimmed.toLowerCase();
   const serviceProvider = Object.values(ServiceProvider).find(
-    (p) => p.toLowerCase() === trimmed.toLowerCase(),
+    (p) => p.toLowerCase() === normalized,
   );
   return serviceProvider ?? trimmed;
 }
 
 export function normalizeModelProvider(
   provider: LLMModel["provider"] | string | undefined | null,
-): LLMModel["provider"] {
+): LLMModelProvider {
   if (provider && typeof provider === "object") {
     const providerId = String(provider.id ?? "")
       .trim()
       .toLowerCase();
+    const rawProviderName = String(provider.providerName ?? "").trim();
     const providerName = normalizeProviderName(provider.providerName);
     const knownProvider =
       providerMap.get(providerId) ||
       (providerName ? providerMap.get(providerName.toLowerCase()) : undefined);
 
-    if (knownProvider) return { ...knownProvider };
+    if (knownProvider) {
+      return {
+        ...knownProvider,
+        providerName: rawProviderName || knownProvider.providerName,
+        providerType: provider.providerType ?? knownProvider.providerType,
+        sorted:
+          Number.isFinite(provider.sorted) &&
+          typeof provider.sorted === "number"
+            ? provider.sorted
+            : knownProvider.sorted,
+      };
+    }
 
     const fallbackName = providerName ?? ServiceProvider.OpenAI;
     const fallbackId =
@@ -149,6 +173,74 @@ export function getModelProvider(modelWithProvider: string): [string, string?] {
   return [model, provider];
 }
 
+export function normalizeModelCandidate(
+  candidate?: ModelCandidate | null,
+): ModelCandidate | undefined {
+  if (!candidate) return undefined;
+  const model = candidate.model?.trim();
+  if (!model) return undefined;
+  const providerName =
+    normalizeProviderId(candidate.providerName) ??
+    normalizeProviderName(candidate.providerName);
+  return {
+    model,
+    providerName,
+  };
+}
+
+export function buildModelCandidateValue(candidate: ModelCandidate): string {
+  const normalized = normalizeModelCandidate(candidate);
+  if (!normalized) return "";
+  return normalized.providerName
+    ? `${normalized.model}@${normalized.providerName}`
+    : normalized.model;
+}
+
+export function normalizeModelCandidates(
+  candidates?: readonly ModelCandidate[],
+): ModelCandidate[] {
+  const normalized = (candidates ?? [])
+    .map((candidate) => normalizeModelCandidate(candidate))
+    .filter((candidate): candidate is ModelCandidate => !!candidate);
+  const seen = new Set<string>();
+  return normalized.filter((candidate) => {
+    const value = buildModelCandidateValue(candidate);
+    if (!value || seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+}
+
+export function matchesModelCandidate(
+  model: Pick<LLMModel, "name" | "provider">,
+  candidate: ModelCandidate,
+): boolean {
+  const normalized = normalizeModelCandidate(candidate);
+  if (!normalized) return false;
+  if (model.name !== normalized.model) return false;
+  if (!normalized.providerName) return true;
+  return (
+    normalizeProviderId(model.provider?.id ?? model.provider?.providerName) ===
+    normalized.providerName
+  );
+}
+
+export function filterModelsByCandidates(
+  models: readonly LLMModel[],
+  candidates?: readonly ModelCandidate[],
+): LLMModel[] {
+  const normalizedModels = normalizeModels(models);
+  const normalizedCandidates = normalizeModelCandidates(candidates);
+  if (normalizedCandidates.length === 0) {
+    return normalizedModels;
+  }
+  return normalizedModels.filter((model) =>
+    normalizedCandidates.some((candidate) =>
+      matchesModelCandidate(model, candidate),
+    ),
+  );
+}
+
 export function collectModelTable(
   models: readonly LLMModel[],
   customModels: string,
@@ -168,7 +260,10 @@ export function collectModelTable(
   // default models
   normalizeModels(models).forEach((m) => {
     // using <modelName>@<providerId> as fullName
-    const providerId = normalizeProviderId(m?.provider?.id) ?? m.provider.id;
+    const providerId =
+      normalizeProviderId(m?.provider?.id) ??
+      normalizeProviderId(m?.provider?.providerName) ??
+      ServiceProvider.OpenAI.toLowerCase();
     modelTable[`${m.name}@${providerId}`] = {
       ...m,
       displayName: m.displayName ?? m.name, // 'provider' is copied over if it exists
@@ -204,8 +299,11 @@ export function collectModelTable(
           ) {
             count += 1;
             modelTable[fullName]["available"] = available;
-            // swap name and displayName for bytedance
-            if (normalizeProviderId(providerName) === "bytedance") {
+            // swap name and displayName for volcengine
+            if (
+              normalizeProviderId(providerName) ===
+              normalizeProviderId(ServiceProvider.Volcengine)
+            ) {
               [name, displayName] = [displayName, modelName];
               modelTable[fullName]["name"] = name;
             }
@@ -220,8 +318,11 @@ export function collectModelTable(
           const provider = normalizeModelProvider(
             customProviderName || customModelName,
           );
-          // swap name and displayName for bytedance
-          if (displayName && provider.providerName == "ByteDance") {
+          // swap name and displayName for volcengine
+          if (
+            displayName &&
+            provider.providerName == ServiceProvider.Volcengine
+          ) {
             [customModelName, displayName] = [displayName, customModelName];
           }
           modelTable[`${customModelName}@${provider?.id}`] = {
@@ -355,8 +456,8 @@ export function isModelNotavailableInServer(
     ? providerNames
     : [providerNames];
   for (const providerName of providerNamesArray) {
-    // if model provider is bytedance, use model config name to check if not avaliable
-    if (providerName === ServiceProvider.ByteDance) {
+    // if model provider is volcengine, use model config name to check if not avaliable
+    if (providerName === ServiceProvider.Volcengine) {
       return !Object.values(modelTable).filter((v) => v.name === modelName)?.[0]
         ?.available;
     }

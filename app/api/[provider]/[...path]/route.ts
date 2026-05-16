@@ -5,7 +5,7 @@ import { handle as azureHandler } from "../../azure";
 import { handle as googleHandler } from "../../google";
 import { handle as anthropicHandler } from "../../anthropic";
 import { handle as baiduHandler } from "../../baidu";
-import { handle as bytedanceHandler } from "../../bytedance";
+import { handle as volcengineHandler } from "../../volcengine";
 import { handle as alibabaHandler } from "../../alibaba";
 import { handle as moonshotHandler } from "../../moonshot";
 import { handle as stabilityHandler } from "../../stability";
@@ -39,8 +39,8 @@ async function handle(
       return anthropicHandler(req, { params: resolvedParams });
     case ApiPath.Baidu:
       return baiduHandler(req, { params: resolvedParams });
-    case ApiPath.ByteDance:
-      return bytedanceHandler(req, { params: resolvedParams });
+    case ApiPath.Volcengine:
+      return volcengineHandler(req, { params: resolvedParams });
     case ApiPath.Alibaba:
       return alibabaHandler(req, { params: resolvedParams });
     // case ApiPath.Tencent: using "/api/tencent"
