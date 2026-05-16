@@ -400,11 +400,11 @@ const bn: PartialLocaleType = {
           SubTitle: "স্বনির্ধারিত সমর্থিত নয়, .env কনফিগারেশনে চলে যান",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "ইন্টারফেস কী",
-          SubTitle: "স্বনির্ধারিত ByteDance API কী ব্যবহার করুন",
-          Placeholder: "ByteDance API কী",
+          SubTitle: "স্বনির্ধারিত volcengine API কী ব্যবহার করুন",
+          Placeholder: "volcengine API কী",
         },
         Endpoint: {
           Title: "ইন্টারফেস ঠিকানা",

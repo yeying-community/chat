@@ -409,11 +409,12 @@ const de: PartialLocaleType = {
             "Keine benutzerdefinierten Adressen unterstützen, konfigurieren Sie in .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Schnittstellenschlüssel",
-          SubTitle: "Verwenden Sie benutzerdefinierten ByteDance API-Schlüssel",
-          Placeholder: "ByteDance API-Schlüssel",
+          SubTitle:
+            "Verwenden Sie benutzerdefinierten volcengine API-Schlüssel",
+          Placeholder: "volcengine API-Schlüssel",
         },
         Endpoint: {
           Title: "Schnittstellenadresse",

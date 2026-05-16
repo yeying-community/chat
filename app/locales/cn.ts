@@ -436,11 +436,11 @@ const cn = {
           SubTitle: "不支持自定义前往.env配置",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "接口密钥",
-          SubTitle: "使用自定义 ByteDance API Key",
-          Placeholder: "ByteDance API Key",
+          SubTitle: "使用自定义 volcengine API Key",
+          Placeholder: "volcengine API Key",
         },
         Endpoint: {
           Title: "接口地址",

@@ -15,7 +15,7 @@ import { ChatGPTApi, DalleRequestPayload } from "./platforms/openai";
 import { GeminiProApi } from "./platforms/google";
 import { ClaudeApi } from "./platforms/anthropic";
 import { ErnieApi } from "./platforms/baidu";
-import { DoubaoApi } from "./platforms/bytedance";
+import { VolcengineApi } from "./platforms/volcengine";
 import { QwenApi } from "./platforms/alibaba";
 import { HunyuanApi } from "./platforms/tencent";
 import { MoonshotApi } from "./platforms/moonshot";
@@ -117,13 +117,19 @@ export interface LLMModel {
   name: string;
   displayName?: string;
   available: boolean;
-  provider: LLMModelProvider;
+  provider?: LLMModelProvider;
   sorted: number;
   ownedBy?: string;
   supportedEndpoints?: string[];
   modelType?: string;
   status?: string;
   description?: string;
+  isDefault?: boolean;
+}
+
+export interface ModelCandidate {
+  model: string;
+  providerName?: string;
 }
 
 export interface LLMModelProvider {
@@ -133,11 +139,24 @@ export interface LLMModelProvider {
   sorted: number;
 }
 
+function normalizeServiceProviderName(
+  providerName?: string,
+): ServiceProvider | undefined {
+  if (!providerName) return undefined;
+  const trimmed = providerName.trim();
+  if (!trimmed) return undefined;
+  const normalized = trimmed.toLowerCase();
+  return Object.values(ServiceProvider).find(
+    (provider) => provider.toLowerCase() === normalized,
+  );
+}
+
 export abstract class LLMApi {
   abstract chat(options: ChatOptions): Promise<void>;
   abstract speech(options: SpeechOptions): Promise<ArrayBuffer>;
   abstract usage(): Promise<LLMUsage>;
   abstract models(): Promise<LLMModel[]>;
+  providerModels?(): Promise<LLMModel[]>;
 }
 
 type ProviderName = "openai" | "azure" | "claude" | "palm";
@@ -274,8 +293,8 @@ export class ClientApi {
       case ModelProvider.Ernie:
         this.llm = new ErnieApi();
         break;
-      case ModelProvider.Doubao:
-        this.llm = new DoubaoApi();
+      case ModelProvider.Volcengine:
+        this.llm = new VolcengineApi();
         break;
       case ModelProvider.Qwen:
         this.llm = new QwenApi();
@@ -389,12 +408,15 @@ export function getHeaders(
 
   function getConfig() {
     const modelConfig = chatStore.currentSession().mask.modelConfig;
-    const providerName = providerNameOverride ?? modelConfig.providerName;
+    const providerName =
+      normalizeServiceProviderName(
+        providerNameOverride ?? modelConfig.providerName,
+      ) ?? ServiceProvider.OpenAI;
     const isGoogle = providerName === ServiceProvider.Google;
     const isAzure = providerName === ServiceProvider.Azure;
     const isAnthropic = providerName === ServiceProvider.Anthropic;
     const isBaidu = providerName == ServiceProvider.Baidu;
-    const isByteDance = providerName === ServiceProvider.ByteDance;
+    const isVolcengine = providerName === ServiceProvider.Volcengine;
     const isAlibaba = providerName === ServiceProvider.Alibaba;
     const isMoonshot = providerName === ServiceProvider.Moonshot;
     const isIflytek = providerName === ServiceProvider.Iflytek;
@@ -410,8 +432,8 @@ export function getHeaders(
         ? accessStore.azureApiKey
         : isAnthropic
           ? accessStore.anthropicApiKey
-          : isByteDance
-            ? accessStore.bytedanceApiKey
+          : isVolcengine
+            ? accessStore.volcengineApiKey
             : isAlibaba
               ? accessStore.alibabaApiKey
               : isMoonshot
@@ -439,7 +461,7 @@ export function getHeaders(
       isAzure,
       isAnthropic,
       isBaidu,
-      isByteDance,
+      isVolcengine,
       isAlibaba,
       isMoonshot,
       isIflytek,
@@ -468,7 +490,7 @@ export function getHeaders(
     isAzure,
     isAnthropic,
     isBaidu,
-    isByteDance,
+    isVolcengine,
     isAlibaba,
     isMoonshot,
     isIflytek,
@@ -501,16 +523,16 @@ export function getHeaders(
   return headers;
 }
 
-export function getClientApi(provider: ServiceProvider): ClientApi {
-  switch (provider) {
+export function getClientApi(provider: ServiceProvider | string): ClientApi {
+  switch (normalizeServiceProviderName(provider) ?? provider) {
     case ServiceProvider.Google:
       return new ClientApi(ModelProvider.GeminiPro);
     case ServiceProvider.Anthropic:
       return new ClientApi(ModelProvider.Claude);
     case ServiceProvider.Baidu:
       return new ClientApi(ModelProvider.Ernie);
-    case ServiceProvider.ByteDance:
-      return new ClientApi(ModelProvider.Doubao);
+    case ServiceProvider.Volcengine:
+      return new ClientApi(ModelProvider.Volcengine);
     case ServiceProvider.Alibaba:
       return new ClientApi(ModelProvider.Qwen);
     case ServiceProvider.Tencent:

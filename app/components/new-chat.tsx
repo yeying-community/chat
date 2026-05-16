@@ -80,8 +80,9 @@ export function NewChat() {
 
   const startChat = (mask?: Mask) => {
     setTimeout(() => {
-      chatStore.newSession(mask);
-      navigate(Path.Chat);
+      if (chatStore.newSession(mask) !== false) {
+        navigate(Path.Chat);
+      }
     }, 10);
   };
 

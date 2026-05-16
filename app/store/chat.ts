@@ -40,7 +40,13 @@ import { createPersistStore } from "../utils/store";
 import { estimateTokenLength } from "../utils/token";
 import { ModelConfig, ModelType, useAppConfig } from "./config";
 import { useAccessStore } from "./access";
-import { collectModelsWithDefaultModel } from "../utils/model";
+import {
+  collectModelsWithDefaultModel,
+  filterModelsByCandidates,
+  matchesModelCandidate,
+  normalizeModelCandidates,
+  normalizeProviderName,
+} from "../utils/model";
 import { createEmptyMask, Mask } from "./mask";
 import { executeMcpAction, getAllTools, isMcpEnabled } from "../mcp/actions";
 import { extractMcpJson, isMcpJson } from "../mcp/utils";
@@ -207,11 +213,13 @@ function resolveRuntimeModelRouting(
   },
 ) {
   const models = useAppConfig.getState().models ?? [];
+  const normalizedProviderName =
+    (normalizeProviderName(providerName) as ServiceProvider) || providerName;
   const selectedModel =
     models.find(
       (model) =>
         model.name === modelName &&
-        model?.provider?.providerName === providerName,
+        model?.provider?.providerName === normalizedProviderName,
     ) ?? models.find((model) => model.name === modelName);
   const supportedEndpoints = normalizeSupportedEndpoints(
     selectedModel?.supportedEndpoints,
@@ -220,7 +228,7 @@ function resolveRuntimeModelRouting(
     preferResponses: options?.preferResponses,
   });
 
-  let requestProvider = providerName;
+  let requestProvider = normalizedProviderName;
   if (endpointPath === SupportedTextEndpoint.Messages) {
     requestProvider = ServiceProvider.Anthropic;
   } else if (endpointPath) {
@@ -274,7 +282,9 @@ function normalizeMessageContent(
 function fillTemplateWith(input: string, modelConfig: ModelConfig) {
   const cutoff =
     KnowledgeCutOffDate[modelConfig.model] ?? KnowledgeCutOffDate.default;
-  const serviceProvider = modelConfig.providerName || ServiceProvider.OpenAI;
+  const serviceProvider =
+    (normalizeProviderName(modelConfig.providerName) as ServiceProvider) ||
+    ServiceProvider.OpenAI;
 
   const vars = {
     ServiceProvider: serviceProvider,
@@ -428,35 +438,66 @@ export const useChatStore = createPersistStore(
 
         if (mask) {
           const config = useAppConfig.getState();
+          const accessStore = useAccessStore.getState();
           const globalModelConfig = config.modelConfig;
           const shouldSyncFromGlobal = mask.syncGlobalConfig !== false;
+          const candidateModels = normalizeModelCandidates(
+            mask.candidateModels,
+          );
           const nextModelConfig = shouldSyncFromGlobal
             ? { ...globalModelConfig }
             : {
                 ...globalModelConfig,
                 ...mask.modelConfig,
               };
+          const runtimeModels = collectModelsWithDefaultModel(
+            config.models,
+            [config.customModels, accessStore.customModels]
+              .filter(Boolean)
+              .join(","),
+            accessStore.defaultModel,
+          ).filter((model) => model.available);
+          const sessionModels = filterModelsByCandidates(
+            runtimeModels,
+            candidateModels,
+          );
+          const hasCandidateModelRestriction = candidateModels.length > 0;
+
+          if (hasCandidateModelRestriction && sessionModels.length === 0) {
+            showToast(
+              "该面具当前没有任何可用模型，请检查 router 分组配置或调整面具候选模型",
+            );
+            return false;
+          }
+
+          const hasCurrentModel =
+            !hasCandidateModelRestriction ||
+            sessionModels.some((model) =>
+              matchesModelCandidate(model, {
+                model: nextModelConfig.model,
+                providerName: nextModelConfig.providerName,
+              }),
+            );
 
           session.mask = {
             ...mask,
+            candidateModels,
             syncGlobalConfig: shouldSyncFromGlobal,
             modelConfig: nextModelConfig,
           };
           session.topic = mask.name;
 
-          console.log("[Mask] newSession from mask", {
-            name: mask.name,
-            syncGlobalConfig: shouldSyncFromGlobal,
-            globalModel: globalModelConfig.model,
-            maskModel: mask.modelConfig?.model,
-            finalModel: nextModelConfig.model,
-          });
+          if (hasCandidateModelRestriction && !hasCurrentModel) {
+            showToast("面具默认模型当前不可用，请先选择一个可用模型");
+          }
         }
 
         set((state) => ({
           currentSessionIndex: 0,
           sessions: [session].concat(state.sessions),
         }));
+
+        return true;
       },
 
       nextSession(delta: number) {

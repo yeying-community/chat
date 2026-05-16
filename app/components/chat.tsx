@@ -119,13 +119,18 @@ import { ChatCommandPrefix, useChatCommand, useCommand } from "../command";
 import { prettyObject } from "../utils/format";
 import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
-import { useAllModels } from "../utils/hooks";
+import { useSessionModels } from "../utils/hooks";
 import { ClientApi, MultimodalContent } from "../client/api";
 import { createTTSPlayer } from "../utils/audio";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
 
 import { isEmpty } from "lodash-es";
-import { getModelProvider } from "../utils/model";
+import {
+  getModelProvider,
+  matchesModelCandidate,
+  normalizeModelCandidates,
+  normalizeProviderName,
+} from "../utils/model";
 import { RealtimeChat } from "@/app/components/realtime-chat";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
@@ -171,6 +176,7 @@ export function SessionConfigModel(props: { onClose: () => void }) {
   const session = chatStore.currentSession();
   const maskStore = useMaskStore();
   const navigate = useNavigate();
+  const runtimeModels = useSessionModels();
 
   return (
     <div className="modal-mask">
@@ -216,6 +222,7 @@ export function SessionConfigModel(props: { onClose: () => void }) {
               (session) => (session.mask = mask),
             );
           }}
+          modelOptions={runtimeModels}
           shouldSyncFromGlobal
           extraListItems={
             session.mask.modelConfig.sendMemory ? (
@@ -532,37 +539,50 @@ export function ChatActions(props: {
 
   // switch model
   const currentModel = session.mask.modelConfig.model;
-  const currentProviderName =
-    session.mask.modelConfig?.providerName || ServiceProvider.OpenAI;
-  const allModels = useAllModels();
+  const currentProviderName = (normalizeProviderName(
+    session.mask.modelConfig?.providerName,
+  ) ??
+    session.mask.modelConfig?.providerName ??
+    ServiceProvider.OpenAI) as ServiceProvider;
+  const sessionCandidateModels = useMemo(
+    () => normalizeModelCandidates(session.mask.candidateModels),
+    [session.mask.candidateModels],
+  );
+  const sessionModels = useSessionModels(sessionCandidateModels);
+  const hasCandidateModelRestriction = sessionCandidateModels.length > 0;
   const models = useMemo(() => {
-    const filteredModels = allModels.filter((m) => m.available);
-    const defaultModel = filteredModels.find((m) => m.isDefault);
+    const defaultModel = sessionModels.find((m) => m.isDefault);
 
     if (defaultModel) {
       const arr = [
         defaultModel,
-        ...filteredModels.filter((m) => m !== defaultModel),
+        ...sessionModels.filter((m) => m !== defaultModel),
       ];
       return arr;
     } else {
-      return filteredModels;
+      return sessionModels;
     }
-  }, [allModels]);
+  }, [sessionModels]);
   const currentModelName = useMemo(() => {
-    if (models.length === 0) return Locale.SearchChat.Page.Loading;
+    if (models.length === 0) {
+      return hasCandidateModelRestriction
+        ? currentModel
+        : Locale.SearchChat.Page.Loading;
+    }
     const model = models.find(
       (m) =>
         m.name == currentModel &&
         m?.provider?.providerName == currentProviderName,
     );
     return model?.displayName ?? currentModel;
-  }, [models, currentModel, currentProviderName]);
+  }, [hasCandidateModelRestriction, models, currentModel, currentProviderName]);
   const modelSelectorItems = useMemo(() => {
     if (models.length === 0) {
       return [
         {
-          title: Locale.SearchChat.Page.Loading,
+          title: hasCandidateModelRestriction
+            ? "No available models"
+            : Locale.SearchChat.Page.Loading,
           value: "loading",
           disable: true,
         },
@@ -574,7 +594,7 @@ export function ChatActions(props: {
       }`,
       value: `${m.name}@${m?.provider?.providerName}`,
     }));
-  }, [models]);
+  }, [hasCandidateModelRestriction, models]);
   const [showModelSelector, setShowModelSelector] = useState(false);
   const [showPluginSelector, setShowPluginSelector] = useState(false);
   const [showUploadImage, setShowUploadImage] = useState(false);
@@ -602,8 +622,15 @@ export function ChatActions(props: {
 
     // if current model is not available
     // switch to first available model
-    const isUnavailableModel = !models.some((m) => m.name === currentModel);
+    const isUnavailableModel = !models.some(
+      (m) =>
+        m.name === currentModel &&
+        m.provider?.providerName === currentProviderName,
+    );
     if (isUnavailableModel && models.length > 0) {
+      if (hasCandidateModelRestriction) {
+        return;
+      }
       // show next model to default model if exist
       let nextModel = models.find((model) => model.isDefault) || models[0];
       chatStore.updateTargetSession(session, (session) => {
@@ -612,14 +639,16 @@ export function ChatActions(props: {
           ?.providerName as ServiceProvider;
       });
       showToast(
-        nextModel?.provider?.providerName == "ByteDance"
-          ? nextModel.displayName
+        nextModel?.provider?.providerName == ServiceProvider.Volcengine
+          ? (nextModel.displayName ?? nextModel.name)
           : nextModel.name,
       );
     }
   }, [
     chatStore,
+    currentProviderName,
     currentModel,
+    hasCandidateModelRestriction,
     models,
     session,
     setAttachContents,
@@ -723,7 +752,7 @@ export function ChatActions(props: {
                   providerName as ServiceProvider;
                 session.mask.syncGlobalConfig = false;
               });
-              if (providerName == "ByteDance") {
+              if (providerName == ServiceProvider.Volcengine) {
                 const selectedModel = models.find(
                   (m) =>
                     m.name == model &&
@@ -1019,6 +1048,12 @@ function ChatView() {
   const fontFamily = config.fontFamily;
   const isAuthenticated = useAuth();
   const walletAddress = isAuthenticated ? getCurrentAccount() : "";
+  const sessionCandidateModels = useMemo(
+    () => normalizeModelCandidates(session.mask.candidateModels),
+    [session.mask.candidateModels],
+  );
+  const sessionModels = useSessionModels(sessionCandidateModels);
+  const hasCandidateModelRestriction = sessionCandidateModels.length > 0;
 
   const [showExport, setShowExport] = useState(false);
 
@@ -1136,6 +1171,26 @@ function ChatView() {
       matchCommand.invoke();
       return;
     }
+
+    if (hasCandidateModelRestriction && sessionModels.length === 0) {
+      showToast(
+        "该面具当前没有任何可用模型，请检查 router 分组配置或调整面具候选模型",
+      );
+      return;
+    }
+
+    const hasCurrentModel = sessionModels.some((model) =>
+      matchesModelCandidate(model, {
+        model: session.mask.modelConfig.model,
+        providerName: session.mask.modelConfig.providerName,
+      }),
+    );
+
+    if (hasCandidateModelRestriction && !hasCurrentModel) {
+      showToast("面具默认模型当前不可用，请先选择一个可用模型");
+      return;
+    }
+
     setIsLoading(true);
     chatStore
       .onUserInput(userInput, attachContents)
@@ -1195,7 +1250,6 @@ function ChatView() {
       // auto sync mask config from global config
       const shouldSyncFromGlobal = session.mask.syncGlobalConfig !== false;
       if (shouldSyncFromGlobal) {
-        console.log("[Mask] syncing from global, name = ", session.mask.name);
         session.mask.modelConfig = { ...config.modelConfig };
       }
     });

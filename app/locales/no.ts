@@ -405,11 +405,11 @@ const no: PartialLocaleType = {
             "Støtter ikke egendefinerte konfigurasjoner. Se .env-konfigurasjon.",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "API-nøkkel",
-          SubTitle: "Bruk egendefinert ByteDance API-nøkkel",
-          Placeholder: "ByteDance API-nøkkel",
+          SubTitle: "Bruk egendefinert volcengine API-nøkkel",
+          Placeholder: "volcengine API-nøkkel",
         },
         Endpoint: {
           Title: "API-adresse",

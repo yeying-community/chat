@@ -64,16 +64,16 @@ type RouterProviderModelDetail = {
   supported_endpoints?: string[];
 };
 
-type RouterProviderCatalogItem = {
+type RouterProviderModelsItem = {
   id?: string;
   name?: string;
   models?: RouterProviderModelDetail[];
   sort_order?: number;
 };
 
-type RouterProviderCatalogResponse = {
+type RouterProviderModelsResponse = {
   success?: boolean;
-  data?: RouterProviderCatalogItem[];
+  data?: RouterProviderModelsItem[];
 };
 
 const ROUTER_HOST = "llm.yeying.pub";
@@ -350,7 +350,7 @@ function resolveProviderNameFromOwnedBy(
     source.includes("volc") ||
     source.includes("ark-")
   ) {
-    return ServiceProvider.ByteDance;
+    return ServiceProvider.Volcengine;
   }
   if (
     source.includes("alibaba") ||
@@ -421,8 +421,8 @@ function modelNameFromProviderDetail(
   return detail.model?.trim() || "";
 }
 
-function buildModelsFromProviderCatalog(
-  items: RouterProviderCatalogItem[],
+function buildModelsFromProviderModels(
+  items: RouterProviderModelsItem[],
 ): LLMModel[] {
   const seen = new Set<string>();
   const finalList: LLMModel[] = [];
@@ -508,8 +508,47 @@ export class RouterApi implements LLMApi {
     return cloudflareAIGatewayUrl([baseUrl, path].join("/"));
   }
 
+  // Provider models are broader than the runtime-available model list.
+  // They are intended for mask candidate selection, not chat session selection.
+  async providerModels(): Promise<LLMModel[]> {
+    const providerModelsPath = this.path(OpenaiPath.ProviderModelsPath);
+    const accessStore = useAccessStore.getState();
+    const hasAccessCode =
+      accessStore.enabledAccessControl() &&
+      accessStore.accessCode.trim() !== "";
+    const hasApiKey = accessStore.openaiApiKey.trim() !== "";
+    const shouldSkipRouterFetch =
+      isRouterUrl(providerModelsPath) &&
+      !isUcanMetaValid() &&
+      !hasApiKey &&
+      !hasAccessCode;
+
+    if (shouldSkipRouterFetch) {
+      return [];
+    }
+
+    try {
+      const headers = await getHeadersWithRouterUcan(providerModelsPath);
+      const res = await fetch(providerModelsPath, {
+        method: "GET",
+        headers,
+      });
+
+      if (!res.ok) {
+        throw new Error(
+          `[Router Models] provider models fetch failed: ${res.status}`,
+        );
+      }
+
+      const resJson = (await res.json()) as RouterProviderModelsResponse;
+      return buildModelsFromProviderModels(resJson.data ?? []);
+    } catch (error) {
+      console.warn("[Router Models] failed to fetch provider models", error);
+      return [];
+    }
+  }
+
   async models(): Promise<LLMModel[]> {
-    const catalogPath = this.path(OpenaiPath.ProviderModelCatalogPath);
     const listPath = this.path(OpenaiPath.ListModelPath);
     const accessStore = useAccessStore.getState();
     const hasAccessCode =
@@ -523,30 +562,7 @@ export class RouterApi implements LLMApi {
       !hasAccessCode;
 
     if (shouldSkipRouterFetch) {
-      console.info("[Router Models] skip fetch before UCAN login");
       return [];
-    }
-
-    try {
-      const headers = await getHeadersWithRouterUcan(catalogPath);
-      const res = await fetch(catalogPath, {
-        method: "GET",
-        headers,
-      });
-
-      if (res.ok) {
-        const resJson = (await res.json()) as RouterProviderCatalogResponse;
-        const models = buildModelsFromProviderCatalog(resJson.data ?? []);
-        if (models.length > 0) {
-          return models;
-        }
-      } else {
-        console.warn(
-          `[Router Models] provider catalog fetch failed: ${res.status}`,
-        );
-      }
-    } catch (error) {
-      console.warn("[Router Models] failed to fetch provider catalog", error);
     }
 
     try {

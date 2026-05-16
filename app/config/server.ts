@@ -51,9 +51,9 @@ declare global {
       BAIDU_API_KEY?: string;
       BAIDU_SECRET_KEY?: string;
 
-      // bytedance only
-      BYTEDANCE_URL?: string;
-      BYTEDANCE_API_KEY?: string;
+      // volcengine only
+      VOLCENGINE_URL?: string;
+      VOLCENGINE_API_KEY?: string;
 
       // alibaba only
       ALIBABA_URL?: string;
@@ -187,7 +187,7 @@ export const getServerSideConfig = () => {
   const isTencent = !!process.env.TENCENT_API_KEY;
 
   const isBaidu = !!process.env.BAIDU_API_KEY;
-  const isBytedance = !!process.env.BYTEDANCE_API_KEY;
+  const isVolcengine = !!process.env.VOLCENGINE_API_KEY;
   const isAlibaba = !!process.env.ALIBABA_API_KEY;
   const isMoonshot = !!process.env.MOONSHOT_API_KEY;
   const isIflytek = !!process.env.IFLYTEK_API_KEY;
@@ -261,9 +261,9 @@ export const getServerSideConfig = () => {
     baiduApiKey: getApiKey(process.env.BAIDU_API_KEY),
     baiduSecretKey: process.env.BAIDU_SECRET_KEY,
 
-    isBytedance,
-    bytedanceApiKey: getApiKey(process.env.BYTEDANCE_API_KEY),
-    bytedanceUrl: process.env.BYTEDANCE_URL,
+    isVolcengine,
+    volcengineApiKey: getApiKey(process.env.VOLCENGINE_API_KEY),
+    volcengineUrl: process.env.VOLCENGINE_URL,
 
     isAlibaba,
     alibabaUrl: process.env.ALIBABA_URL,
