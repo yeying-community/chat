@@ -399,11 +399,11 @@ const vi: PartialLocaleType = {
           SubTitle: "Không hỗ trợ tùy chỉnh, hãy cấu hình trong .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Khóa giao diện",
-          SubTitle: "Sử dụng khóa ByteDance API tùy chỉnh",
-          Placeholder: "Khóa API ByteDance",
+          SubTitle: "Sử dụng khóa volcengine API tùy chỉnh",
+          Placeholder: "Khóa API volcengine",
         },
         Endpoint: {
           Title: "Địa chỉ giao diện",

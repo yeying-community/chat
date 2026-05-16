@@ -1,5 +1,5 @@
 "use client";
-import { ApiPath, ByteDance, BYTEDANCE_BASE_URL } from "@/app/constant";
+import { ApiPath, Volcengine, VOLCENGINE_BASE_URL } from "@/app/constant";
 import {
   useAccessStore,
   useAppConfig,
@@ -35,7 +35,7 @@ export interface OpenAIListModelResponse {
   }>;
 }
 
-interface RequestPayloadForByteDance {
+interface RequestPayloadForVolcengine {
   messages: {
     role: "system" | "user" | "assistant";
     content: string | MultimodalContent[];
@@ -49,25 +49,28 @@ interface RequestPayloadForByteDance {
   max_tokens?: number;
 }
 
-export class DoubaoApi implements LLMApi {
+export class VolcengineApi implements LLMApi {
   path(path: string): string {
     const accessStore = useAccessStore.getState();
 
     let baseUrl = "";
 
     if (accessStore.useCustomConfig) {
-      baseUrl = accessStore.bytedanceUrl;
+      baseUrl = accessStore.volcengineUrl;
     }
 
     if (baseUrl.length === 0) {
       const isApp = !!getClientConfig()?.isApp;
-      baseUrl = isApp ? BYTEDANCE_BASE_URL : ApiPath.ByteDance;
+      baseUrl = isApp ? VOLCENGINE_BASE_URL : ApiPath.Volcengine;
     }
 
     if (baseUrl.endsWith("/")) {
       baseUrl = baseUrl.slice(0, baseUrl.length - 1);
     }
-    if (!baseUrl.startsWith("http") && !baseUrl.startsWith(ApiPath.ByteDance)) {
+    if (
+      !baseUrl.startsWith("http") &&
+      !baseUrl.startsWith(ApiPath.Volcengine)
+    ) {
       baseUrl = "https://" + baseUrl;
     }
 
@@ -103,7 +106,7 @@ export class DoubaoApi implements LLMApi {
     };
 
     const shouldStream = !!options.config.stream;
-    const requestPayload: RequestPayloadForByteDance = {
+    const requestPayload: RequestPayloadForVolcengine = {
       messages,
       stream: shouldStream,
       model: modelConfig.model,
@@ -117,7 +120,7 @@ export class DoubaoApi implements LLMApi {
     options.onController?.(controller);
 
     try {
-      const chatPath = this.path(ByteDance.ChatPath);
+      const chatPath = this.path(Volcengine.ChatPath);
       const chatPayload = {
         method: "POST",
         body: JSON.stringify(requestPayload),
@@ -210,7 +213,7 @@ export class DoubaoApi implements LLMApi {
           },
           // processToolMessage, include tool_calls message and tool call results
           (
-            requestPayload: RequestPayloadForByteDance,
+            requestPayload: RequestPayloadForVolcengine,
             toolCallMessage: any,
             toolCallResult: any[],
           ) => {
@@ -247,4 +250,4 @@ export class DoubaoApi implements LLMApi {
     return [];
   }
 }
-export { ByteDance };
+export { Volcengine };

@@ -431,11 +431,11 @@ const ko: PartialLocaleType = {
           SubTitle: "지원되지 않음, .env에서 설정",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "엔드포인트 키",
-          SubTitle: "커스텀 ByteDance API 키 사용",
-          Placeholder: "ByteDance API 키",
+          SubTitle: "커스텀 volcengine API 키 사용",
+          Placeholder: "volcengine API 키",
         },
         Endpoint: {
           Title: "엔드포인트 주소",

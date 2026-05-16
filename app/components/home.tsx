@@ -28,7 +28,7 @@ import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { getRouterClientApi } from "../client/api";
-import { useAccessStore } from "../store";
+import { useAccessStore, useMaskProviderModelsStore } from "../store";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
 import {
@@ -332,11 +332,18 @@ function Screen() {
 
 export function useLoadData() {
   const mergeModels = useAppConfig((state) => state.mergeModels);
+  const setMaskProviderModels = useMaskProviderModelsStore(
+    (state) => state.setModels,
+  );
   const loadModels = useCallback(async () => {
     const api = getRouterClientApi();
-    const models = await api.llm.models();
+    const [models, providerModels] = await Promise.all([
+      api.llm.models(),
+      api.llm.providerModels?.() ?? Promise.resolve([]),
+    ]);
     mergeModels(models);
-  }, [mergeModels]);
+    setMaskProviderModels(providerModels);
+  }, [mergeModels, setMaskProviderModels]);
 
   useEffect(() => {
     loadModels().catch((error) => {
@@ -361,12 +368,13 @@ export function useLoadData() {
 }
 
 function useUcanAuthState() {
-  const [state, setState] = useState<{ authorized: boolean; checking: boolean }>(
-    {
-      authorized: false,
-      checking: true,
-    },
-  );
+  const [state, setState] = useState<{
+    authorized: boolean;
+    checking: boolean;
+  }>({
+    authorized: false,
+    checking: true,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -413,9 +421,7 @@ function AuthenticatedBootstrap() {
       try {
         const enabled = await isMcpEnabled();
         if (enabled) {
-          console.log("[MCP] initializing...");
           await initializeMcpSystem();
-          console.log("[MCP] initialized");
         }
       } catch (err) {
         console.error("[MCP] failed to initialize:", err);

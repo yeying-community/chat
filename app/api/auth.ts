@@ -76,8 +76,8 @@ export function auth(req: NextRequest, modelProvider: ModelProvider) {
       case ModelProvider.Claude:
         systemApiKey = serverConfig.anthropicApiKey;
         break;
-      case ModelProvider.Doubao:
-        systemApiKey = serverConfig.bytedanceApiKey;
+      case ModelProvider.Volcengine:
+        systemApiKey = serverConfig.volcengineApiKey;
         break;
       case ModelProvider.Ernie:
         systemApiKey = serverConfig.baiduApiKey;

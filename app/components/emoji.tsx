@@ -18,7 +18,7 @@ import BotIconQwen from "../icons/llm-icons/qwen.svg";
 import BotIconWenxin from "../icons/llm-icons/wenxin.svg";
 import BotIconGrok from "../icons/llm-icons/grok.svg";
 import BotIconHunyuan from "../icons/llm-icons/hunyuan.svg";
-import BotIconDoubao from "../icons/llm-icons/doubao.svg";
+import BotIconVolcengine from "../icons/llm-icons/volcengine.svg";
 import BotIconChatglm from "../icons/llm-icons/chatglm.svg";
 import React, { useMemo, useState } from "react";
 import { notifyError, notifySuccess } from "../plugins/show_window";
@@ -124,7 +124,7 @@ export function Avatar(props: {
     } else if (modelName.startsWith("hunyuan")) {
       LlmIcon = BotIconHunyuan;
     } else if (modelName.startsWith("doubao") || modelName.startsWith("ep-")) {
-      LlmIcon = BotIconDoubao;
+      LlmIcon = BotIconVolcengine;
     } else if (
       modelName.includes("glm") ||
       modelName.startsWith("cogview-") ||

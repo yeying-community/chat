@@ -403,11 +403,11 @@ const ru: PartialLocaleType = {
             "Не поддерживает пользовательскую настройку, перейдите в .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Ключ интерфейса",
-          SubTitle: "Использовать пользовательский ByteDance API-ключ",
-          Placeholder: "ByteDance API-ключ",
+          SubTitle: "Использовать пользовательский volcengine API-ключ",
+          Placeholder: "volcengine API-ключ",
         },
         Endpoint: {
           Title: "Адрес интерфейса",

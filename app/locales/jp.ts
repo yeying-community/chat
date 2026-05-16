@@ -397,11 +397,11 @@ const jp: PartialLocaleType = {
           SubTitle: "カスタムはサポートしていません、.env設定に進んでください",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "APIキー",
-          SubTitle: "カスタムByteDance APIキーを使用",
-          Placeholder: "ByteDance APIキー",
+          SubTitle: "カスタムvolcengine APIキーを使用",
+          Placeholder: "volcengine APIキー",
         },
         Endpoint: {
           Title: "エンドポイント",

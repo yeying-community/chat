@@ -8,7 +8,7 @@ Chat（UCAN 定制版）
 
 # 功能特性
 
-- 与多家大模型聊天（OpenAI/Gemini/Anthropic 等）
+- 与多家大模型聊天（OpenAI/Gemini/Anthropic/Volcengine 等）
 - UCAN + 钱包登录（可选）
 - Router/WebDAV 代理转发
 
@@ -52,6 +52,21 @@ npm run dev
 
 默认端口：`3020`
 
+## Volcengine 配置
+
+如果需要启用 Volcengine 直连或服务端默认 Key，可在运行环境中配置：
+
+```bash
+VOLCENGINE_URL=https://ark.cn-beijing.volces.com
+VOLCENGINE_API_KEY=<your-volcengine-api-key>
+```
+
+说明：
+
+- `VOLCENGINE_URL` 可省略，默认会使用内置 Volcengine 基础地址。
+- `VOLCENGINE_API_KEY` 主要用于服务端 `/api/volcengine` 代理链路。
+- 当前代码标准命名已经统一为 `Volcengine / volcengine`，旧的 `BYTEDANCE_*` 不再是当前配置名。
+
 ## 测试机器启动
 
 ```bash
@@ -69,6 +84,8 @@ bash scripts/start-all.sh
    - `UCAN_LOGIN_FORCE_MODE`：登录路径强制模式（`auto`/`wallet`/`central`，默认 `auto`）
    - `WEBDAV_BACKEND_BASE_URL`：WebDAV 后端基础地址（**不设会导致 build 失败**，不含路径）
    - `WEBDAV_BACKEND_PREFIX`：WebDAV 路径前缀（默认 `/dav`，可选修改）
+   - `VOLCENGINE_URL`：Volcengine 基础地址（可选）
+   - `VOLCENGINE_API_KEY`：Volcengine API Key（按需配置）
 
 ## 部署步骤（standalone）
 

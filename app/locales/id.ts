@@ -401,11 +401,11 @@ const id: PartialLocaleType = {
           SubTitle: "Tidak mendukung kustom, pergi ke .env untuk konfigurasi",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Kunci Antarmuka",
-          SubTitle: "Gunakan ByteDance API Key kustom",
-          Placeholder: "ByteDance API Key",
+          SubTitle: "Gunakan volcengine API Key kustom",
+          Placeholder: "volcengine API Key",
         },
         Endpoint: {
           Title: "Alamat Antarmuka",

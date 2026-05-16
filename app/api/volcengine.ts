@@ -1,6 +1,6 @@
 import { getServerSideConfig } from "@/app/config/server";
 import {
-  BYTEDANCE_BASE_URL,
+  VOLCENGINE_BASE_URL,
   ApiPath,
   ModelProvider,
   ServiceProvider,
@@ -16,13 +16,13 @@ export async function handle(
   req: NextRequest,
   { params }: { params: { path: string[] } },
 ) {
-  console.log("[ByteDance Route] params ", params);
+  console.log("[volcengine Route] params ", params);
 
   if (req.method === "OPTIONS") {
     return NextResponse.json({ body: "OK" }, { status: 200 });
   }
 
-  const authResult = auth(req, ModelProvider.Doubao);
+  const authResult = auth(req, ModelProvider.Volcengine);
   if (authResult.error) {
     return NextResponse.json(authResult, {
       status: 401,
@@ -33,7 +33,7 @@ export async function handle(
     const response = await request(req);
     return response;
   } catch (e) {
-    console.error("[ByteDance] ", e);
+    console.error("[volcengine] ", e);
     return NextResponse.json(prettyObject(e));
   }
 }
@@ -41,9 +41,9 @@ export async function handle(
 async function request(req: NextRequest) {
   const controller = new AbortController();
 
-  let path = `${req.nextUrl.pathname}`.replaceAll(ApiPath.ByteDance, "");
+  let path = `${req.nextUrl.pathname}`.replaceAll(ApiPath.Volcengine, "");
 
-  let baseUrl = serverConfig.bytedanceUrl || BYTEDANCE_BASE_URL;
+  let baseUrl = serverConfig.volcengineUrl || VOLCENGINE_BASE_URL;
 
   if (!baseUrl.startsWith("http")) {
     baseUrl = `https://${baseUrl}`;
@@ -91,7 +91,7 @@ async function request(req: NextRequest) {
         isModelNotavailableInServer(
           serverConfig.customModels,
           jsonBody?.model as string,
-          ServiceProvider.ByteDance as string,
+          ServiceProvider.Volcengine as string,
         )
       ) {
         return NextResponse.json(
@@ -105,7 +105,7 @@ async function request(req: NextRequest) {
         );
       }
     } catch (e) {
-      console.error(`[ByteDance] filter`, e);
+      console.error(`[volcengine] filter`, e);
     }
   }
 

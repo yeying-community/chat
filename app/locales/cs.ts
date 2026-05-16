@@ -400,11 +400,11 @@ const cs: PartialLocaleType = {
             "Nepodporuje vlastní nastavení, přejděte na .env konfiguraci",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
           Title: "Rozhraní klíč",
-          SubTitle: "Použijte vlastní ByteDance API Key",
-          Placeholder: "ByteDance API Key",
+          SubTitle: "Použijte vlastní volcengine API Key",
+          Placeholder: "volcengine API Key",
         },
         Endpoint: {
           Title: "Adresa rozhraní",

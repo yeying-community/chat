@@ -1,5 +1,6 @@
 import { BUILTIN_MASKS, BuiltinMask } from "../masks";
 import { getLang, Lang } from "../locales";
+import { ModelCandidate } from "../client/api";
 import { DEFAULT_TOPIC, ChatMessage } from "./chat";
 import { ModelConfig, useAppConfig } from "./config";
 import { StoreKey } from "../constant";
@@ -18,6 +19,7 @@ export type Mask = {
   context: ChatMessage[];
   syncGlobalConfig?: boolean;
   modelConfig: ModelConfig;
+  candidateModels?: ModelCandidate[];
   lang: Lang;
   builtin: boolean;
   plugin?: string[];
@@ -43,6 +45,7 @@ export const createEmptyMask = () =>
     context: [],
     syncGlobalConfig: true, // use global config as default
     modelConfig: { ...useAppConfig.getState().modelConfig },
+    candidateModels: [],
     lang: getLang(),
     builtin: false,
     createdAt: Date.now(),

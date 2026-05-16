@@ -19,7 +19,7 @@ export const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/";
 export const BAIDU_BASE_URL = "https://aip.baidubce.com";
 export const BAIDU_OATUH_URL = `${BAIDU_BASE_URL}/oauth/2.0/token`;
 
-export const BYTEDANCE_BASE_URL = "https://ark.cn-beijing.volces.com";
+export const VOLCENGINE_BASE_URL = "https://ark.cn-beijing.volces.com";
 
 export const ALIBABA_BASE_URL = "https://dashscope.aliyuncs.com/api/";
 
@@ -64,7 +64,7 @@ export enum ApiPath {
   Anthropic = "/api/anthropic",
   Google = "/api/google",
   Baidu = "/api/baidu",
-  ByteDance = "/api/bytedance",
+  Volcengine = "/api/volcengine",
   Alibaba = "/api/alibaba",
   Tencent = "/api/tencent",
   Moonshot = "/api/moonshot",
@@ -124,7 +124,7 @@ export enum ServiceProvider {
   Google = "Google",
   Anthropic = "Anthropic",
   Baidu = "Baidu",
-  ByteDance = "ByteDance",
+  Volcengine = "volcengine",
   Alibaba = "Alibaba",
   Tencent = "Tencent",
   Moonshot = "Moonshot",
@@ -153,7 +153,7 @@ export enum ModelProvider {
   GeminiPro = "GeminiPro",
   Claude = "Claude",
   Ernie = "Ernie",
-  Doubao = "Doubao",
+  Volcengine = "Volcengine",
   Qwen = "Qwen",
   Hunyuan = "Hunyuan",
   Moonshot = "Moonshot",
@@ -185,7 +185,7 @@ export const OpenaiPath = {
   SubsPath: "dashboard/billing/subscription",
   ResponsePath: "v1/responses",
   ListModelPath: "v1/models",
-  ProviderModelCatalogPath: "api/v1/public/providers/models",
+  ProviderModelsPath: "api/v1/public/providers/models",
 };
 
 // normalize openai model aliases
@@ -234,7 +234,7 @@ export const Baidu = {
   },
 };
 
-export const ByteDance = {
+export const Volcengine = {
   ExampleEndpoint: "https://ark.cn-beijing.volces.com/api/",
   ChatPath: "api/v3/chat/completions",
 };
@@ -513,7 +513,7 @@ export const VISION_MODEL_REGEXES = [
 
 export const EXCLUDE_VISION_MODEL_REGEXES = [/claude-3-5-haiku-20241022/];
 
-// Model catalog is loaded from the configured router endpoint at runtime.
+// Provider models are loaded from the configured router endpoint at runtime.
 export const DEFAULT_MODELS = [];
 
 export const CHAT_PAGE_SIZE = 15;

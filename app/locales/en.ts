@@ -420,11 +420,11 @@ const en: LocaleType = {
           SubTitle: "not supported, configure in .env",
         },
       },
-      ByteDance: {
+      Volcengine: {
         ApiKey: {
-          Title: "ByteDance API Key",
-          SubTitle: "Use a custom ByteDance API Key",
-          Placeholder: "ByteDance API Key",
+          Title: "volcengine API Key",
+          SubTitle: "Use a custom volcengine API Key",
+          Placeholder: "volcengine API Key",
         },
         Endpoint: {
           Title: "Endpoint Address",

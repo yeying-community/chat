@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { ServiceProvider } from "@/app/constant";
+import { LLMModel } from "../client/api";
 import { ModalConfigValidator, ModelConfig } from "../store";
 
 import Locale from "../locales";
@@ -13,12 +14,15 @@ import { getModelProvider, normalizeProviderName } from "../utils/model";
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
+  modelOptions?: LLMModel[];
+  strictModelSelection?: boolean;
 }) {
   const allModels = useAllModels();
-  const hasModels = allModels.length > 0;
+  const baseModelOptions = props.modelOptions ?? allModels;
+  const hasModels = baseModelOptions.length > 0;
   const availableModels = useMemo(
-    () => allModels.filter((v: { available: any }) => v.available),
-    [allModels],
+    () => baseModelOptions.filter((v: { available: any }) => v.available),
+    [baseModelOptions],
   );
   const groupModels = useMemo(
     () => groupBy(availableModels, "provider.providerName"),
@@ -37,52 +41,19 @@ export function ModelConfigList(props: {
   const fallbackMatch = availableModels.find(
     (m) => m.name === props.modelConfig.model,
   );
-  const value = hasModels
-    ? exactMatch
+  const value = props.strictModelSelection
+    ? hasModels
       ? configuredValue
-      : fallbackMatch
-        ? `${fallbackMatch.name}@${fallbackMatch.provider?.providerName}`
-        : availableModels[0]
-          ? `${availableModels[0].name}@${availableModels[0].provider?.providerName}`
-          : ""
-    : "";
-
-  useEffect(() => {
-    if (!hasModels || exactMatch) return;
-    console.warn("[ModelConfig] value mismatch, fallback option selected", {
-      configuredModel: props.modelConfig.model,
-      configuredProviderName: props.modelConfig.providerName,
-      configuredValue,
-      resolvedValue: value,
-      availableModelCount: availableModels.length,
-      fallbackByModel: fallbackMatch?.name ?? null,
-      fallbackProvider: fallbackMatch?.provider?.providerName ?? null,
-    });
-  }, [
-    hasModels,
-    exactMatch,
-    configuredValue,
-    value,
-    availableModels.length,
-    fallbackMatch?.name,
-    fallbackMatch?.provider?.providerName,
-    props.modelConfig.model,
-    props.modelConfig.providerName,
-  ]);
-
-  useEffect(() => {
-    console.debug("[ModelConfig] current config", {
-      model: props.modelConfig.model,
-      providerName: props.modelConfig.providerName,
-      selectValue: value,
-      hasExactMatch: exactMatch,
-    });
-  }, [
-    props.modelConfig.model,
-    props.modelConfig.providerName,
-    value,
-    exactMatch,
-  ]);
+      : ""
+    : hasModels
+      ? exactMatch
+        ? configuredValue
+        : fallbackMatch
+          ? `${fallbackMatch.name}@${fallbackMatch.provider?.providerName}`
+          : availableModels[0]
+            ? `${availableModels[0].name}@${availableModels[0].provider?.providerName}`
+            : ""
+      : "";
   const compressModelValue = `${props.modelConfig.compressModel}@${props.modelConfig?.compressProviderName}`;
 
   return (
@@ -105,6 +76,15 @@ export function ModelConfigList(props: {
           {!hasModels ? (
             <option value="" disabled>
               {Locale.SearchChat.Page.Loading}
+            </option>
+          ) : null}
+          {hasModels &&
+          props.strictModelSelection &&
+          configuredValue &&
+          !exactMatch ? (
+            <option value={configuredValue}>
+              {props.modelConfig.model}
+              {configuredProviderName ? ` (${configuredProviderName})` : ""}
             </option>
           ) : null}
           {Object.keys(groupModels).map((providerName, index) => (
