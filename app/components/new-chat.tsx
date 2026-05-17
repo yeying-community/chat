@@ -6,6 +6,7 @@ import styles from "./new-chat.module.scss";
 import LeftIcon from "../icons/left.svg";
 import LightningIcon from "../icons/lightning.svg";
 import EyeIcon from "../icons/eye.svg";
+import ImageIcon from "../icons/image.svg";
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { Mask, useMaskStore } from "../store/mask";
@@ -86,6 +87,14 @@ export function NewChat() {
     }, 10);
   };
 
+  const startImageStudio = () => {
+    setTimeout(() => {
+      if (chatStore.createStudioSession("image") !== false) {
+        navigate(Path.Chat);
+      }
+    }, 10);
+  };
+
   useCommand({
     mask: (id) => {
       try {
@@ -148,6 +157,14 @@ export function NewChat() {
           onClick={() => startChat()}
           icon={<LightningIcon />}
           type="primary"
+          shadow
+          className={styles["skip"]}
+        />
+        <IconButton
+          text={"图像工作空间"}
+          onClick={startImageStudio}
+          icon={<ImageIcon />}
+          bordered
           shadow
           className={styles["skip"]}
         />
