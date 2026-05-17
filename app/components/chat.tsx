@@ -134,6 +134,7 @@ import {
 import { RealtimeChat } from "@/app/components/realtime-chat";
 import clsx from "clsx";
 import { getAvailableClientsCount, isMcpEnabled } from "../mcp/actions";
+import { ImageStudio } from "./image-studio";
 
 const localStorage = safeLocalStorage();
 
@@ -2246,5 +2247,9 @@ function ChatView() {
 export function Chat() {
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  if (session.type === "studio" && session.studio?.kind === "image") {
+    return <ImageStudio key={session.id} session={session} />;
+  }
+
   return <ChatView key={session.id}></ChatView>;
 }

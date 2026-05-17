@@ -189,6 +189,7 @@ export const SupportedTextEndpoint = {
 export const SupportedEndpoint = {
   ...SupportedTextEndpoint,
   ImagesGenerations: "/v1/images/generations",
+  ImagesEdits: "/v1/images/edits",
 } as const;
 
 export function normalizeModelEndpointPath(
@@ -262,6 +263,14 @@ export function supportsImageGenerationEndpoint(
 ): boolean {
   return normalizeSupportedEndpoints(endpoints).includes(
     SupportedEndpoint.ImagesGenerations,
+  );
+}
+
+export function supportsImageEditEndpoint(
+  endpoints?: readonly string[],
+): boolean {
+  return normalizeSupportedEndpoints(endpoints).includes(
+    SupportedEndpoint.ImagesEdits,
   );
 }
 

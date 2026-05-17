@@ -29,6 +29,7 @@ import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { getRouterClientApi } from "../client/api";
 import { useAccessStore, useMaskProviderModelsStore } from "../store";
+import { useChatStore } from "../store/chat";
 import clsx from "clsx";
 import { initializeMcpSystem, isMcpEnabled } from "../mcp/actions";
 import {
@@ -207,6 +208,9 @@ export function WindowContent(props: { children: React.ReactNode }) {
 
 function Screen() {
   const config = useAppConfig();
+  const currentSessionType = useChatStore(
+    (state) => state.currentSession().type,
+  );
   const location = useLocation();
   const navigate = useNavigate();
   const { authorized: isAuthorized, checking: isCheckingAuth } =
@@ -273,6 +277,9 @@ function Screen() {
 
   const shouldTightBorder =
     getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
+  const shouldUseWorkspaceShell =
+    (location.pathname === Path.Chat || location.pathname === Path.Home) &&
+    currentSessionType === "studio";
 
   useEffect(() => {
     loadAsyncGoogleFont();
@@ -322,6 +329,7 @@ function Screen() {
     <div
       className={clsx(styles.container, {
         [styles["tight-container"]]: shouldTightBorder,
+        [styles["workspace-container"]]: shouldUseWorkspaceShell,
         [styles["rtl-screen"]]: getLang() === "ar",
       })}
     >

@@ -98,9 +98,16 @@ export interface ChatStat {
   charCount: number;
 }
 
+export type SessionType = "chat" | "studio";
+export type StudioKind = "image";
+
 export interface ChatSession {
   id: string;
   topic: string;
+  type?: SessionType;
+  studio?: {
+    kind: StudioKind;
+  };
 
   memoryPrompt: string;
   messages: ChatMessage[];
@@ -122,6 +129,7 @@ function createEmptySession(): ChatSession {
   return {
     id: nanoid(),
     topic: DEFAULT_TOPIC,
+    type: "chat",
     memoryPrompt: "",
     messages: [],
     stat: {
@@ -491,6 +499,20 @@ export const useChatStore = createPersistStore(
             showToast("面具默认模型当前不可用，请先选择一个可用模型");
           }
         }
+
+        set((state) => ({
+          currentSessionIndex: 0,
+          sessions: [session].concat(state.sessions),
+        }));
+
+        return true;
+      },
+
+      createStudioSession(kind: StudioKind = "image") {
+        const session = createEmptySession();
+        session.type = "studio";
+        session.studio = { kind };
+        session.topic = kind === "image" ? "图像工作空间" : DEFAULT_TOPIC;
 
         set((state) => ({
           currentSessionIndex: 0,
@@ -1211,6 +1233,12 @@ export const useChatStore = createPersistStore(
           }
         });
       }
+
+      newState.sessions.forEach((s) => {
+        if (!s.type) {
+          s.type = "chat";
+        }
+      });
 
       return newState as any;
     },
