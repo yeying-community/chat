@@ -171,6 +171,8 @@ export interface PresetServer {
         description?: string;
         required?: boolean;
         minItems?: number;
+        itemLabel?: string;
+        addButtonText?: string;
       }
     >;
   };

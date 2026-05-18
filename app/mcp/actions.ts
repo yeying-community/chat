@@ -20,6 +20,7 @@ import { getServerSideConfig } from "../config/server";
 
 const logger = new MCPClientLogger("MCP Actions");
 const CONFIG_PATH = path.join(process.cwd(), "app/mcp/mcp_config.json");
+const DEFAULT_CONFIG_CONTENT = JSON.stringify(DEFAULT_MCP_CONFIG, null, 2);
 
 const clientsMap = new Map<string, McpClientData>();
 
@@ -357,6 +358,12 @@ export async function getMcpConfigFromFile(): Promise<McpConfigData> {
     const configStr = await fs.readFile(CONFIG_PATH, "utf-8");
     return JSON.parse(configStr);
   } catch (error) {
+    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+      await updateMcpConfig(DEFAULT_MCP_CONFIG);
+      logger.info(`Created default MCP config at ${CONFIG_PATH}`);
+      return DEFAULT_MCP_CONFIG;
+    }
+
     logger.error(`Failed to load MCP config, using default config: ${error}`);
     return DEFAULT_MCP_CONFIG;
   }
@@ -367,7 +374,11 @@ async function updateMcpConfig(config: McpConfigData): Promise<void> {
   try {
     // 确保目录存在
     await fs.mkdir(path.dirname(CONFIG_PATH), { recursive: true });
-    await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
+    const content =
+      config === DEFAULT_MCP_CONFIG
+        ? DEFAULT_CONFIG_CONTENT
+        : JSON.stringify(config, null, 2);
+    await fs.writeFile(CONFIG_PATH, content);
   } catch (error) {
     throw error;
   }
