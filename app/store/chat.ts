@@ -101,6 +101,7 @@ export interface ChatStat {
 export interface ChatSession {
   id: string;
   topic: string;
+  type?: "chat";
 
   memoryPrompt: string;
   messages: ChatMessage[];
@@ -122,6 +123,7 @@ function createEmptySession(): ChatSession {
   return {
     id: nanoid(),
     topic: DEFAULT_TOPIC,
+    type: "chat",
     memoryPrompt: "",
     messages: [],
     stat: {
@@ -1128,7 +1130,7 @@ export const useChatStore = createPersistStore(
   },
   {
     name: StoreKey.Chat,
-    version: 3.6,
+    version: 3.7,
     migrate(persistedState, version) {
       const state = persistedState as any;
       const newState = JSON.parse(
@@ -1211,6 +1213,19 @@ export const useChatStore = createPersistStore(
           }
         });
       }
+      if (version < 3.7) {
+        newState.sessions.forEach((s) => {
+          s.type = "chat";
+          delete (s as { studio?: unknown }).studio;
+        });
+      }
+
+      newState.sessions.forEach((s) => {
+        if (s.type !== "chat") {
+          s.type = "chat";
+        }
+        delete (s as { studio?: unknown }).studio;
+      });
 
       return newState as any;
     },

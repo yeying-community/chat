@@ -243,6 +243,17 @@ export function SideBarBody(props: {
   );
 }
 
+export function SideBarSection(props: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={clsx(styles["sidebar-section"], props.className)}>
+      {props.children}
+    </div>
+  );
+}
+
 export function SideBarTail(props: {
   primaryAction?: React.ReactNode;
   secondaryAction?: React.ReactNode;
