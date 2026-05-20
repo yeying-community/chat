@@ -20,7 +20,8 @@ import {
   AI302_BASE_URL,
 } from "../constant";
 import { getHeaders } from "../client/api";
-import { getClientConfig } from "../config/client";
+import { getClientConfig, setClientConfig } from "../config/client";
+import type { RuntimePublicConfig } from "../config/runtime";
 import { createPersistStore } from "../utils/store";
 import { ensure } from "../utils/clone";
 import { DEFAULT_CONFIG } from "./config";
@@ -30,16 +31,17 @@ import { isCentralUcanAuthorized } from "../plugins/central-ucan";
 
 let fetchState = 0; // 0 not fetch, 1 fetching, 2 done
 
-const isApp = getClientConfig()?.buildMode === "export";
-
 // Default router endpoint for OpenAI-compatible requests
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
-const ROUTER_BASE_URL =
-  getClientConfig()?.routerBackendUrl?.trim() || "https://llm.yeying.pub";
-const DEFAULT_OPENAI_URL = normalizeUrl(ROUTER_BASE_URL);
+
+const isApp = () => getClientConfig()?.buildMode === "export";
+const getDefaultOpenAIUrl = () =>
+  normalizeUrl(
+    getClientConfig()?.routerBackendUrl?.trim() || "https://llm.yeying.pub",
+  );
 const LEGACY_OPENAI_URL = "https://shengnw.win";
 const ROUTER_HOST = "llm.yeying.pub";
-const ROUTER_BACKEND_HOST = (() => {
+const getRouterBackendHost = () => {
   try {
     const url = getClientConfig()?.routerBackendUrl;
     if (!url) return "";
@@ -47,7 +49,7 @@ const ROUTER_BACKEND_HOST = (() => {
   } catch {
     return "";
   }
-})();
+};
 
 const getRouterBackendUrl = () =>
   normalizeUrl(
@@ -81,134 +83,111 @@ const isRouterEndpoint = (url: string | undefined): boolean => {
     const parsed = new URL(url, base);
     return (
       parsed.host.includes(ROUTER_HOST) ||
-      (ROUTER_BACKEND_HOST !== "" && parsed.host === ROUTER_BACKEND_HOST)
+      (getRouterBackendHost() !== "" && parsed.host === getRouterBackendHost())
     );
   } catch {
     return false;
   }
 };
 
-const DEFAULT_GOOGLE_URL = isApp ? GEMINI_BASE_URL : ApiPath.Google;
+const createDefaultAccessState = () => {
+  const isExportApp = isApp();
+  const defaultOpenAIUrl = getDefaultOpenAIUrl();
 
-const DEFAULT_ANTHROPIC_URL = isApp ? ANTHROPIC_BASE_URL : ApiPath.Anthropic;
+  return {
+    accessCode: "",
+    useCustomConfig: true,
 
-const DEFAULT_BAIDU_URL = isApp ? BAIDU_BASE_URL : ApiPath.Baidu;
+    provider: ServiceProvider.OpenAI,
 
-const DEFAULT_VOLCENGINE_URL = isApp ? VOLCENGINE_BASE_URL : ApiPath.Volcengine;
+    // openai
+    openaiUrl: defaultOpenAIUrl,
+    openaiApiKey: "",
+    routerBackendUrlSnapshot: defaultOpenAIUrl,
 
-const DEFAULT_ALIBABA_URL = isApp ? ALIBABA_BASE_URL : ApiPath.Alibaba;
+    // azure
+    azureUrl: "",
+    azureApiKey: "",
+    azureApiVersion: "2023-08-01-preview",
 
-const DEFAULT_TENCENT_URL = isApp ? TENCENT_BASE_URL : ApiPath.Tencent;
+    // google ai studio
+    googleUrl: isExportApp ? GEMINI_BASE_URL : ApiPath.Google,
+    googleApiKey: "",
+    googleApiVersion: "v1",
+    googleSafetySettings: GoogleSafetySettingsThreshold.BLOCK_ONLY_HIGH,
 
-const DEFAULT_MOONSHOT_URL = isApp ? MOONSHOT_BASE_URL : ApiPath.Moonshot;
+    // anthropic
+    anthropicUrl: isExportApp ? ANTHROPIC_BASE_URL : ApiPath.Anthropic,
+    anthropicApiKey: "",
+    anthropicApiVersion: "2023-06-01",
 
-const DEFAULT_STABILITY_URL = isApp ? STABILITY_BASE_URL : ApiPath.Stability;
+    // baidu
+    baiduUrl: isExportApp ? BAIDU_BASE_URL : ApiPath.Baidu,
+    baiduApiKey: "",
+    baiduSecretKey: "",
 
-const DEFAULT_IFLYTEK_URL = isApp ? IFLYTEK_BASE_URL : ApiPath.Iflytek;
+    // volcengine
+    volcengineUrl: isExportApp ? VOLCENGINE_BASE_URL : ApiPath.Volcengine,
+    volcengineApiKey: "",
 
-const DEFAULT_DEEPSEEK_URL = isApp ? DEEPSEEK_BASE_URL : ApiPath.DeepSeek;
+    // alibaba
+    alibabaUrl: isExportApp ? ALIBABA_BASE_URL : ApiPath.Alibaba,
+    alibabaApiKey: "",
 
-const DEFAULT_XAI_URL = isApp ? XAI_BASE_URL : ApiPath.XAI;
+    // moonshot
+    moonshotUrl: isExportApp ? MOONSHOT_BASE_URL : ApiPath.Moonshot,
+    moonshotApiKey: "",
 
-const DEFAULT_CHATGLM_URL = isApp ? CHATGLM_BASE_URL : ApiPath.ChatGLM;
+    //stability
+    stabilityUrl: isExportApp ? STABILITY_BASE_URL : ApiPath.Stability,
+    stabilityApiKey: "",
 
-const DEFAULT_SILICONFLOW_URL = isApp
-  ? SILICONFLOW_BASE_URL
-  : ApiPath.SiliconFlow;
+    // tencent
+    tencentUrl: isExportApp ? TENCENT_BASE_URL : ApiPath.Tencent,
+    tencentSecretKey: "",
+    tencentSecretId: "",
 
-const DEFAULT_AI302_URL = isApp ? AI302_BASE_URL : ApiPath["302.AI"];
+    // iflytek
+    iflytekUrl: isExportApp ? IFLYTEK_BASE_URL : ApiPath.Iflytek,
+    iflytekApiKey: "",
+    iflytekApiSecret: "",
 
-const DEFAULT_ACCESS_STATE = {
-  accessCode: "",
-  useCustomConfig: true,
+    // deepseek
+    deepseekUrl: isExportApp ? DEEPSEEK_BASE_URL : ApiPath.DeepSeek,
+    deepseekApiKey: "",
 
-  provider: ServiceProvider.OpenAI,
+    // xai
+    xaiUrl: isExportApp ? XAI_BASE_URL : ApiPath.XAI,
+    xaiApiKey: "",
 
-  // openai
-  openaiUrl: DEFAULT_OPENAI_URL,
-  openaiApiKey: "",
-  routerBackendUrlSnapshot: DEFAULT_OPENAI_URL,
+    // chatglm
+    chatglmUrl: isExportApp ? CHATGLM_BASE_URL : ApiPath.ChatGLM,
+    chatglmApiKey: "",
 
-  // azure
-  azureUrl: "",
-  azureApiKey: "",
-  azureApiVersion: "2023-08-01-preview",
+    // siliconflow
+    siliconflowUrl: isExportApp ? SILICONFLOW_BASE_URL : ApiPath.SiliconFlow,
+    siliconflowApiKey: "",
 
-  // google ai studio
-  googleUrl: DEFAULT_GOOGLE_URL,
-  googleApiKey: "",
-  googleApiVersion: "v1",
-  googleSafetySettings: GoogleSafetySettingsThreshold.BLOCK_ONLY_HIGH,
+    // 302.AI
+    ai302Url: isExportApp ? AI302_BASE_URL : ApiPath["302.AI"],
+    ai302ApiKey: "",
 
-  // anthropic
-  anthropicUrl: DEFAULT_ANTHROPIC_URL,
-  anthropicApiKey: "",
-  anthropicApiVersion: "2023-06-01",
+    // server config
+    needCode: true,
+    hideUserApiKey: false,
+    hideBalanceQuery: false,
+    disableGPT4: false,
+    disableFastLink: false,
+    customModels: "",
+    defaultModel: "",
+    visionModels: "",
 
-  // baidu
-  baiduUrl: DEFAULT_BAIDU_URL,
-  baiduApiKey: "",
-  baiduSecretKey: "",
-
-  // volcengine
-  volcengineUrl: DEFAULT_VOLCENGINE_URL,
-  volcengineApiKey: "",
-
-  // alibaba
-  alibabaUrl: DEFAULT_ALIBABA_URL,
-  alibabaApiKey: "",
-
-  // moonshot
-  moonshotUrl: DEFAULT_MOONSHOT_URL,
-  moonshotApiKey: "",
-
-  //stability
-  stabilityUrl: DEFAULT_STABILITY_URL,
-  stabilityApiKey: "",
-
-  // tencent
-  tencentUrl: DEFAULT_TENCENT_URL,
-  tencentSecretKey: "",
-  tencentSecretId: "",
-
-  // iflytek
-  iflytekUrl: DEFAULT_IFLYTEK_URL,
-  iflytekApiKey: "",
-  iflytekApiSecret: "",
-
-  // deepseek
-  deepseekUrl: DEFAULT_DEEPSEEK_URL,
-  deepseekApiKey: "",
-
-  // xai
-  xaiUrl: DEFAULT_XAI_URL,
-  xaiApiKey: "",
-
-  // chatglm
-  chatglmUrl: DEFAULT_CHATGLM_URL,
-  chatglmApiKey: "",
-
-  // siliconflow
-  siliconflowUrl: DEFAULT_SILICONFLOW_URL,
-  siliconflowApiKey: "",
-
-  // 302.AI
-  ai302Url: DEFAULT_AI302_URL,
-  ai302ApiKey: "",
-
-  // server config
-  needCode: true,
-  hideUserApiKey: false,
-  hideBalanceQuery: false,
-  disableGPT4: false,
-  disableFastLink: false,
-  customModels: "",
-  defaultModel: "",
-  visionModels: "",
-
-  // tts config
-  edgeTTSVoiceName: "zh-CN-YunxiNeural",
+    // tts config
+    edgeTTSVoiceName: "zh-CN-YunxiNeural",
+  };
 };
+
+const DEFAULT_ACCESS_STATE = createDefaultAccessState();
 
 const syncRouterBackendUrlSnapshot = (state: typeof DEFAULT_ACCESS_STATE) => {
   const routerBackendUrl = getRouterBackendUrl();
@@ -347,15 +326,23 @@ export const useAccessStore = createPersistStore(
 
           return res;
         })
-        .then((res: DangerConfig) => {
+        .then((res: RuntimePublicConfig) => {
+          setClientConfig(res);
           console.log("[Config] got config from server", res);
           set((state) => ({
             ...state,
-            ...res,
+            needCode: res.needCode,
+            hideUserApiKey: res.hideUserApiKey,
+            hideBalanceQuery: res.hideBalanceQuery,
+            disableGPT4: res.disableGPT4,
+            disableFastLink: res.disableFastLink,
+            customModels: res.customModels,
+            defaultModel: res.defaultModel,
+            visionModels: res.visionModels,
             // keep router defaults if server config doesn't specify
             useCustomConfig: true,
             provider: ServiceProvider.OpenAI,
-            openaiUrl: state.openaiUrl || DEFAULT_OPENAI_URL,
+            openaiUrl: state.openaiUrl || getDefaultOpenAIUrl(),
           }));
         })
         .catch(() => {
@@ -391,7 +378,7 @@ export const useAccessStore = createPersistStore(
           state.openaiUrl === OPENAI_BASE_URL;
 
         if (!state.openaiUrl || shouldReplaceOpenAIUrl) {
-          state.openaiUrl = DEFAULT_OPENAI_URL;
+          state.openaiUrl = getDefaultOpenAIUrl();
         }
       }
 
@@ -399,7 +386,7 @@ export const useAccessStore = createPersistStore(
         const state = persistedState as typeof DEFAULT_ACCESS_STATE;
         state.useCustomConfig = true;
         state.provider = ServiceProvider.OpenAI;
-        state.openaiUrl = DEFAULT_OPENAI_URL;
+        state.openaiUrl = getDefaultOpenAIUrl();
       }
 
       if (version < 5) {
@@ -412,7 +399,7 @@ export const useAccessStore = createPersistStore(
           normalizedOpenAIUrl === normalizeUrl(LEGACY_OPENAI_URL);
 
         if (shouldReplaceOpenAIUrl) {
-          state.openaiUrl = DEFAULT_OPENAI_URL;
+          state.openaiUrl = getDefaultOpenAIUrl();
         }
       }
 

@@ -4,9 +4,8 @@ import { getServerSideConfig } from "./config/server";
 
 export const runtime = "nodejs";
 
-const serverConfig = getServerSideConfig();
-
 export default async function App() {
+  const serverConfig = getServerSideConfig();
   return (
     <>
       <Home />
