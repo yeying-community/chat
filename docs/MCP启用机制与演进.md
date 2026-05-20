@@ -116,7 +116,7 @@ flowchart LR
    将 `app/mcp/mcp_config.json` 迁移到专用数据目录（例如 `data/`），避免与源码目录耦合。
 
 4. **MCP 预设源可配置**  
-   当前预设列表来自固定远端地址（`https://nextchat.club/mcp/list`），建议增加可配置项/镜像能力。
+   当前预设列表应优先对齐官方 `modelcontextprotocol/servers` reference servers；若未来仍需要远端源，建议增加可配置项/镜像能力。
 
 5. **前后端边界收敛**  
    若未来继续推进“前端直连化”，需要明确 MCP 属于“必须服务端能力”模块，并从文档层面单独标注为例外链路。
