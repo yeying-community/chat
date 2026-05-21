@@ -88,7 +88,7 @@ type CachedInvocationToken = {
 
 let cachedRouterInvocationToken: CachedInvocationToken | null = null;
 
-const ROUTER_BACKEND_HOST = (() => {
+const getRouterBackendHost = () => {
   try {
     const url = getClientConfig()?.routerBackendUrl;
     if (!url) return "";
@@ -96,7 +96,7 @@ const ROUTER_BACKEND_HOST = (() => {
   } catch {
     return "";
   }
-})();
+};
 
 function isRouterUrl(url: string): boolean {
   try {
@@ -107,7 +107,7 @@ function isRouterUrl(url: string): boolean {
     const parsed = new URL(url, base);
     return (
       parsed.host.includes(ROUTER_HOST) ||
-      (ROUTER_BACKEND_HOST !== "" && parsed.host === ROUTER_BACKEND_HOST)
+      (getRouterBackendHost() !== "" && parsed.host === getRouterBackendHost())
     );
   } catch {
     return false;

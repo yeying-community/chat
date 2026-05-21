@@ -8,7 +8,7 @@ import { isDesktopAppRuntime } from "../tauri";
 import { adapter, getOperationId } from "../utils";
 import { useAccessStore } from "./access";
 
-const isApp = getClientConfig()?.isApp !== false;
+const isApp = () => getClientConfig()?.isApp !== false;
 
 export type Plugin = {
   id: string;
@@ -50,14 +50,14 @@ export const FunctionToolService = {
       plugin?.authType == "basic"
         ? `Basic ${plugin?.authToken}`
         : plugin?.authType == "bearer"
-        ? `Bearer ${plugin?.authToken}`
-        : plugin?.authToken;
+          ? `Bearer ${plugin?.authToken}`
+          : plugin?.authToken;
     const authLocation = plugin?.authLocation || "header";
     const definition = yaml.load(plugin.content) as any;
     const serverURL = definition?.servers?.[0]?.url;
-    const baseURL = !isApp ? "/api/proxy" : serverURL;
+    const baseURL = !isApp() ? "/api/proxy" : serverURL;
     const headers: Record<string, string | undefined> = {
-      "X-Base-URL": !isApp ? serverURL : undefined,
+      "X-Base-URL": !isApp() ? serverURL : undefined,
     };
     if (authLocation == "header") {
       headers[headerName] = tokenValue;

@@ -1,11 +1,12 @@
 import "./styles/globals.scss";
 import "./styles/markdown.scss";
 import "./styles/highlight.scss";
-import { getClientConfig } from "./config/client";
 import type { Metadata, Viewport } from "next";
+import { unstable_noStore as noStore } from "next/cache";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { getServerSideConfig } from "./config/server";
+import { getRuntimePublicConfig } from "./config/runtime";
 import { Toaster } from "sonner";
 export const metadata: Metadata = {
   title: "Chat",
@@ -31,12 +32,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (process.env.BUILD_MODE !== "export") {
+    noStore();
+  }
   const serverConfig = getServerSideConfig();
+  const clientConfig = getRuntimePublicConfig();
 
   return (
     <html lang="en">
       <head>
-        <meta name="config" content={JSON.stringify(getClientConfig())} />
+        <meta name="runtime-config" content={JSON.stringify(clientConfig)} />
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"

@@ -1,10 +1,5 @@
 import { getClientConfig } from "../config/client";
-import {
-  ApiPath,
-  CACHE_URL_PREFIX,
-  STORAGE_KEY,
-  StoreKey,
-} from "../constant";
+import { ApiPath, CACHE_URL_PREFIX, STORAGE_KEY, StoreKey } from "../constant";
 import { createPersistStore } from "../utils/store";
 import {
   AppState,
@@ -176,10 +171,7 @@ function collectCacheMediaUrls(appState: AppState) {
   const chatState = appState[StoreKey.Chat];
 
   for (const session of chatState.sessions) {
-    collectMessageMediaUrls(
-      session.messages as MessageLike[],
-      mediaUrls,
-    );
+    collectMessageMediaUrls(session.messages as MessageLike[], mediaUrls);
     collectMessageMediaUrls(
       session.mask?.context as MessageLike[] | undefined,
       mediaUrls,
@@ -311,7 +303,7 @@ export interface WebDavConfig {
   password: string;
 }
 
-const isApp = !!getClientConfig()?.isApp;
+const isApp = () => !!getClientConfig()?.isApp;
 export type SyncStore = GetStoreState<typeof useSyncStore>;
 
 const isUcanRootMetaReady = (): boolean => {
@@ -390,7 +382,7 @@ export const useSyncStore = createPersistStore(
 
     export() {
       const state = getLocalAppState();
-      const datePart = isApp
+      const datePart = isApp()
         ? `${new Date().toLocaleDateString().replace(/\//g, "_")} ${new Date()
             .toLocaleTimeString()
             .replace(/:/g, "_")}`
@@ -498,7 +490,9 @@ export const useSyncStore = createPersistStore(
 
           if (!hasStateDiff) {
             set({ lastSyncTime: Date.now(), lastProvider: provider });
-            console.log("[Sync] Local state already matches remote, skip write.");
+            console.log(
+              "[Sync] Local state already matches remote, skip write.",
+            );
             return;
           }
 

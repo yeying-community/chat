@@ -1,25 +1,8 @@
 import tauriConfig from "../../src-tauri/tauri.conf.json";
-import { DEFAULT_INPUT_TEMPLATE } from "../constant";
 
-function splitWebdavUrl(raw: string): { baseUrl: string; prefix: string } {
-  try {
-    const url = new URL(raw);
-    const baseUrl = `${url.protocol}//${url.host}`;
-    const pathname = url.pathname.replace(/\/+$/, "");
-    return { baseUrl, prefix: pathname === "/" ? "" : pathname };
-  } catch {
-    return { baseUrl: raw.trim(), prefix: "" };
-  }
-}
-
-type UcanLoginForceMode = "auto" | "wallet" | "central";
-
-function normalizeUcanLoginForceMode(raw?: string): UcanLoginForceMode {
-  const mode = (raw || "").trim().toLowerCase();
-  if (mode === "wallet" || mode === "central") {
-    return mode;
-  }
-  return "auto";
+function isEnabledEnv(value?: string): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "1" || normalized === "true";
 }
 
 export const getBuildConfig = () => {
@@ -28,50 +11,9 @@ export const getBuildConfig = () => {
       "[Server Config] you are importing a nodejs-only module outside of nodejs",
     );
   }
-  const defaultRouterBackendUrl = "http://127.0.0.1:3011";
   const buildMode = process.env.BUILD_MODE ?? "standalone";
-  const isApp = !!process.env.BUILD_APP;
+  const isApp = isEnabledEnv(process.env.BUILD_APP);
   const version = "v" + tauriConfig.version;
-  const webdavBackendBaseUrlEnv =
-    process.env.WEBDAV_BACKEND_BASE_URL?.trim() || "";
-  const rawWebdavBackendPrefixEnv = process.env.WEBDAV_BACKEND_PREFIX;
-  const hasWebdavBackendPrefixEnv = rawWebdavBackendPrefixEnv !== undefined;
-  const webdavBackendPrefixEnv = hasWebdavBackendPrefixEnv
-    ? rawWebdavBackendPrefixEnv.trim()
-    : "";
-  let webdavBackendBaseUrl = webdavBackendBaseUrlEnv;
-  let webdavBackendPrefix = webdavBackendPrefixEnv;
-  if (webdavBackendBaseUrl) {
-    const parsed = splitWebdavUrl(webdavBackendBaseUrl);
-    webdavBackendBaseUrl = parsed.baseUrl;
-    if (!webdavBackendPrefix && parsed.prefix) {
-      webdavBackendPrefix = parsed.prefix;
-    }
-  }
-  if (!hasWebdavBackendPrefixEnv && !webdavBackendPrefix) {
-    webdavBackendPrefix = "/dav";
-  }
-  if (webdavBackendBaseUrl) {
-    webdavBackendBaseUrl = webdavBackendBaseUrl.replace(/\/+$/, "");
-  }
-  if (webdavBackendPrefix) {
-    const trimmed = webdavBackendPrefix.trim();
-    webdavBackendPrefix = trimmed
-      ? (trimmed.startsWith("/") ? trimmed : `/${trimmed}`).replace(/\/+$/, "")
-      : "";
-  }
-  const routerBackendUrl =
-    process.env.ROUTER_BACKEND_URL ??
-    process.env.YEYING_BACKEND_URL ??
-    defaultRouterBackendUrl;
-  const centralUcanAuthBaseUrl =
-    process.env.CENTRAL_UCAN_AUTH_BASE_URL?.trim() ||
-    "http://127.0.0.1:8100";
-  const centralUcanAppId =
-    process.env.CENTRAL_UCAN_APP_ID?.trim() || "";
-  const ucanLoginForceMode = normalizeUcanLoginForceMode(
-    process.env.UCAN_LOGIN_FORCE_MODE,
-  );
 
   const commitInfo = (() => {
     try {
@@ -100,13 +42,6 @@ export const getBuildConfig = () => {
     ...commitInfo,
     buildMode,
     isApp,
-    template: process.env.DEFAULT_INPUT_TEMPLATE ?? DEFAULT_INPUT_TEMPLATE,
-    webdavBackendBaseUrl,
-    webdavBackendPrefix,
-    routerBackendUrl,
-    centralUcanAuthBaseUrl,
-    centralUcanAppId,
-    ucanLoginForceMode,
   };
 };
 

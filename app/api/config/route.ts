@@ -1,26 +1,13 @@
 import { NextResponse } from "next/server";
+import { unstable_noStore as noStore } from "next/cache";
 
-import { getServerSideConfig } from "../../config/server";
-
-export const dynamic = "force-static";
-
-const serverConfig = getServerSideConfig();
-
-// Danger! Do not hard code any secret value here!
-// 警告！不要在这里写入任何敏感信息！
-const DANGER_CONFIG = {
-  needCode: serverConfig.needCode,
-  hideUserApiKey: serverConfig.hideUserApiKey,
-  disableGPT4: serverConfig.disableGPT4,
-  hideBalanceQuery: serverConfig.hideBalanceQuery,
-  disableFastLink: serverConfig.disableFastLink,
-  customModels: serverConfig.customModels,
-  defaultModel: serverConfig.defaultModel,
-  visionModels: serverConfig.visionModels,
-};
+import { getRuntimePublicConfig } from "../../config/runtime";
 
 async function handle() {
-  return NextResponse.json(DANGER_CONFIG);
+  if (process.env.BUILD_MODE !== "export") {
+    noStore();
+  }
+  return NextResponse.json(getRuntimePublicConfig());
 }
 
 export const GET = handle;
