@@ -38,6 +38,7 @@ export function SideBar(props: { className?: string }) {
   const sdStore = useSdStore();
   const currentMode = sdStore.currentMode;
   const editSourceImage = sdStore.editSourceImage;
+  const editMaskImage = sdStore.editMaskImage;
   const currentModel = sdStore.currentModel;
   const params = sdStore.currentParams;
   const setParams = sdStore.setCurrentParams;
@@ -71,6 +72,7 @@ export function SideBar(props: { className?: string }) {
       model_name: currentModel.name,
       status: "wait",
       source_image: currentMode === "editing" ? editSourceImage : "",
+      mask_image: currentMode === "editing" ? editMaskImage : "",
       params: reqParams,
       created_at: new Date().toLocaleString(),
       img_data: "",

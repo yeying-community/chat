@@ -27,6 +27,7 @@ export type ImageEndpointSchema = {
     model: string;
     params: Record<string, any>;
     sourceImage?: Blob;
+    maskImage?: Blob;
   }) => Record<string, any> | FormData;
   resolveImageResult: (response: any) =>
     | {
@@ -135,7 +136,7 @@ export const imageEndpointSchemas: Record<
       imageQualityParam,
       imageStyleParam,
     ],
-    buildRequestBody: ({ model, params, sourceImage }) => {
+    buildRequestBody: ({ model, params, sourceImage, maskImage }) => {
       const body = new FormData();
       body.append("model", model);
       body.append("prompt", params.prompt || "");
@@ -144,6 +145,9 @@ export const imageEndpointSchemas: Record<
       body.append("style", params.style || "vivid");
       if (sourceImage) {
         body.append("image", sourceImage, "image.png");
+      }
+      if (maskImage) {
+        body.append("mask", maskImage, "mask.png");
       }
       return body;
     },

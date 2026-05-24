@@ -55,6 +55,8 @@ const DEFAULT_SD_STATE = {
   editSourceType: "history" as "history" | "upload",
   editSourceImage: "",
   editSourceName: "",
+  editMaskImage: "",
+  editMaskName: "",
   currentModel: defaultModel,
   currentParams: defaultParams,
 };
@@ -67,6 +69,8 @@ export const useSdStore = createPersistStore<
     editSourceType: "history" | "upload";
     editSourceImage: string;
     editSourceName: string;
+    editMaskImage: string;
+    editMaskName: string;
     currentModel: typeof defaultModel;
     currentParams: any;
   },
@@ -77,6 +81,7 @@ export const useSdStore = createPersistStore<
     setCurrentMode: (mode: ImageFormMode) => void;
     setEditSourceType: (type: "history" | "upload") => void;
     setEditSourceImage: (image: string, name?: string) => void;
+    setEditMaskImage: (image: string, name?: string) => void;
     setCurrentModel: (model: any) => void;
     setCurrentParams: (data: any) => void;
   }
@@ -115,10 +120,14 @@ export const useSdStore = createPersistStore<
         const sourceImage = data.source_image
           ? await fetch(data.source_image).then((res) => res.blob())
           : undefined;
+        const maskImage = data.mask_image
+          ? await fetch(data.mask_image).then((res) => res.blob())
+          : undefined;
         const requestBody = schema.buildRequestBody({
           model: data.model,
           params: data.params,
           sourceImage,
+          maskImage,
         });
 
         const endpointPath =
@@ -219,6 +228,9 @@ export const useSdStore = createPersistStore<
       },
       setEditSourceImage(image: string, name?: string) {
         set({ editSourceImage: image, editSourceName: name || "" });
+      },
+      setEditMaskImage(image: string, name?: string) {
+        set({ editMaskImage: image, editMaskName: name || "" });
       },
       setCurrentModel(model: any) {
         set({ currentModel: model });

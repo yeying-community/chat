@@ -831,6 +831,27 @@ const en: LocaleType = {
     Mode: "Mode",
     SourceType: "Image Source",
     UploadImage: "Upload Image",
+    MaskImage: "Upload Mask",
+    MaskImageSubTitle:
+      "Transparent areas will be regenerated, or open the painter to brush a mask directly.",
+    DrawMask: "Paint Mask",
+    ClearMask: "Clear Mask",
+    SaveMask: "Save Mask",
+    MaskInteractionMode: "Interaction",
+    MaskZoom: "Zoom",
+    ResetZoom: "Reset Zoom",
+    MaskBrushMode: "Brush Mode",
+    MaskBrushSize: "Brush Size",
+    MaskDrawSubTitle:
+      "Brush over the regions to regenerate. Saving will create a transparent PNG mask.",
+    MaskInteractionModes: {
+      Draw: "Draw",
+      Pan: "Pan",
+    },
+    MaskBrushModes: {
+      Erase: "Regenerate Area",
+      Restore: "Restore Area",
+    },
     SelectHistory: "Select History Image",
     Provider: "Provider",
     Prompt: "Prompt",
