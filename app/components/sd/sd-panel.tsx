@@ -165,6 +165,7 @@ export function SdPanel() {
     () => resolveImageModels(runtimeModels),
     [runtimeModels],
   );
+  const hasImageModels = imageModels.length > 0;
 
   React.useEffect(() => {
     if (imageModels.length === 0) return;
@@ -199,6 +200,7 @@ export function SdPanel() {
         <Select
           aria-label={Locale.SdPanel.AIModel}
           value={currentModel.value}
+          disabled={!hasImageModels}
           onChange={(e) => {
             const model = imageModels.find(
               (item) => item.value === e.currentTarget.value,
@@ -208,18 +210,39 @@ export function SdPanel() {
             }
           }}
         >
-          {imageModels.map((item) => (
-            <option value={item.value} key={item.value}>
-              {item.name}
-            </option>
-          ))}
+          {hasImageModels ? (
+            imageModels.map((item) => (
+              <option value={item.value} key={item.value}>
+                {item.name}
+              </option>
+            ))
+          ) : (
+            <option value="">{Locale.Sd.EmptyRecord}</option>
+          )}
         </Select>
       </ControlParamItem>
-      <ControlParam
-        columns={getParams?.(currentModel, params) as any[]}
-        data={params}
-        onChange={handleValueChange}
-      ></ControlParam>
+      {hasImageModels && (
+        <ControlParamItem title={Locale.Sd.SourceLabel}>
+          <div>{currentModel.providerName || currentModel.provider || "-"}</div>
+          <div className={styles["ctrl-param-item-sub-title"]}>
+            {Locale.Sd.EndpointLabel}: /v1/images/generations
+          </div>
+        </ControlParamItem>
+      )}
+      {!hasImageModels && (
+        <ControlParamItem title={Locale.Sd.NoModelsTitle}>
+          <div className={styles["ctrl-param-item-sub-title"]}>
+            {Locale.Sd.NoModelsDesc}
+          </div>
+        </ControlParamItem>
+      )}
+      {hasImageModels && (
+        <ControlParam
+          columns={getParams?.(currentModel, params) as any[]}
+          data={params}
+          onChange={handleValueChange}
+        ></ControlParam>
+      )}
     </>
   );
 }

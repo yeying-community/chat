@@ -42,6 +42,10 @@ export function SideBar(props: { className?: string }) {
 
   const handleSubmit = () => {
     const columns = getParams?.(currentModel, params);
+    if (!currentModel.value || columns.length === 0) {
+      showToast(Locale.Sd.EmptyRecord);
+      return;
+    }
     const reqParams: any = {};
     for (let i = 0; i < columns.length; i++) {
       const item = columns[i];

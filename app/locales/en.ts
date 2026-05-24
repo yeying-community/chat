@@ -864,6 +864,11 @@ const en: LocaleType = {
   Sd: {
     Title: "AI Images",
     SubTitle: (count: number) => `${count} images`,
+    NoModelsTitle: "No image models are currently available",
+    NoModelsDesc:
+      "Make sure Router login is active and the current group exposes image models with /v1/images/generations.",
+    EndpointLabel: "Endpoint",
+    SourceLabel: "Source",
     Actions: {
       Params: "See Params",
       Copy: "Copy Prompt",
@@ -885,6 +890,12 @@ const en: LocaleType = {
     },
     GenerateParams: "Generate Params",
     Detail: "Detail",
+    Errors: {
+      MissingToken:
+        "Router access token is missing. Sign in first and try again.",
+      Unauthorized:
+        "You do not have access to this image model. Check your login state and group configuration.",
+    },
   },
   MyCenter: {
     Title: "person center",

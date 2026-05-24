@@ -7,6 +7,28 @@ import { getImageEndpointSchema } from "@/app/components/sd/image-endpoint-schem
 import { getDefaultImageModel } from "@/app/components/sd/image-registry";
 import { getHeadersWithRouterUcan } from "@/app/client/platforms/openai";
 import { useAccessStore } from "./access";
+import Locale from "@/app/locales";
+
+function normalizeSdErrorMessage(message: string) {
+  const text = String(message || "");
+  const lower = text.toLowerCase();
+  if (
+    lower.includes("missing token") ||
+    text.includes("未提供令牌") ||
+    lower.includes("access token is missing")
+  ) {
+    return Locale.Sd.Errors.MissingToken;
+  }
+  if (
+    lower.includes("unauthorized") ||
+    lower.includes("forbidden") ||
+    text.includes("无权") ||
+    text.includes("未授权")
+  ) {
+    return Locale.Sd.Errors.Unauthorized;
+  }
+  return text;
+}
 
 const defaultModel = getDefaultImageModel() || {
   name: "",
@@ -93,7 +115,7 @@ export const useSdStore = createPersistStore<
               this.updateDraw({
                 ...data,
                 status: "error",
-                error: errorMessage,
+                error: normalizeSdErrorMessage(errorMessage),
               });
               this.getNextId();
               return;
@@ -104,7 +126,7 @@ export const useSdStore = createPersistStore<
               this.updateDraw({
                 ...data,
                 status: "error",
-                error: JSON.stringify(resData),
+                error: normalizeSdErrorMessage(JSON.stringify(resData)),
               });
               this.getNextId();
               return;
@@ -122,7 +144,7 @@ export const useSdStore = createPersistStore<
                 this.updateDraw({
                   ...data,
                   status: "error",
-                  error: JSON.stringify(e),
+                  error: normalizeSdErrorMessage(JSON.stringify(e)),
                 });
               })
               .finally(() => {
@@ -130,7 +152,11 @@ export const useSdStore = createPersistStore<
               });
           })
           .catch((error) => {
-            this.updateDraw({ ...data, status: "error", error: error.message });
+            this.updateDraw({
+              ...data,
+              status: "error",
+              error: normalizeSdErrorMessage(error.message),
+            });
             console.error("Error:", error);
             this.getNextId();
           });

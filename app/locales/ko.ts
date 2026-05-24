@@ -840,6 +840,11 @@ const ko: PartialLocaleType = {
   Sd: {
     Title: "AI 이미지",
     SubTitle: (count: number) => `${count} 개의 이미지`,
+    NoModelsTitle: "현재 사용 가능한 이미지 모델이 없습니다",
+    NoModelsDesc:
+      "Router 로그인 상태와 현재 그룹에서 /v1/images/generations 를 지원하는 image 모델이 노출되는지 확인하세요.",
+    EndpointLabel: "엔드포인트",
+    SourceLabel: "출처",
     Actions: {
       Params: "파라미터 보기",
       Copy: "프롬프트 복사",
@@ -861,6 +866,12 @@ const ko: PartialLocaleType = {
     },
     GenerateParams: "파라미터 생성",
     Detail: "상세",
+    Errors: {
+      MissingToken:
+        "Router 접근 토큰이 없습니다. 먼저 로그인한 뒤 다시 시도하세요.",
+      Unauthorized:
+        "이 이미지 모델에 접근할 권한이 없습니다. 로그인 상태와 그룹 설정을 확인하세요.",
+    },
   },
 };
 

@@ -819,6 +819,11 @@ const da: PartialLocaleType = {
   Sd: {
     Title: "AI-billeder",
     SubTitle: (count: number) => `${count} billeder`,
+    NoModelsTitle: "Der er ingen tilgængelige billedmodeller lige nu",
+    NoModelsDesc:
+      "Kontroller, at Router-login er aktivt, og at den aktuelle gruppe eksponerer image-modeller med /v1/images/generations.",
+    EndpointLabel: "Endepunkt",
+    SourceLabel: "Kilde",
     Actions: {
       Params: "Se indstillinger",
       Copy: "Kopiér prompt",
@@ -840,6 +845,11 @@ const da: PartialLocaleType = {
     },
     GenerateParams: "Genereringsvalg",
     Detail: "Detaljer",
+    Errors: {
+      MissingToken: "Router-adgangstoken mangler. Log ind først, og prøv igen.",
+      Unauthorized:
+        "Du har ikke adgang til denne billedmodel. Kontroller loginstatus og gruppekonfiguration.",
+    },
   },
 };
 

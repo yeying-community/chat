@@ -854,6 +854,11 @@ const cn = {
   Sd: {
     Title: "AI 绘图",
     SubTitle: (count: number) => `共 ${count} 条绘画`,
+    NoModelsTitle: "当前没有可用的图片模型",
+    NoModelsDesc:
+      "请确认已经登录 Router，并且当前分组暴露了支持 /v1/images/generations 的 image 模型。",
+    EndpointLabel: "端点",
+    SourceLabel: "来源",
     Actions: {
       Params: "查看参数",
       Copy: "复制提示词",
@@ -875,6 +880,10 @@ const cn = {
     },
     GenerateParams: "生成参数",
     Detail: "详情",
+    Errors: {
+      MissingToken: "当前未提供 Router 访问令牌，请先登录后再试。",
+      Unauthorized: "当前没有访问该图片模型的权限，请检查登录态和分组配置。",
+    },
   },
   MyCenter: {
     Title: "个人中心",
