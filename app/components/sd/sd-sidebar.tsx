@@ -36,6 +36,7 @@ export function SideBar(props: { className?: string }) {
   const navigate = useNavigate();
   const sdStore = useSdStore();
   const currentMode = sdStore.currentMode;
+  const editSourceType = sdStore.editSourceType;
   const editSourceImage = sdStore.editSourceImage;
   const editMaskImage = sdStore.editMaskImage;
   const currentModel = sdStore.currentModel;
@@ -167,7 +168,9 @@ export function SideBar(props: { className?: string }) {
             )}
             {currentMode === "editing" && editSourceImage && (
               <span className={styles["submit-card-chip"]}>
-                {Locale.SdPanel.SourceType}
+                {editSourceType === "history"
+                  ? Locale.SdPanel.SourceTypes.History
+                  : Locale.SdPanel.SourceTypes.Upload}
               </span>
             )}
             {currentMode === "editing" && editMaskImage && (
