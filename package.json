@@ -35,7 +35,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@yeying-community/web3-bs": "1.0.8",
-    "axios": "^1.13.6",
+    "axios": "^1.16.1",
     "clsx": "^2.1.1",
     "csstype": "^3.2.3",
     "emoji-picker-react": "^4.19.1",
