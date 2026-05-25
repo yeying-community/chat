@@ -125,6 +125,11 @@
   cursor: crosshair;
 }
 
+.mask-editor-stage-hidden-canvas {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .mask-editor-stage-pan canvas {
   cursor: grab;
 }

@@ -117,13 +117,13 @@ interface ModalProps {
   actions?: React.ReactNode[];
   defaultMax?: boolean;
   footer?: React.ReactNode;
-  onClose?: () => void;
+  onClose?: () => void | boolean | Promise<void | boolean>;
 }
 export function Modal(props: ModalProps) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        props.onClose?.();
+        void props.onClose?.();
       }
     };
 
@@ -155,7 +155,7 @@ export function Modal(props: ModalProps) {
           </div>
           <div
             className={styles["modal-header-action"]}
-            onClick={props.onClose}
+            onClick={() => void props.onClose?.()}
           >
             <CloseIcon />
           </div>
@@ -184,15 +184,16 @@ export function showModal(props: ModalProps) {
   document.body.appendChild(div);
 
   const root = createRoot(div);
-  const closeModal = () => {
-    props.onClose?.();
+  const closeModal = async () => {
+    const result = await props.onClose?.();
+    if (result === false) return;
     root.unmount();
     div.remove();
   };
 
   div.onclick = (e) => {
     if (e.target === div) {
-      closeModal();
+      void closeModal();
     }
   };
 

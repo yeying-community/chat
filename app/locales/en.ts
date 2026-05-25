@@ -837,16 +837,24 @@ const en: LocaleType = {
     DrawMask: "Paint Mask",
     ClearMask: "Clear Mask",
     SaveMask: "Save Mask",
+    MaskOverlay: "Overlay",
     MaskInteractionMode: "Interaction",
     MaskZoom: "Zoom",
     ResetZoom: "Reset Zoom",
     MaskBrushMode: "Brush Mode",
     MaskBrushSize: "Brush Size",
+    MaskShortcutHint:
+      "Use the mouse wheel to zoom, and hold Space to pan temporarily.",
     MaskDrawSubTitle:
       "Brush over the regions to regenerate. Saving will create a transparent PNG mask.",
+    MaskCloseConfirm: "This mask has unsaved changes. Close anyway?",
     MaskInteractionModes: {
       Draw: "Draw",
       Pan: "Pan",
+    },
+    MaskOverlayModes: {
+      Show: "Show Overlay",
+      Hide: "Hide Overlay",
     },
     MaskBrushModes: {
       Erase: "Regenerate Area",
@@ -907,6 +915,7 @@ const en: LocaleType = {
       Copy: "Copy Prompt",
       Delete: "Delete",
       Retry: "Retry",
+      EditAgain: "Continue Editing",
       ReturnHome: "Return Home",
       History: "History",
     },

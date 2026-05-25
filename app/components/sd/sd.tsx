@@ -276,6 +276,7 @@ export function Sd() {
                                   provider: item.provider,
                                   provider_name: item.provider_name,
                                   endpoint_type: item.endpoint_type,
+                                  model_def: item.model_def,
                                   model: item.model,
                                   model_name: item.model_name,
                                   status: "wait",
@@ -286,6 +287,30 @@ export function Sd() {
                                 sdStore.sendTask(reqData);
                               }}
                             />
+                            {item.status === "success" && !!item.img_data && (
+                              <ChatAction
+                                text={Locale.Sd.Actions.EditAgain}
+                                icon={<PromptIcon />}
+                                onClick={() => {
+                                  sdStore.setCurrentMode("editing");
+                                  sdStore.setEditSourceType("history");
+                                  if (item.model_def) {
+                                    sdStore.setCurrentModel(item.model_def);
+                                  }
+                                  if (item.params) {
+                                    sdStore.setCurrentParams({
+                                      ...item.params,
+                                    });
+                                  }
+                                  sdStore.setEditSourceImage(
+                                    item.img_data,
+                                    `${item.model_name} · ${item.created_at}`,
+                                  );
+                                  sdStore.setEditMaskImage("", "");
+                                  navigate(Path.Sd);
+                                }}
+                              />
+                            )}
                             <ChatAction
                               text={Locale.Sd.Actions.Delete}
                               icon={<DeleteIcon />}
