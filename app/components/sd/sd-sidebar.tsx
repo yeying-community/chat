@@ -68,6 +68,7 @@ export function SideBar(props: { className?: string }) {
       provider: currentModel.provider || "",
       provider_name: currentModel.providerName || "",
       endpoint_type: currentModel.endpointType || "",
+      model_def: currentModel,
       model: currentModel.value,
       model_name: currentModel.name,
       status: "wait",

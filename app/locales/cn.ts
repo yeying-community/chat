@@ -826,15 +826,23 @@ const cn = {
     DrawMask: "涂抹遮罩",
     ClearMask: "清空遮罩",
     SaveMask: "保存遮罩",
+    MaskOverlay: "遮罩显示",
     MaskInteractionMode: "操作模式",
     MaskZoom: "缩放",
     ResetZoom: "重置缩放",
     MaskBrushMode: "画笔模式",
     MaskBrushSize: "画笔大小",
+    MaskShortcutHint:
+      "滚轮或双指滚动用于移动视图，按住 Ctrl 或 Command 再滚动可缩放，按住空格可临时拖动画布。",
     MaskDrawSubTitle: "在图片上涂抹需要重绘的区域，保存后会生成透明遮罩。",
+    MaskCloseConfirm: "当前遮罩尚未保存，确认关闭吗？",
     MaskInteractionModes: {
       Draw: "绘制",
       Pan: "平移",
+    },
+    MaskOverlayModes: {
+      Show: "显示遮罩",
+      Hide: "隐藏遮罩",
     },
     MaskBrushModes: {
       Erase: "重绘区域",
@@ -895,6 +903,7 @@ const cn = {
       Copy: "复制提示词",
       Delete: "删除",
       Retry: "重试",
+      EditAgain: "继续编辑",
       ReturnHome: "返回首页",
       History: "查看历史",
     },

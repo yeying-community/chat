@@ -10,6 +10,7 @@ import {
   getImageEndpointSchema,
   ImageFormMode,
 } from "@/app/components/sd/image-endpoint-schemas";
+import { resolveStoredImageUrl } from "@/app/components/sd/image-result";
 import { getDefaultImageModel } from "@/app/components/sd/image-registry";
 import { getHeadersWithRouterUcan } from "@/app/client/platforms/openai";
 import { useAccessStore } from "./access";
@@ -34,6 +35,54 @@ function normalizeSdErrorMessage(message: string) {
     return Locale.Sd.Errors.Unauthorized;
   }
   return text;
+}
+
+function resolveImageFetchUrl(input: string) {
+  if (!input) return input;
+  if (
+    input.startsWith("data:") ||
+    input.startsWith("blob:") ||
+    input.startsWith("/")
+  ) {
+    return input;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return input;
+  }
+
+  if (
+    typeof window !== "undefined" &&
+    parsed.origin === window.location.origin
+  ) {
+    return input;
+  }
+
+  const normalizedPath = parsed.pathname.replace(/^\/+/, "");
+  const isWebdavPublicShare =
+    normalizedPath.startsWith("api/v1/public/share/") ||
+    normalizedPath.startsWith("api/v1/public/webdav/");
+
+  if (!isWebdavPublicShare) {
+    return input;
+  }
+
+  const search = new URLSearchParams(parsed.search);
+  search.set("endpoint", parsed.origin);
+  return `/api/webdav/${normalizedPath}?${search.toString()}`;
+}
+
+async function fetchImageBlob(input: string) {
+  const response = await fetch(resolveImageFetchUrl(input));
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch image: ${response.status} ${response.statusText}`,
+    );
+  }
+  return response.blob();
 }
 
 const defaultModel = getDefaultImageModel() || {
@@ -118,10 +167,10 @@ export const useSdStore = createPersistStore<
         const endpointType = data.endpoint_type || "images-generation";
         const schema = getImageEndpointSchema(endpointType);
         const sourceImage = data.source_image
-          ? await fetch(data.source_image).then((res) => res.blob())
+          ? await fetchImageBlob(data.source_image)
           : undefined;
         const maskImage = data.mask_image
-          ? await fetch(data.mask_image).then((res) => res.blob())
+          ? await fetchImageBlob(data.mask_image)
           : undefined;
         const requestBody = schema.buildRequestBody({
           model: data.model,
@@ -174,12 +223,10 @@ export const useSdStore = createPersistStore<
               return;
             }
 
-            const imagePromise =
-              imageResult.type === "url"
-                ? Promise.resolve(imageResult.value)
-                : uploadGeneratedImageAndGetStableUrl(
-                    base64Image2Blob(imageResult.value, "image/png"),
-                  );
+            const imagePromise = resolveStoredImageUrl(imageResult, {
+              base64Image2Blob,
+              uploadGeneratedImageAndGetStableUrl,
+            });
 
             imagePromise
               .then((img_data: string) => {

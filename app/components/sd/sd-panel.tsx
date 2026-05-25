@@ -1,6 +1,11 @@
 import styles from "./sd-panel.module.scss";
 import React from "react";
-import { Select, showModal, showToast } from "@/app/components/ui-lib";
+import {
+  Select,
+  showConfirm,
+  showModal,
+  showToast,
+} from "@/app/components/ui-lib";
 import Locale from "@/app/locales";
 import { useSdStore } from "@/app/store/sd";
 import clsx from "clsx";
@@ -14,9 +19,11 @@ function MaskPainter(props: {
   sourceImage: string;
   onSave: (maskDataUrl: string) => void;
   onDone?: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const imageRef = React.useRef<HTMLImageElement>(null);
-  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = React.useRef<HTMLCanvasElement>(null);
+  const maskCanvasRef = React.useRef<HTMLCanvasElement>(null);
   const stageRef = React.useRef<HTMLDivElement>(null);
   const drawingRef = React.useRef(false);
   const panningRef = React.useRef<{
@@ -34,26 +41,120 @@ function MaskPainter(props: {
     "draw",
   );
   const [isPanning, setIsPanning] = React.useState(false);
+  const [showOverlay, setShowOverlay] = React.useState(true);
+  const [isDirty, setIsDirty] = React.useState(false);
+  const [isSpacePressed, setIsSpacePressed] = React.useState(false);
+  const [isStageHovered, setIsStageHovered] = React.useState(false);
+  const panEnabled =
+    interactionMode === "pan" || (isStageHovered && isSpacePressed);
+
+  const clampZoom = React.useCallback((nextZoom: number) => {
+    return Number(Math.max(1, Math.min(4, nextZoom)).toFixed(2));
+  }, []);
+
+  const updateZoom = React.useCallback(
+    (
+      nextZoom: number,
+      anchor?: {
+        clientX: number;
+        clientY: number;
+      },
+    ) => {
+      const stage = stageRef.current;
+      const image = imageRef.current;
+      const currentZoom = zoom;
+      const targetZoom = clampZoom(nextZoom);
+      const anchorPoint = anchor;
+      if (targetZoom === currentZoom) {
+        return;
+      }
+
+      let anchorRatioX: number | null = null;
+      let anchorRatioY: number | null = null;
+      if (stage && image && anchorPoint) {
+        const imageRect = image.getBoundingClientRect();
+        if (imageRect.width > 0 && imageRect.height > 0) {
+          anchorRatioX =
+            (anchorPoint.clientX - imageRect.left) / imageRect.width;
+          anchorRatioY =
+            (anchorPoint.clientY - imageRect.top) / imageRect.height;
+        }
+      }
+
+      setZoom(targetZoom);
+
+      if (
+        stage &&
+        image &&
+        anchorPoint &&
+        anchorRatioX !== null &&
+        anchorRatioY !== null &&
+        Number.isFinite(anchorRatioX) &&
+        Number.isFinite(anchorRatioY)
+      ) {
+        requestAnimationFrame(() => {
+          const nextImageWidth = image.naturalWidth * targetZoom;
+          const nextImageHeight = image.naturalHeight * targetZoom;
+          const stageRect = stage.getBoundingClientRect();
+          stage.scrollLeft =
+            nextImageWidth * anchorRatioX -
+            (anchorPoint.clientX - stageRect.left);
+          stage.scrollTop =
+            nextImageHeight * anchorRatioY -
+            (anchorPoint.clientY - stageRect.top);
+        });
+      }
+    },
+    [clampZoom, zoom],
+  );
+
+  const markDirty = React.useCallback(() => {
+    setIsDirty((prev) => {
+      if (!prev) {
+        props.onDirtyChange?.(true);
+      }
+      return true;
+    });
+  }, [props]);
+
+  const resizeCanvas = React.useCallback(
+    (canvas: HTMLCanvasElement, width: number, height: number) => {
+      if (canvas.width === width && canvas.height === height) return;
+
+      const snapshot = document.createElement("canvas");
+      snapshot.width = canvas.width;
+      snapshot.height = canvas.height;
+      const snapshotCtx = snapshot.getContext("2d");
+      if (snapshotCtx && canvas.width > 0 && canvas.height > 0) {
+        snapshotCtx.drawImage(canvas, 0, 0);
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.clearRect(0, 0, width, height);
+      if (snapshot.width > 0 && snapshot.height > 0) {
+        ctx.drawImage(snapshot, 0, 0, width, height);
+      }
+    },
+    [],
+  );
 
   const syncCanvasSize = React.useCallback(() => {
     const image = imageRef.current;
-    const canvas = canvasRef.current;
-    if (!image || !canvas) return;
+    const overlayCanvas = overlayCanvasRef.current;
+    const maskCanvas = maskCanvasRef.current;
+    if (!image || !overlayCanvas || !maskCanvas) return;
 
     const width = image.clientWidth;
     const height = image.clientHeight;
     if (!width || !height) return;
 
-    if (canvas.width !== width || canvas.height !== height) {
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, width, height);
-    }
-  }, []);
+    resizeCanvas(overlayCanvas, width, height);
+    resizeCanvas(maskCanvas, width, height);
+  }, [resizeCanvas]);
 
   React.useEffect(() => {
     syncCanvasSize();
@@ -61,36 +162,93 @@ function MaskPainter(props: {
     return () => window.removeEventListener("resize", syncCanvasSize);
   }, [syncCanvasSize]);
 
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      if (event.repeat) return;
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName?.toLowerCase() || "";
+      if (
+        tagName === "input" ||
+        tagName === "textarea" ||
+        tagName === "select"
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setIsSpacePressed(true);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (event.code !== "Space") return;
+      setIsSpacePressed(false);
+      panningRef.current = null;
+      setIsPanning(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   const paintAtPoint = React.useCallback(
     (clientX: number, clientY: number) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
+      const overlayCanvas = overlayCanvasRef.current;
+      const maskCanvas = maskCanvasRef.current;
+      if (!overlayCanvas || !maskCanvas) return;
+      const rect = overlayCanvas.getBoundingClientRect();
+      const scaleX = overlayCanvas.width / rect.width;
+      const scaleY = overlayCanvas.height / rect.height;
       const x = (clientX - rect.left) * scaleX;
       const y = (clientY - rect.top) * scaleY;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      const overlayCtx = overlayCanvas.getContext("2d");
+      const maskCtx = maskCanvas.getContext("2d");
+      if (!overlayCtx || !maskCtx) return;
 
-      ctx.save();
-      ctx.globalCompositeOperation =
-        brushMode === "erase" ? "destination-out" : "source-over";
-      if (brushMode === "restore") {
-        ctx.fillStyle = "#ffffff";
+      if (brushMode === "erase") {
+        overlayCtx.save();
+        overlayCtx.globalCompositeOperation = "source-over";
+        overlayCtx.fillStyle = "rgba(255, 59, 48, 0.35)";
+        overlayCtx.beginPath();
+        overlayCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        overlayCtx.fill();
+        overlayCtx.restore();
+
+        maskCtx.save();
+        maskCtx.globalCompositeOperation = "source-over";
+        maskCtx.fillStyle = "rgba(0, 0, 0, 1)";
+        maskCtx.beginPath();
+        maskCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        maskCtx.fill();
+        maskCtx.restore();
+        markDirty();
+      } else {
+        overlayCtx.save();
+        overlayCtx.globalCompositeOperation = "destination-out";
+        overlayCtx.beginPath();
+        overlayCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        overlayCtx.fill();
+        overlayCtx.restore();
+
+        maskCtx.save();
+        maskCtx.globalCompositeOperation = "destination-out";
+        maskCtx.beginPath();
+        maskCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        maskCtx.fill();
+        maskCtx.restore();
+        markDirty();
       }
-      ctx.beginPath();
-      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
     },
-    [brushMode, brushSize],
+    [brushMode, brushSize, markDirty],
   );
 
   const exportMask = React.useCallback(() => {
     const image = imageRef.current;
-    const canvas = canvasRef.current;
-    if (!image || !canvas) return;
+    const maskCanvas = maskCanvasRef.current;
+    if (!image || !maskCanvas) return;
 
     const output = document.createElement("canvas");
     output.width = image.naturalWidth;
@@ -100,14 +258,30 @@ function MaskPainter(props: {
 
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, output.width, output.height);
-    ctx.drawImage(canvas, 0, 0, output.width, output.height);
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.drawImage(maskCanvas, 0, 0, output.width, output.height);
+    ctx.restore();
     props.onSave(output.toDataURL("image/png"));
+    props.onDirtyChange?.(false);
+    setIsDirty(false);
     props.onDone?.();
   }, [props]);
 
   return (
     <div className={styles["mask-editor"]}>
       <div className={styles["mask-editor-toolbar"]}>
+        <label>
+          {Locale.SdPanel.MaskOverlay}
+          <Select
+            aria-label={Locale.SdPanel.MaskOverlay}
+            value={showOverlay ? "show" : "hide"}
+            onChange={(e) => setShowOverlay(e.currentTarget.value === "show")}
+          >
+            <option value="show">{Locale.SdPanel.MaskOverlayModes.Show}</option>
+            <option value="hide">{Locale.SdPanel.MaskOverlayModes.Hide}</option>
+          </Select>
+        </label>
         <label>
           {Locale.SdPanel.MaskInteractionMode}
           <Select
@@ -125,12 +299,15 @@ function MaskPainter(props: {
             </option>
           </Select>
         </label>
+        <div className={styles["ctrl-param-item-sub-title"]}>
+          {Locale.SdPanel.MaskShortcutHint}
+        </div>
         <label>
           {Locale.SdPanel.MaskBrushMode}
           <Select
             aria-label={Locale.SdPanel.MaskBrushMode}
             value={brushMode}
-            disabled={interactionMode === "pan"}
+            disabled={panEnabled}
             onChange={(e) =>
               setBrushMode(e.currentTarget.value as "erase" | "restore")
             }
@@ -149,11 +326,11 @@ function MaskPainter(props: {
             max={4}
             step={0.1}
             value={zoom}
-            onChange={(e) => setZoom(Number(e.currentTarget.value))}
+            onChange={(e) => updateZoom(Number(e.currentTarget.value))}
           />
           <span>{Math.round(zoom * 100)}%</span>
         </label>
-        <button type="button" onClick={() => setZoom(1)}>
+        <button type="button" onClick={() => updateZoom(1)}>
           {Locale.SdPanel.ResetZoom}
         </button>
         <label>
@@ -164,7 +341,7 @@ function MaskPainter(props: {
             max={120}
             step={2}
             value={brushSize}
-            disabled={interactionMode === "pan"}
+            disabled={panEnabled}
             onChange={(e) => setBrushSize(Number(e.currentTarget.value))}
           />
           <span>{brushSize}px</span>
@@ -172,12 +349,24 @@ function MaskPainter(props: {
         <button
           type="button"
           onClick={() => {
-            const canvas = canvasRef.current;
-            const ctx = canvas?.getContext("2d");
-            if (!canvas || !ctx) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            const overlayCanvas = overlayCanvasRef.current;
+            const maskCanvas = maskCanvasRef.current;
+            const overlayCtx = overlayCanvas?.getContext("2d");
+            const maskCtx = maskCanvas?.getContext("2d");
+            if (!overlayCanvas || !maskCanvas || !overlayCtx || !maskCtx) {
+              return;
+            }
+            overlayCtx.clearRect(
+              0,
+              0,
+              overlayCanvas.width,
+              overlayCanvas.height,
+            );
+            maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+            if (isDirty) {
+              props.onDirtyChange?.(true);
+            }
+            setIsDirty(true);
           }}
         >
           {Locale.SdPanel.ClearMask}
@@ -189,9 +378,25 @@ function MaskPainter(props: {
       <div
         ref={stageRef}
         className={clsx(styles["mask-editor-stage"], {
-          [styles["mask-editor-stage-pan"]]: interactionMode === "pan",
+          [styles["mask-editor-stage-pan"]]: panEnabled,
           [styles["mask-editor-stage-pan-active"]]: isPanning,
         })}
+        onMouseEnter={() => setIsStageHovered(true)}
+        onMouseLeave={() => {
+          setIsStageHovered(false);
+          panningRef.current = null;
+          setIsPanning(false);
+        }}
+        onWheel={(e) => {
+          if (!e.ctrlKey && !e.metaKey) {
+            return;
+          }
+          e.preventDefault();
+          updateZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1), {
+            clientX: e.clientX,
+            clientY: e.clientY,
+          });
+        }}
       >
         <div
           className={styles["mask-editor-stage-inner"]}
@@ -202,14 +407,19 @@ function MaskPainter(props: {
             ref={imageRef}
             src={props.sourceImage}
             alt="mask-source"
+            draggable={false}
             onLoad={syncCanvasSize}
+            onDragStart={(e) => e.preventDefault()}
           />
           <canvas
-            ref={canvasRef}
+            ref={overlayCanvasRef}
+            style={{ opacity: showOverlay ? 1 : 0 }}
             onPointerDown={(e) => {
-              if (interactionMode === "pan") {
+              e.preventDefault();
+              if (panEnabled) {
                 const stage = stageRef.current;
                 if (!stage) return;
+                e.currentTarget.setPointerCapture(e.pointerId);
                 panningRef.current = {
                   startX: e.clientX,
                   startY: e.clientY,
@@ -219,11 +429,13 @@ function MaskPainter(props: {
                 setIsPanning(true);
                 return;
               }
+              e.currentTarget.setPointerCapture(e.pointerId);
               drawingRef.current = true;
               paintAtPoint(e.clientX, e.clientY);
             }}
             onPointerMove={(e) => {
-              if (interactionMode === "pan") {
+              e.preventDefault();
+              if (panEnabled) {
                 const stage = stageRef.current;
                 const pan = panningRef.current;
                 if (!stage || !pan) return;
@@ -234,7 +446,10 @@ function MaskPainter(props: {
               if (!drawingRef.current) return;
               paintAtPoint(e.clientX, e.clientY);
             }}
-            onPointerUp={() => {
+            onPointerUp={(e) => {
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }
               drawingRef.current = false;
               panningRef.current = null;
               setIsPanning(false);
@@ -242,11 +457,20 @@ function MaskPainter(props: {
             onPointerLeave={() => {
               drawingRef.current = false;
             }}
-            onPointerCancel={() => {
+            onPointerCancel={(e) => {
+              if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              }
               drawingRef.current = false;
               panningRef.current = null;
               setIsPanning(false);
             }}
+            onDragStart={(e) => e.preventDefault()}
+          />
+          <canvas
+            ref={maskCanvasRef}
+            className={styles["mask-editor-stage-hidden-canvas"]}
+            aria-hidden="true"
           />
         </div>
       </div>
@@ -494,16 +718,24 @@ export function SdPanel() {
       showToast(Locale.Sd.SelectImageFirst);
       return;
     }
-    let closeModal = () => {};
+    let dirty = false;
+    let closeModal = async () => {};
     closeModal = showModal({
       title: Locale.SdPanel.DrawMask,
       defaultMax: true,
+      onClose: async () => {
+        if (!dirty) return true;
+        return await showConfirm(Locale.SdPanel.MaskCloseConfirm);
+      },
       children: (
         <MaskPainter
           sourceImage={editSourceImage}
           onSave={(maskDataUrl) =>
             setEditMaskImage(maskDataUrl, Locale.SdPanel.DrawMask)
           }
+          onDirtyChange={(nextDirty) => {
+            dirty = nextDirty;
+          }}
           onDone={() => closeModal()}
         />
       ),
@@ -676,17 +908,6 @@ export function SdPanel() {
               </div>
             </div>
           )}
-        </ControlParamItem>
-      )}
-      {hasImageModels && (
-        <ControlParamItem title={Locale.Sd.SourceLabel}>
-          <div>{currentModel.providerName || currentModel.provider || "-"}</div>
-          <div className={styles["ctrl-param-item-sub-title"]}>
-            {Locale.Sd.EndpointLabel}:{" "}
-            {currentMode === "editing"
-              ? "/v1/images/edits"
-              : "/v1/images/generations"}
-          </div>
         </ControlParamItem>
       )}
       {!hasImageModels && (
