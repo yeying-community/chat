@@ -841,9 +841,6 @@ const cn = {
     SubmitSummaryGenerate: "准备根据当前提示词生成新图片。",
     SubmitSummaryReady: "原图与遮罩已就绪，将仅在遮罩区域执行编辑。",
     SubmitSummaryNoMask: "已选择原图，但未附加遮罩；部分模型可能按整图编辑。",
-    HistorySelectorSearch: "搜索历史图片",
-    HistorySelectorAction: "浏览",
-    HistorySelectorHint: (count: number) => `可从 ${count} 张历史图片中选择`,
     MaskCloseConfirm: "当前遮罩尚未保存，确认关闭吗？",
     MaskInteractionModes: {
       Draw: "绘制",
@@ -857,7 +854,6 @@ const cn = {
       Erase: "重绘区域",
       Restore: "恢复区域",
     },
-    SelectHistory: "选择历史图片",
     Provider: "提供商",
     Prompt: "画面提示",
     NegativePrompt: "否定提示",

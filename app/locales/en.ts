@@ -856,10 +856,6 @@ const en: LocaleType = {
       "Source image and mask are ready. Editing will focus on the masked area.",
     SubmitSummaryNoMask:
       "A source image is selected, but no mask is attached. Some models may edit the full image.",
-    HistorySelectorSearch: "Search history images",
-    HistorySelectorAction: "Browse",
-    HistorySelectorHint: (count: number) =>
-      `Choose from ${count} previous images`,
     MaskCloseConfirm: "This mask has unsaved changes. Close anyway?",
     MaskInteractionModes: {
       Draw: "Draw",
@@ -873,7 +869,6 @@ const en: LocaleType = {
       Erase: "Regenerate Area",
       Restore: "Restore Area",
     },
-    SelectHistory: "Select History Image",
     Provider: "Provider",
     Prompt: "Prompt",
     NegativePrompt: "Negative Prompt",

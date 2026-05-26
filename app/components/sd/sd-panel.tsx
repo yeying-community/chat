@@ -19,6 +19,7 @@ import EyeOffIcon from "@/app/icons/eye-off.svg";
 import EditIcon from "@/app/icons/edit.svg";
 import DragIcon from "@/app/icons/drag.svg";
 import ResetIcon from "@/app/icons/reload.svg";
+import UploadIcon from "@/app/icons/upload.svg";
 
 function MaskPainter(props: {
   sourceImage: string;
@@ -609,67 +610,6 @@ function ModelSelectorPanel(props: {
   );
 }
 
-function HistoryImageSelectorPanel(props: {
-  items: Array<{
-    value: string;
-    name: string;
-    image: string;
-  }>;
-  currentImage: string;
-  onSelect: (item: { value: string; name: string; image: string }) => void;
-}) {
-  const [query, setQuery] = React.useState("");
-  const filteredItems = React.useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-    if (!keyword) return props.items;
-    return props.items.filter((item) =>
-      item.name.toLowerCase().includes(keyword),
-    );
-  }, [props.items, query]);
-
-  return (
-    <div className={styles["history-selector-panel"]}>
-      <input
-        className={styles["history-selector-search"]}
-        type="text"
-        value={query}
-        placeholder={Locale.SdPanel.HistorySelectorSearch}
-        onChange={(e) => setQuery(e.currentTarget.value)}
-      />
-      <div className={styles["history-selector-grid"]}>
-        {filteredItems.map((item) => {
-          const active = item.image === props.currentImage;
-          return (
-            <button
-              key={item.value}
-              type="button"
-              className={clsx(styles["history-selector-item"], {
-                [styles["history-selector-item-active"]]: active,
-              })}
-              onClick={() => props.onSelect(item)}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.image}
-                alt={item.name}
-                className={styles["history-selector-item-image"]}
-              />
-              <div className={styles["history-selector-item-title"]}>
-                {item.name}
-              </div>
-            </button>
-          );
-        })}
-        {filteredItems.length === 0 && (
-          <div className={styles["history-selector-empty"]}>
-            {Locale.Sd.EmptyRecord}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function PanelSection(props: {
   title: string;
   subTitle?: string;
@@ -845,7 +785,6 @@ export function SdPanel() {
   const runtimeModels = useAllModels();
   const currentMode = sdStore.currentMode;
   const setCurrentMode = sdStore.setCurrentMode;
-  const editSourceType = sdStore.editSourceType;
   const setEditSourceType = sdStore.setEditSourceType;
   const editSourceImage = sdStore.editSourceImage;
   const editSourceName = sdStore.editSourceName;
@@ -857,17 +796,6 @@ export function SdPanel() {
   const setCurrentModel = sdStore.setCurrentModel;
   const params = sdStore.currentParams;
   const setParams = sdStore.setCurrentParams;
-  const successfulImages = React.useMemo(
-    () =>
-      sdStore.draw
-        .filter((item: any) => item.status === "success" && !!item.img_data)
-        .map((item: any) => ({
-          value: item.id,
-          name: `${item.model_name} · ${item.created_at}`,
-          image: item.img_data,
-        })),
-    [sdStore.draw],
-  );
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const maskFileInputRef = React.useRef<HTMLInputElement>(null);
   const imageModels = React.useMemo(
@@ -933,6 +861,7 @@ export function SdPanel() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
+        setEditSourceType("upload");
         setEditSourceImage(reader.result, file.name);
       }
     };
@@ -992,22 +921,6 @@ export function SdPanel() {
       ),
     });
   };
-  const openHistorySelector = () => {
-    let closeModal = async () => {};
-    closeModal = showModal({
-      title: Locale.SdPanel.SelectHistory,
-      children: (
-        <HistoryImageSelectorPanel
-          items={successfulImages}
-          currentImage={editSourceImage}
-          onSelect={(item) => {
-            setEditSourceImage(item.image, item.name);
-            void closeModal();
-          }}
-        />
-      ),
-    });
-  };
 
   return (
     <>
@@ -1039,13 +952,8 @@ export function SdPanel() {
           onClick={openModelSelector}
           disabled={!hasImageModels}
         >
-          <div className={styles["model-selector-trigger-main"]}>
-            <div className={styles["model-selector-trigger-title"]}>
-              {currentModel.name || Locale.Sd.EmptyRecord}
-            </div>
-            <div className={styles["model-selector-trigger-sub-title"]}>
-              {currentModel.providerName || currentModel.provider || ""}
-            </div>
+          <div className={styles["model-selector-trigger-title"]}>
+            {currentModel.name || Locale.SdPanel.ModelSelectorTitle}
           </div>
           <div className={styles["model-selector-trigger-action"]}>
             {Locale.SdPanel.ModelSelectorAction}
@@ -1057,71 +965,21 @@ export function SdPanel() {
           title={Locale.SdPanel.SourceType}
           subTitle={Locale.SdPanel.MaskImageSubTitle}
         >
-          <div className={styles["segmented-control"]}>
-            <button
-              type="button"
-              className={clsx({
-                [styles["segmented-control-active"]]:
-                  editSourceType === "history",
-              })}
-              onClick={() => setEditSourceType("history")}
-            >
-              {Locale.SdPanel.SourceTypes.History}
-            </button>
-            <button
-              type="button"
-              className={clsx({
-                [styles["segmented-control-active"]]:
-                  editSourceType === "upload",
-              })}
-              onClick={() => setEditSourceType("upload")}
-            >
-              {Locale.SdPanel.SourceTypes.Upload}
-            </button>
-          </div>
-          {editSourceType === "history" && (
-            <ControlParamItem title={Locale.SdPanel.SelectHistory}>
-              <button
-                type="button"
-                className={styles["history-selector-trigger"]}
-                onClick={openHistorySelector}
-              >
-                <div className={styles["history-selector-trigger-main"]}>
-                  <div className={styles["history-selector-trigger-title"]}>
-                    {editSourceName || Locale.Sd.SelectImageFirst}
-                  </div>
-                  <div className={styles["history-selector-trigger-sub-title"]}>
-                    {successfulImages.length > 0
-                      ? Locale.SdPanel.HistorySelectorHint(
-                          successfulImages.length,
-                        )
-                      : Locale.Sd.EmptyRecord}
-                  </div>
-                </div>
-                <div className={styles["history-selector-trigger-action"]}>
-                  {Locale.SdPanel.HistorySelectorAction}
-                </div>
-              </button>
-            </ControlParamItem>
-          )}
-          {editSourceType === "upload" && (
-            <ControlParamItem title={Locale.SdPanel.UploadImage}>
-              <input
-                ref={fileInputRef}
-                className={styles["hidden-file-input"]}
-                type="file"
-                accept="image/*"
-                onChange={(e) => handleUploadImage(e.target.files?.[0])}
-              />
-              <button
-                type="button"
-                className={styles["secondary-action-button"]}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {Locale.SdPanel.UploadImage}
-              </button>
-            </ControlParamItem>
-          )}
+          <input
+            ref={fileInputRef}
+            className={styles["hidden-file-input"]}
+            type="file"
+            accept="image/*"
+            onChange={(e) => handleUploadImage(e.target.files?.[0])}
+          />
+          <button
+            type="button"
+            className={styles["source-upload-button"]}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <UploadIcon />
+            <span>{Locale.SdPanel.UploadImage}</span>
+          </button>
           {editSourceImage && (
             <div className={styles["asset-preview"]}>
               <div className={styles["asset-preview-header"]}>

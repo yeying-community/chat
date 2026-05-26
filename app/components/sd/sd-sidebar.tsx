@@ -1,11 +1,10 @@
 import { IconButton } from "@/app/components/button";
-import GithubIcon from "@/app/icons/github.svg";
 import SDIcon from "@/app/icons/sd.svg";
 import ReturnIcon from "@/app/icons/return.svg";
 import styles from "./sd-sidebar.module.scss";
 import Locale from "@/app/locales";
 
-import { Path, REPO_URL } from "@/app/constant";
+import { Path } from "@/app/constant";
 
 import { useNavigate } from "react-router-dom";
 import dynamic from "next/dynamic";
@@ -134,7 +133,7 @@ export function SideBar(props: { className?: string }) {
       ) : (
         <SideBarHeader
           title={Locale.Sd.Title}
-          subTitle={currentModel.name || currentModeLabel}
+          subTitle={currentModeLabel}
           logo={<SDIcon width={38} height={"100%"} />}
           extra={
             <IconButton
@@ -187,11 +186,6 @@ export function SideBar(props: { className?: string }) {
             disabled={!canSubmit}
             onClick={handleSubmit}
           ></IconButton>
-        </div>
-        <div className={styles["submit-secondary"]}>
-          <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
-            <IconButton icon={<GithubIcon />} text="GitHub" bordered />
-          </a>
         </div>
       </div>
     </SideBarContainer>
