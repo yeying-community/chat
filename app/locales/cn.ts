@@ -835,6 +835,12 @@ const cn = {
     MaskShortcutHint:
       "滚轮或双指滚动用于移动视图，按住 Ctrl 或 Command 再滚动可缩放，按住空格可临时拖动画布。",
     MaskDrawSubTitle: "在图片上涂抹需要重绘的区域，保存后会生成透明遮罩。",
+    ModelSelectorTitle: "选择图片模型",
+    ModelSelectorSearch: "搜索模型名称或提供方",
+    ModelSelectorAction: "切换",
+    SubmitSummaryGenerate: "准备根据当前提示词生成新图片。",
+    SubmitSummaryReady: "原图与遮罩已就绪，将仅在遮罩区域执行编辑。",
+    SubmitSummaryNoMask: "已选择原图，但未附加遮罩；部分模型可能按整图编辑。",
     MaskCloseConfirm: "当前遮罩尚未保存，确认关闭吗？",
     MaskInteractionModes: {
       Draw: "绘制",
@@ -848,7 +854,6 @@ const cn = {
       Erase: "重绘区域",
       Restore: "恢复区域",
     },
-    SelectHistory: "选择历史图片",
     Provider: "提供商",
     Prompt: "画面提示",
     NegativePrompt: "否定提示",
