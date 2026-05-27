@@ -14,13 +14,14 @@ import CloseIcon from "../icons/close.svg";
 import EyeIcon from "../icons/eye.svg";
 import styles from "./discovery.module.scss";
 
-type CapabilityType = "skill" | "tool" | "model";
+type CapabilityType = "all" | "skill" | "tool" | "model";
 type PricingType = "free" | "subscription" | "usage";
 type RuntimeType = "cloud" | "local" | "both";
+type DiscoveryView = "market" | "mine";
 
 type Capability = {
   id: string;
-  type: CapabilityType;
+  type: Exclude<CapabilityType, "all">;
   title: string;
   description: string;
   status: string;
@@ -28,13 +29,16 @@ type Capability = {
   runtime: RuntimeType;
   source: string;
   path: Path;
+  installed: boolean;
 };
 
-const typeOrder: CapabilityType[] = ["skill", "tool", "model"];
+const typeOrder: CapabilityType[] = ["all", "skill", "tool", "model"];
 
 export function DiscoveryPage() {
   const navigate = useNavigate();
-  const [activeType, setActiveType] = useState<CapabilityType>("skill");
+  const [view, setView] = useState<DiscoveryView>("market");
+  const [activeType, setActiveType] = useState<CapabilityType>("all");
+  const [searchText, setSearchText] = useState("");
   const skillRecords = useSkillStore((state) => state.skills);
   const pluginRecords = usePluginStore((state) => state.plugins);
   const models = useAppConfig((state) => state.models);
@@ -83,6 +87,7 @@ export function DiscoveryPage() {
         ? Locale.Discovery.Source.Official
         : Locale.Discovery.Source.Custom,
       path: Path.Skills,
+      installed: !skill.builtin,
     }));
 
     const toolItems: Capability[] = [
@@ -96,6 +101,7 @@ export function DiscoveryPage() {
         runtime: "both",
         source: Locale.Discovery.Source.Official,
         path: Path.McpMarket,
+        installed: false,
       },
       ...plugins.map((plugin) => ({
         id: `tool:${plugin.id}`,
@@ -109,6 +115,7 @@ export function DiscoveryPage() {
           ? Locale.Discovery.Source.Official
           : Locale.Discovery.Source.Custom,
         path: Path.Plugins,
+        installed: true,
       })),
     ];
 
@@ -127,14 +134,24 @@ export function DiscoveryPage() {
       runtime: "cloud" as const,
       source: model.provider?.providerName || Locale.Discovery.Source.Provider,
       path: Path.Settings,
+      installed: model.available,
     }));
 
     return [...skillItems, ...toolItems, ...modelItems];
   }, [models, plugins, skills]);
 
-  const visibleCapabilities = capabilities.filter(
-    (item) => item.type === activeType,
-  );
+  const visibleCapabilities = capabilities.filter((item) => {
+    const keyword = searchText.trim().toLowerCase();
+    const matchType = activeType === "all" || item.type === activeType;
+    const matchView = view === "market" || item.installed;
+    const matchSearch =
+      !keyword ||
+      [item.title, item.description, item.source, item.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(keyword);
+    return matchType && matchView && matchSearch;
+  });
 
   return (
     <ErrorBoundary>
@@ -151,6 +168,17 @@ export function DiscoveryPage() {
           <div className="window-actions">
             <div className="window-action-button">
               <IconButton
+                text={
+                  view === "market"
+                    ? Locale.Discovery.MyCapabilities
+                    : Locale.Discovery.BackToMarket
+                }
+                bordered
+                onClick={() => setView(view === "market" ? "mine" : "market")}
+              />
+            </div>
+            <div className="window-action-button">
+              <IconButton
                 icon={<CloseIcon />}
                 bordered
                 onClick={() => navigate(-1)}
@@ -160,20 +188,32 @@ export function DiscoveryPage() {
         </div>
 
         <div className={styles["discovery-body"]}>
-          <div className={styles.tabs}>
-            {typeOrder.map((type) => (
-              <button
-                key={type}
-                type="button"
-                className={clsx(
-                  styles.tab,
-                  activeType === type && styles["tab-active"],
-                )}
-                onClick={() => setActiveType(type)}
-              >
-                {Locale.Discovery.Types[type]}
-              </button>
-            ))}
+          <div className={styles.toolbar}>
+            <input
+              className={styles.search}
+              value={searchText}
+              placeholder={
+                view === "market"
+                  ? Locale.Discovery.SearchMarket
+                  : Locale.Discovery.SearchMine
+              }
+              onChange={(event) => setSearchText(event.currentTarget.value)}
+            />
+            <div className={styles.filters}>
+              {typeOrder.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={clsx(
+                    styles.filter,
+                    activeType === type && styles["filter-active"],
+                  )}
+                  onClick={() => setActiveType(type)}
+                >
+                  {Locale.Discovery.Types[type]}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className={styles.grid}>
@@ -205,13 +245,20 @@ export function DiscoveryPage() {
                 <div className={styles.actions}>
                   <IconButton
                     icon={<EyeIcon />}
-                    text={Locale.Discovery.Manage}
+                    text={
+                      view === "market" && !item.installed
+                        ? Locale.Discovery.Enable
+                        : Locale.Discovery.Manage
+                    }
                     bordered
                     onClick={() => navigate(item.path)}
                   />
                 </div>
               </div>
             ))}
+            {visibleCapabilities.length === 0 && (
+              <div className={styles.empty}>{Locale.Discovery.Empty}</div>
+            )}
           </div>
         </div>
       </div>

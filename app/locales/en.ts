@@ -678,6 +678,7 @@ const en: LocaleType = {
       SubTitle: "Browse and manage skills, tools, and model capabilities",
     },
     Types: {
+      all: "All",
       skill: "Skills",
       tool: "Tools",
       model: "Models",
@@ -705,6 +706,12 @@ const en: LocaleType = {
     },
     SourceLabel: "Source",
     Manage: "Manage",
+    Enable: "Enable",
+    MyCapabilities: "My Capabilities",
+    BackToMarket: "Back to Market",
+    SearchMarket: "Search skills, tools, and models",
+    SearchMine: "Search my capabilities",
+    Empty: "No matching capabilities",
     DefaultSkillDesc:
       "A task-oriented workflow that can bind models, prompts, and tools.",
     DefaultModelDesc:

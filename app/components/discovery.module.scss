@@ -17,14 +17,26 @@
   overflow-x: hidden;
 }
 
-.tabs {
+.toolbar {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 18px;
   animation: slide-in ease 0.3s;
 }
 
-.tab {
+.search {
+  height: 36px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+}
+
+.filter {
   height: 34px;
   padding: 0 14px;
   border: var(--border-in-light);
@@ -35,7 +47,7 @@
   font-size: 13px;
 }
 
-.tab-active {
+.filter-active {
   color: var(--primary);
   border-color: var(--primary);
   background: var(--hover-color);
@@ -116,12 +128,29 @@
   margin-top: 4px;
 }
 
+.empty {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-in-light);
+  border-radius: 10px;
+  background: var(--white);
+  opacity: 0.65;
+  font-size: 13px;
+}
+
 @media screen and (max-width: 600px) {
   .discovery-body {
     padding: 14px 12px 24px;
   }
 
-  .tabs {
+  .toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters {
     overflow-x: auto;
   }
 
