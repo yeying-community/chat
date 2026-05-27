@@ -15,6 +15,7 @@ import { useCommand } from "../command";
 import { showConfirm } from "./ui-lib";
 import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
+import { useMemo } from "react";
 
 function SkillItem(props: {
   skill: Skill;
@@ -61,6 +62,27 @@ export function NewChat() {
   const skillStore = useSkillStore();
 
   const skills = skillStore.getAll();
+  const recentSkills = useMemo(() => {
+    const seen = new Set<string>();
+    return chatStore.sessions
+      .slice()
+      .sort((a, b) => b.lastUpdate - a.lastUpdate)
+      .map((session) => session.mask as Skill | undefined)
+      .filter((skill): skill is Skill => {
+        if (!skill) return false;
+        const hasSkillContent =
+          skill.context?.length > 0 ||
+          !!skill.description ||
+          !!skill.category ||
+          !!skill.starters?.length;
+        if (!hasSkillContent) return false;
+        const key = skill.id || skill.name;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 3);
+  }, [chatStore.sessions]);
 
   const navigate = useNavigate();
   const config = useAppConfig();
@@ -111,30 +133,58 @@ export function NewChat() {
       <div className={styles["title"]}>{Locale.NewChat.Title}</div>
       <div className={styles["sub-title"]}>{Locale.NewChat.SubTitle}</div>
 
-      <div className={styles["actions"]}>
+      <div className={styles["start-options"]}>
+        <button
+          className={styles["blank-chat"]}
+          onClick={() => startChat()}
+          type="button"
+        >
+          <span className={styles["blank-chat-icon"]}>
+            <LightningIcon />
+          </span>
+          <span className={styles["blank-chat-text"]}>
+            <span className={styles["blank-chat-title"]}>
+              {Locale.NewChat.BlankTitle}
+            </span>
+            <span className={styles["blank-chat-subtitle"]}>
+              {Locale.NewChat.BlankSubTitle}
+            </span>
+          </span>
+        </button>
+      </div>
+
+      {recentSkills.length > 0 && (
+        <>
+          <div className={styles["section-title"]}>
+            {Locale.NewChat.RecentTitle}
+          </div>
+          <div className={styles["recent-skills"]}>
+            {recentSkills.map((skill) => (
+              <SkillItem
+                key={skill.id}
+                skill={skill}
+                onClick={() => startChat(skill)}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className={styles["section-header"]}>
+        <div>
+          <div className={styles["section-title"]}>
+            {Locale.NewChat.FeaturedTitle}
+          </div>
+          <div className={styles["featured-subtitle"]}>
+            {Locale.NewChat.FeaturedSubTitle}
+          </div>
+        </div>
         <IconButton
           text={Locale.NewChat.More}
           onClick={() => navigate(Path.Skills)}
           icon={<EyeIcon />}
           bordered
-          shadow
         />
-
-        <IconButton
-          text={Locale.NewChat.Skip}
-          onClick={() => startChat()}
-          icon={<LightningIcon />}
-          type="primary"
-          shadow
-          className={styles["skip"]}
-        />
-      </div>
-
-      <div className={styles["featured-title"]}>
-        {Locale.NewChat.FeaturedTitle}
-      </div>
-      <div className={styles["featured-subtitle"]}>
-        {Locale.NewChat.FeaturedSubTitle}
       </div>
 
       <div className={styles["featured-masks"]}>
