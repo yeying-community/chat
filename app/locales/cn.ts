@@ -163,6 +163,13 @@ const cn = {
     SubTitle: "所有设置选项",
     ShowPassword: "显示密码",
 
+    Account: {
+      Logout: {
+        Title: "退出登录",
+        SubTitle: "断开当前钱包账号，并清除本地授权会话。",
+        Action: "退出",
+      },
+    },
     Danger: {
       Reset: {
         Title: "重置所有设置",

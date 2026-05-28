@@ -164,6 +164,14 @@ const en: LocaleType = {
     Title: "Settings",
     SubTitle: "All Settings",
     ShowPassword: "ShowPassword",
+    Account: {
+      Logout: {
+        Title: "Sign out",
+        SubTitle:
+          "Disconnect the current wallet account and clear the local authorization session.",
+        Action: "Sign out",
+      },
+    },
     Danger: {
       Reset: {
         Title: "Reset All Settings",

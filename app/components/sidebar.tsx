@@ -8,7 +8,6 @@ import CenterIcon from "../icons/my-center.svg";
 import AddIcon from "../icons/add.svg";
 import DeleteIcon from "../icons/delete.svg";
 import MaskIcon from "../icons/mask.svg";
-import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 import DiscoveryIcon from "../icons/discovery.svg";
 import WalletIcon from "../icons/wallet.svg";
@@ -17,7 +16,6 @@ import {
   connectWallet,
   getCurrentAccount,
   isValidUcanAuthorization,
-  logoutWallet,
   UCAN_AUTH_EVENT,
 } from "../plugins/wallet";
 import { useAppConfig, useChatStore } from "../store";
@@ -36,7 +34,6 @@ import { isIOS, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
 import { showConfirm } from "./ui-lib";
 import clsx from "clsx";
-import { isMcpEnabled } from "../mcp/actions";
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -270,17 +267,6 @@ export function SideBar(props: { className?: string }) {
   const navigate = useNavigate();
   const config = useAppConfig();
   const chatStore = useChatStore();
-  const [mcpEnabled, setMcpEnabled] = useState(false);
-
-  useEffect(() => {
-    // 检查 MCP 是否启用
-    const checkMcpStatus = async () => {
-      const enabled = await isMcpEnabled();
-      setMcpEnabled(enabled);
-      console.log("[SideBar] MCP enabled:", enabled);
-    };
-    checkMcpStatus();
-  }, []);
 
   return (
     <SideBarContainer
@@ -307,18 +293,6 @@ export function SideBar(props: { className?: string }) {
           ) : undefined
         }
         subTitle={show ? "" : undefined}
-        extra={
-          show ? (
-            <IconButton
-              text="退出"
-              bordered
-              className={styles["sidebar-header-logout"]}
-              onClick={async () => {
-                await logoutWallet();
-              }}
-            />
-          ) : undefined
-        }
       >
         {!show && (
           <div className={styles["sidebar-header-bar"]}>
@@ -349,19 +323,6 @@ export function SideBar(props: { className?: string }) {
             }}
             shadow
           />
-          {mcpEnabled && (
-            <IconButton
-              icon={<McpIcon />}
-              text={shouldNarrow ? undefined : Locale.Mcp.Name}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                navigate(`${Path.Discovery}?type=tool`, {
-                  state: { fromHome: true },
-                });
-              }}
-              shadow
-            />
-          )}
           <IconButton
             icon={<DiscoveryIcon />}
             text={shouldNarrow ? undefined : Locale.Discovery.Name}

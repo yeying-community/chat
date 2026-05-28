@@ -163,7 +163,7 @@
   padding-top: 20px;
   padding-bottom: 20px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   &-narrow {
     justify-content: center;
@@ -172,12 +172,13 @@
 
 .sidebar-logo {
   display: inline-flex;
-  margin-right: 8px;
+  margin-right: 6px;
 }
 
 .sidebar-title-container {
   display: inline-flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .sidebar-logo:empty {
@@ -192,12 +193,6 @@
   min-width: 0;
   margin-left: auto;
   justify-content: flex-end;
-}
-
-.sidebar-header-logout {
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1;
 }
 
 .sidebar-title {

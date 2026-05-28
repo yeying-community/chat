@@ -71,6 +71,12 @@ import { useSkillStore } from "../store/skill";
 import { ProviderType } from "../utils/cloud";
 import { TTSConfigList } from "./tts-config";
 import { RealtimeConfigList } from "./realtime-chat/realtime-config";
+import {
+  getCurrentAccount,
+  isValidUcanAuthorization,
+  logoutWallet,
+  UCAN_AUTH_EVENT,
+} from "../plugins/wallet";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
@@ -255,6 +261,51 @@ function DangerItems() {
             if (await showConfirm(Locale.Settings.Danger.Clear.Confirm)) {
               chatStore.clearAllData();
             }
+          }}
+          type="danger"
+        />
+      </ListItem>
+    </List>
+  );
+}
+
+function AccountItems() {
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const valid = await isValidUcanAuthorization();
+      if (!cancelled) {
+        setAuthorized(valid);
+      }
+    };
+    check();
+    const onAuthChange = () => {
+      check();
+    };
+    window.addEventListener(UCAN_AUTH_EVENT, onAuthChange);
+    window.addEventListener("storage", onAuthChange);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(UCAN_AUTH_EVENT, onAuthChange);
+      window.removeEventListener("storage", onAuthChange);
+    };
+  }, []);
+
+  if (!authorized) return null;
+
+  return (
+    <List>
+      <ListItem
+        title={Locale.Settings.Account.Logout.Title}
+        subTitle={Locale.Settings.Account.Logout.SubTitle}
+      >
+        <IconButton
+          aria={Locale.Settings.Account.Logout.Action}
+          text={Locale.Settings.Account.Logout.Action}
+          onClick={async () => {
+            await logoutWallet();
           }}
           type="danger"
         />
@@ -726,6 +777,7 @@ export function Settings() {
   const builtinCount = SearchService.count.builtin;
   const customCount = promptStore.getUserPrompts().length ?? 0;
   const [shouldShowPromptModal, setShowPromptModal] = useState(false);
+  const walletAddress = getCurrentAccount() || undefined;
 
   const showUsage = accessStore.isAuthorized();
   useEffect(() => {
@@ -869,7 +921,7 @@ export function Settings() {
                     setShowEmojiPicker(!showEmojiPicker);
                   }}
                 >
-                  <Avatar avatar={config.avatar} />
+                  <Avatar avatar={config.avatar} address={walletAddress} />
                 </div>
               </Popover>
             </ListItem>
@@ -1257,6 +1309,7 @@ export function Settings() {
           </List>
 
           <DangerItems />
+          <AccountItems />
         </div>
       </div>
     </ErrorBoundary>
