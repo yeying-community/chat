@@ -165,6 +165,9 @@ const en: LocaleType = {
     SubTitle: "All Settings",
     ShowPassword: "ShowPassword",
     Account: {
+      Address: {
+        Title: "Blockchain Address",
+      },
       Logout: {
         Title: "Sign out",
         SubTitle:

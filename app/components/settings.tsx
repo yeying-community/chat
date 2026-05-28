@@ -63,7 +63,7 @@ import { SearchService, usePromptStore } from "../store/prompt";
 import { ErrorBoundary } from "./error";
 import { InputRange } from "./input-range";
 import { useNavigate } from "react-router-dom";
-import { Avatar, AvatarPicker } from "./emoji";
+import { Avatar, AvatarPicker, WalletAccount } from "./emoji";
 import { getClientConfig } from "../config/client";
 import { useSyncStore } from "../store/sync";
 import { nanoid } from "nanoid";
@@ -925,6 +925,14 @@ export function Settings() {
                 </div>
               </Popover>
             </ListItem>
+            {walletAddress && (
+              <ListItem
+                title={Locale.Settings.Account.Address.Title}
+                subTitle={walletAddress}
+              >
+                <WalletAccount address={walletAddress} title={walletAddress} />
+              </ListItem>
+            )}
             <ListItem
               title={Locale.Settings.Update.Version(
                 currentVersion ?? "unknown",
