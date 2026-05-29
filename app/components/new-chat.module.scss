@@ -26,10 +26,10 @@
   .title {
     flex-shrink: 0;
     text-align: center;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: bolder;
-    margin-top: 32px;
-    margin-bottom: 1vh;
+    margin-top: 24px;
+    margin-bottom: 0;
     animation: slide-in ease 0.35s;
   }
 
@@ -52,7 +52,7 @@
   .section-title {
     flex-shrink: 0;
     width: min(1100px, calc(100% - 40px));
-    margin: 28px auto 0;
+    margin: 24px auto 0;
     font-size: 18px;
     font-weight: 700;
     animation: slide-in ease 0.45s;
@@ -77,66 +77,81 @@
     width: auto;
   }
 
-  .start-options {
+  .launch-panel {
     width: min(720px, calc(100% - 40px));
-    margin: 28px auto 0;
+    margin: 24px auto 0;
+    padding: 12px;
+    border: var(--border-in-light);
+    border-radius: 18px;
+    background: var(--white);
+    box-shadow: var(--card-shadow);
     animation: slide-in ease 0.45s;
   }
 
-  .blank-chat {
+  .launch-input {
     width: 100%;
-    min-height: 72px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    border: var(--border-in-light);
-    border-radius: 10px;
-    background: var(--white);
+    min-height: 96px;
+    padding: 8px 10px;
+    border: 0;
+    outline: none;
+    resize: none;
+    box-sizing: border-box;
+    background: transparent;
     color: var(--black);
-    box-shadow: var(--card-shadow);
-    cursor: pointer;
-    text-align: left;
-    transition: all ease 0.25s;
-
-    &:hover {
-      border-color: var(--primary);
-    }
+    font-size: 16px;
+    line-height: 1.55;
+    font-family: inherit;
   }
 
-  .blank-chat-icon {
-    width: 36px;
-    height: 36px;
+  .launch-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .quick-action,
+  .send-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    border-radius: 8px;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all ease 0.25s;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .quick-action {
     background: var(--hover-color);
+    color: var(--black);
   }
 
-  .blank-chat-text {
-    min-width: 0;
-    display: grid;
-    gap: 5px;
+  .send-action {
+    background: var(--primary);
+    color: white;
   }
 
-  .blank-chat-title {
-    font-size: 15px;
-    font-weight: 700;
-  }
-
-  .blank-chat-subtitle {
-    font-size: 12px;
-    line-height: 1.45;
-    opacity: 0.72;
+  .quick-action:hover,
+  .send-action:hover {
+    transform: translateY(-1px);
   }
 
   .featured-masks {
     width: min(1100px, calc(100% - 40px));
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 12px;
     margin-top: 18px;
     margin-left: auto;
@@ -159,9 +174,10 @@
 
   .mask {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     min-width: 0;
-    padding: 14px 16px;
+    min-height: 64px;
+    padding: 12px 14px;
     border: var(--border-in-light);
     box-shadow: var(--card-shadow);
     background-color: var(--white);
@@ -184,32 +200,6 @@
       font-size: 14px;
       font-weight: 600;
     }
-
-    .mask-desc {
-      margin-top: 6px;
-      font-size: 12px;
-      line-height: 1.5;
-      opacity: 0.75;
-    }
-
-    .mask-starters {
-      margin-top: 10px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .mask-starter {
-      font-size: 12px;
-      line-height: 1.45;
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: var(--hover-color);
-    }
-  }
-
-  .mask-detailed {
-    min-height: 180px;
-    width: 100%;
   }
 
   @media screen and (max-width: 600px) {
@@ -233,14 +223,24 @@
       align-items: flex-start;
     }
 
-    .start-options,
+    .launch-panel,
     .recent-skills {
       width: calc(100% - 24px);
     }
 
+    .launch-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .quick-action,
+    .send-action {
+      width: 100%;
+    }
+
     .featured-masks {
       width: calc(100% - 24px);
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .recent-skills {

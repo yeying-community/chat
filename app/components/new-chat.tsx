@@ -1,10 +1,11 @@
-import { Path } from "../constant";
+import { Path, UNFINISHED_INPUT } from "../constant";
 import { IconButton } from "./button";
 import styles from "./new-chat.module.scss";
 
 import LeftIcon from "../icons/left.svg";
-import LightningIcon from "../icons/lightning.svg";
 import EyeIcon from "../icons/eye.svg";
+import ImageIcon from "../icons/image.svg";
+import SendWhiteIcon from "../icons/send-white.svg";
 
 import { useLocation, useNavigate } from "react-router-dom";
 import { Skill, useSkillStore } from "../store/skill";
@@ -15,21 +16,12 @@ import { useCommand } from "../command";
 import { showConfirm } from "./ui-lib";
 import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { safeLocalStorage } from "../utils";
 
-function SkillItem(props: {
-  skill: Skill;
-  onClick?: () => void;
-  detailed?: boolean;
-}) {
+function SkillItem(props: { skill: Skill; onClick?: () => void }) {
   return (
-    <div
-      className={clsx(
-        styles["mask"],
-        props.detailed && styles["mask-detailed"],
-      )}
-      onClick={props.onClick}
-    >
+    <div className={styles["mask"]} onClick={props.onClick}>
       <MaskAvatar
         avatar={props.skill.avatar}
         model={props.skill.modelConfig.model}
@@ -38,30 +30,20 @@ function SkillItem(props: {
         <div className={clsx(styles["mask-name"], "one-line")}>
           {props.skill.name}
         </div>
-        {props.detailed && props.skill.description && (
-          <div className={styles["mask-desc"]}>{props.skill.description}</div>
-        )}
-        {props.detailed &&
-          props.skill.starters &&
-          props.skill.starters.length > 0 && (
-            <div className={styles["mask-starters"]}>
-              {props.skill.starters.slice(0, 2).map((starter) => (
-                <div key={starter} className={styles["mask-starter"]}>
-                  {starter}
-                </div>
-              ))}
-            </div>
-          )}
       </div>
     </div>
   );
 }
 
+const localStorage = safeLocalStorage();
+
 export function NewChat() {
   const chatStore = useChatStore();
   const skillStore = useSkillStore();
+  const [draft, setDraft] = useState("");
 
   const skills = skillStore.getAll();
+  const featuredSkills = skills.slice(0, 8);
   const recentSkills = useMemo(() => {
     const seen = new Set<string>();
     return chatStore.sessions
@@ -89,13 +71,20 @@ export function NewChat() {
 
   const { state } = useLocation();
 
-  const startChat = (skill?: Skill) => {
+  const startChat = (skill?: Skill, initialInput = "") => {
     setTimeout(() => {
       if (chatStore.newSession(skill) !== false) {
+        const input = initialInput.trim();
+        const session = useChatStore.getState().sessions[0];
+        if (input && session?.id) {
+          localStorage.setItem(UNFINISHED_INPUT(session.id), input);
+        }
         navigate(Path.Chat);
       }
     }, 10);
   };
+
+  const startDraftChat = () => startChat(undefined, draft);
 
   useCommand({
     mask: (id) => {
@@ -130,27 +119,40 @@ export function NewChat() {
           ></IconButton>
         )}
       </div>
-      <div className={styles["title"]}>{Locale.NewChat.Title}</div>
-      <div className={styles["sub-title"]}>{Locale.NewChat.SubTitle}</div>
+      <div className={styles["title"]}>{Locale.Home.NewChat}</div>
 
-      <div className={styles["start-options"]}>
-        <button
-          className={styles["blank-chat"]}
-          onClick={() => startChat()}
-          type="button"
-        >
-          <span className={styles["blank-chat-icon"]}>
-            <LightningIcon />
-          </span>
-          <span className={styles["blank-chat-text"]}>
-            <span className={styles["blank-chat-title"]}>
-              {Locale.NewChat.BlankTitle}
-            </span>
-            <span className={styles["blank-chat-subtitle"]}>
-              {Locale.NewChat.BlankSubTitle}
-            </span>
-          </span>
-        </button>
+      <div className={styles["launch-panel"]}>
+        <textarea
+          className={styles["launch-input"]}
+          value={draft}
+          placeholder={Locale.NewChat.Placeholder}
+          rows={3}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              startDraftChat();
+            }
+          }}
+        />
+        <div className={styles["launch-actions"]}>
+          <button
+            className={styles["quick-action"]}
+            onClick={() => navigate(Path.Sd)}
+            type="button"
+          >
+            <ImageIcon />
+            {Locale.NewChat.ImageTitle}
+          </button>
+          <button
+            className={styles["send-action"]}
+            onClick={startDraftChat}
+            type="button"
+          >
+            {Locale.NewChat.BlankTitle}
+            <SendWhiteIcon />
+          </button>
+        </div>
       </div>
 
       {recentSkills.length > 0 && (
@@ -175,9 +177,6 @@ export function NewChat() {
           <div className={styles["section-title"]}>
             {Locale.NewChat.FeaturedTitle}
           </div>
-          <div className={styles["featured-subtitle"]}>
-            {Locale.NewChat.FeaturedSubTitle}
-          </div>
         </div>
         <IconButton
           text={Locale.NewChat.More}
@@ -188,11 +187,10 @@ export function NewChat() {
       </div>
 
       <div className={styles["featured-masks"]}>
-        {skills.map((skill) => (
+        {featuredSkills.map((skill) => (
           <SkillItem
             key={skill.id}
             skill={skill}
-            detailed
             onClick={() => startChat(skill)}
           />
         ))}

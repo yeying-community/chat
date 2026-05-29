@@ -209,6 +209,8 @@
 
 .sidebar-body {
   flex: 1;
+  min-height: 0;
+  padding-bottom: 12px;
   overflow: auto;
   overflow-x: hidden;
 }
@@ -359,35 +361,6 @@
       opacity: 0.6;
     }
   }
-
-  .sidebar-tail {
-    flex-direction: column-reverse;
-    align-items: center;
-
-    .sidebar-actions {
-      flex-direction: column-reverse;
-      align-items: center;
-
-      .sidebar-action {
-        margin-right: 0;
-        margin-top: 15px;
-      }
-    }
-  }
-}
-
-.sidebar-tail {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 20px;
-}
-
-.sidebar-actions {
-  display: inline-flex;
-}
-
-.sidebar-action:not(:last-child) {
-  margin-right: 15px;
 }
 
 .loading-content {
