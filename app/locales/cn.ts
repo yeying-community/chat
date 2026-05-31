@@ -870,9 +870,9 @@ const cn = {
     BlankSubTitle: "不使用预设技能，直接进入对话。",
     ImageTitle: "图片创作",
     RecentTitle: "最近使用",
-    FeaturedTitle: "选择技能",
+    FeaturedTitle: "技能",
     FeaturedSubTitle: "技能会带上适合当前任务的提示词和模型参数。",
-    More: "管理技能",
+    More: "全部",
   },
 
   URLCommand: {

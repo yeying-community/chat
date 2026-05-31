@@ -7,13 +7,13 @@ import EyeIcon from "../icons/eye.svg";
 import ImageIcon from "../icons/image.svg";
 import SendWhiteIcon from "../icons/send-white.svg";
 
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Skill, useSkillStore } from "../store/skill";
 import Locale from "../locales";
-import { useAppConfig, useChatStore } from "../store";
+import { useChatStore } from "../store";
+import { useSdStore } from "../store/sd";
 import { MaskAvatar } from "./mask";
 import { useCommand } from "../command";
-import { showConfirm } from "./ui-lib";
 import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
 import { useMemo, useState } from "react";
@@ -40,10 +40,10 @@ const localStorage = safeLocalStorage();
 export function NewChat() {
   const chatStore = useChatStore();
   const skillStore = useSkillStore();
+  const sdStore = useSdStore();
   const [draft, setDraft] = useState("");
 
   const skills = skillStore.getAll();
-  const featuredSkills = skills.slice(0, 8);
   const recentSkills = useMemo(() => {
     const seen = new Set<string>();
     return chatStore.sessions
@@ -65,11 +65,19 @@ export function NewChat() {
       })
       .slice(0, 3);
   }, [chatStore.sessions]);
+  const entrySkills = useMemo(() => {
+    const seen = new Set<string>();
+    return [...recentSkills, ...skills]
+      .filter((skill) => {
+        const key = skill.id || skill.name;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }, [recentSkills, skills]);
 
   const navigate = useNavigate();
-  const config = useAppConfig();
-
-  const { state } = useLocation();
 
   const startChat = (skill?: Skill, initialInput = "") => {
     setTimeout(() => {
@@ -85,6 +93,17 @@ export function NewChat() {
   };
 
   const startDraftChat = () => startChat(undefined, draft);
+  const startImageCreation = () => {
+    const input = draft.trim();
+    sdStore.setCurrentMode("generation");
+    if (input) {
+      sdStore.setCurrentParams({
+        ...useSdStore.getState().currentParams,
+        prompt: input,
+      });
+    }
+    navigate(Path.Sd);
+  };
 
   useCommand({
     mask: (id) => {
@@ -105,19 +124,6 @@ export function NewChat() {
           text={Locale.NewChat.Return}
           onClick={() => navigate(Path.Home)}
         ></IconButton>
-        {!state?.fromHome && (
-          <IconButton
-            text={Locale.NewChat.NotShow}
-            onClick={async () => {
-              if (await showConfirm(Locale.NewChat.ConfirmNoShow)) {
-                startChat();
-                config.update(
-                  (config) => (config.dontShowMaskSplashScreen = true),
-                );
-              }
-            }}
-          ></IconButton>
-        )}
       </div>
       <div className={styles["title"]}>{Locale.Home.NewChat}</div>
 
@@ -138,7 +144,7 @@ export function NewChat() {
         <div className={styles["launch-actions"]}>
           <button
             className={styles["quick-action"]}
-            onClick={() => navigate(Path.Sd)}
+            onClick={startImageCreation}
             type="button"
           >
             <ImageIcon />
@@ -155,23 +161,6 @@ export function NewChat() {
         </div>
       </div>
 
-      {recentSkills.length > 0 && (
-        <>
-          <div className={styles["section-title"]}>
-            {Locale.NewChat.RecentTitle}
-          </div>
-          <div className={styles["recent-skills"]}>
-            {recentSkills.map((skill) => (
-              <SkillItem
-                key={skill.id}
-                skill={skill}
-                onClick={() => startChat(skill)}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
       <div className={styles["section-header"]}>
         <div>
           <div className={styles["section-title"]}>
@@ -187,7 +176,7 @@ export function NewChat() {
       </div>
 
       <div className={styles["featured-masks"]}>
-        {featuredSkills.map((skill) => (
+        {entrySkills.map((skill) => (
           <SkillItem
             key={skill.id}
             skill={skill}
