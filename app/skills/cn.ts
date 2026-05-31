@@ -1,0 +1,112 @@
+import { BuiltinSkill } from "./typing";
+import { createBuiltinSkill } from "./utils";
+
+export const CN_SKILLS: BuiltinSkill[] = [
+  createBuiltinSkill({
+    avatar: "26a1",
+    name: "直接对话",
+    description: "没有固定套路，适合日常问答、临时想法和快速处理。",
+    category: "基础",
+    starters: [
+      "帮我把这个问题想清楚，先给结论。",
+      "把下面内容整理成清晰的要点。",
+      "按当前信息先推进，缺少关键信息再问我。",
+    ],
+    lang: "cn",
+    createdAt: 1700000001001,
+    context: [
+      {
+        id: "cn-general-0",
+        role: "system",
+        content:
+          "你是一个面向结果的通用 AI。先理解用户目标，再给出清晰、可执行的回答。信息不足时，只追问最关键的问题；如果可以基于合理假设继续，就先说明假设并推进。避免空话和重复，优先输出结论、步骤、风险和下一步。",
+        date: "",
+      },
+    ],
+    modelConfig: {
+      temperature: 0.4,
+      historyMessageCount: 12,
+    },
+  }),
+  createBuiltinSkill({
+    avatar: "1f50d",
+    name: "网页研究",
+    description: "搜索网页、抓取来源、对比总结，适合需要最新资料的问题。",
+    category: "研究",
+    starters: [
+      "请先搜索这个主题，再抓取最相关的两个来源并对比总结。",
+      "围绕这个问题做多来源调研，输出结论、证据和不确定点。",
+      "帮我查找最新资料，并附上来源链接。",
+    ],
+    lang: "cn",
+    createdAt: 1700000001002,
+    context: [
+      {
+        id: "cn-web-research-0",
+        role: "system",
+        content:
+          "你正在执行网页研究任务。需要最新信息、公开网页资料、技术调研或产品对比时，优先使用网页搜索工具找来源，再用网页抓取工具读取原文。不要把搜索结果页当作正文来源。回答时先给结论，再列关键证据、差异、不确定点和来源链接。工具不可用、来源不足或抓取失败时，要直接说明，不要捏造来源。",
+        date: "",
+      },
+    ],
+    modelConfig: {
+      temperature: 0.25,
+      max_tokens: 6000,
+      historyMessageCount: 10,
+    },
+  }),
+  createBuiltinSkill({
+    avatar: "1f4c4",
+    name: "阅读总结",
+    description: "读取网页、文档或长文本，提炼摘要、结构和行动项。",
+    category: "阅读",
+    starters: [
+      "抓取这个网页并用中文总结重点。",
+      "阅读下面这段长文，提炼摘要、关键结论和待办事项。",
+      "把这份材料整理成适合汇报的结构。",
+    ],
+    lang: "cn",
+    createdAt: 1700000001003,
+    context: [
+      {
+        id: "cn-reading-0",
+        role: "system",
+        content:
+          "你正在执行阅读总结任务。优先保留原文事实、结构和关键结论，区分原文观点与自己的分析。默认输出：一句话摘要、关键要点、重要细节、可执行事项、仍需确认的问题。不要擅自补充原文没有的信息；如果材料来自网页，尽量附来源链接。",
+        date: "",
+      },
+    ],
+    modelConfig: {
+      temperature: 0.3,
+      max_tokens: 5000,
+      historyMessageCount: 8,
+    },
+  }),
+  createBuiltinSkill({
+    avatar: "2696-fe0f",
+    name: "方案对比",
+    description: "把多个产品、技术或决策选项放在同一标准下比较。",
+    category: "分析",
+    starters: [
+      "对比这几个方案，给出评价维度、优缺点和推荐结论。",
+      "帮我把这两个产品按价格、能力、限制和适用场景做表格对比。",
+      "先定义判断标准，再分析哪个方案更适合我。",
+    ],
+    lang: "cn",
+    createdAt: 1700000001004,
+    context: [
+      {
+        id: "cn-compare-0",
+        role: "system",
+        content:
+          "你正在执行方案对比任务。先明确用户目标和评价维度，再比较各选项的能力、成本、限制、风险和适用场景。默认输出：结论、对比表、关键取舍、推荐方案、下一步验证。事实不足时明确标注假设；涉及最新信息时优先使用搜索和抓取工具核实。",
+        date: "",
+      },
+    ],
+    modelConfig: {
+      temperature: 0.3,
+      max_tokens: 5000,
+      historyMessageCount: 10,
+    },
+  }),
+];

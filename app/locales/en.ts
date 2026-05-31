@@ -7,6 +7,7 @@ const isApp = !!getClientConfig()?.isApp;
 const en: LocaleType = {
   WIP: "Coming Soon...",
   Error: {
+    Mermaid: "Mermaid syntax error. Source code is preserved.",
     Unauthorized: isApp
       ? `😆 Oops, there's an issue. No worries:
      \\ 1️⃣ Want zero-config access? Please use Chat AI
@@ -60,7 +61,7 @@ const en: LocaleType = {
     },
     Commands: {
       new: "Start a new chat",
-      newm: "Start a new chat with mask",
+      newm: "Start with a skill",
       next: "Next Chat",
       prev: "Previous Chat",
       clear: "Clear Context",
@@ -76,7 +77,7 @@ const en: LocaleType = {
         dark: "Dark Theme",
       },
       Prompt: "Prompts",
-      Masks: "Masks",
+      Masks: "Skills",
       Clear: "Clear Context",
       Settings: "Settings",
       UploadImage: "Upload Images",
@@ -95,7 +96,7 @@ const en: LocaleType = {
     StopSpeak: "Stop Speak",
     Config: {
       Reset: "Reset to Default",
-      SaveAs: "Save as Mask",
+      SaveAs: "Save as Skill",
     },
     IsContext: "Contextual Prompt",
     ShortcutKey: {
@@ -121,7 +122,7 @@ const en: LocaleType = {
     },
     IncludeContext: {
       Title: "Including Context",
-      SubTitle: "Export context prompts in mask or not",
+      SubTitle: "Export skill context prompts or not",
     },
     Steps: {
       Select: "Select",
@@ -152,7 +153,7 @@ const en: LocaleType = {
       "Resetting will clear the current conversation history and historical memory. Are you sure you want to reset?",
   },
   Home: {
-    NewChat: "New Chat",
+    NewChat: "Session",
     DeleteChat: "Confirm to delete the selected conversation?",
     DeleteToast: "Chat Deleted",
     Revert: "Revert",
@@ -164,6 +165,17 @@ const en: LocaleType = {
     Title: "Settings",
     SubTitle: "All Settings",
     ShowPassword: "ShowPassword",
+    Account: {
+      Address: {
+        Title: "Blockchain Address",
+      },
+      Logout: {
+        Title: "Sign out",
+        SubTitle:
+          "Disconnect the current wallet account and clear the local authorization session.",
+        Action: "Sign out",
+      },
+    },
     Danger: {
       Reset: {
         Title: "Reset All Settings",
@@ -238,6 +250,12 @@ const en: LocaleType = {
           Title: "Sync Type",
           SubTitle: "Choose your favorite sync service",
         },
+        AutoSync: {
+          Title: "Auto Sync",
+        },
+        AutoSyncInterval: {
+          Title: "Auto Sync Interval (min)",
+        },
         Proxy: {
           Title: "Enable CORS Proxy",
           SubTitle: "Enable a proxy to avoid cross-origin restrictions",
@@ -254,12 +272,15 @@ const en: LocaleType = {
           BaseUrlSubTitle: "No path included, e.g. https://webdav.example.com",
           Prefix: "WebDAV Prefix",
           PrefixSubTitle: "Default /dav, optional to change",
+          UcanBaseUrl: "WebDAV Backend Base URL",
+          UcanPrefix: "WebDAV Backend Prefix",
+          AuthType: "WebDAV Auth",
           UserName: "User Name",
           Password: "Password",
         },
 
         UpStash: {
-          Endpoint: "UpStash Redis REST Url",
+          Endpoint: "UpStash Redis REST URL",
           UserName: "Backup Name",
           Password: "UpStash Redis REST Token",
         },
@@ -267,18 +288,18 @@ const en: LocaleType = {
 
       LocalState: "Local Data",
       Overview: (overview: any) => {
-        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${overview.mask} masks`;
+        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${overview.mask} skills`;
       },
       ImportFailed: "Failed to import from file",
     },
     Mask: {
       Splash: {
-        Title: "Mask Splash Screen",
-        SubTitle: "Show a mask splash screen before starting new chat",
+        Title: "Skill Picker",
+        SubTitle: "Show the skill picker before starting a new chat",
       },
       Builtin: {
-        Title: "Hide Builtin Masks",
-        SubTitle: "Hide builtin masks in mask list",
+        Title: "Hide Builtin Skills",
+        SubTitle: "Hide builtin skills in the skill list",
       },
     },
     Prompt: {
@@ -565,6 +586,7 @@ const en: LocaleType = {
     CompressModel: {
       Title: "Summary Model",
       SubTitle: "Model used to compress history and generate title",
+      Auto: "Auto",
     },
     Temperature: {
       Title: "Temperature",
@@ -673,9 +695,69 @@ const en: LocaleType = {
   },
   Discovery: {
     Name: "Discovery",
+    Page: {
+      Title: "Discovery",
+      SubTitle: "Browse and manage skills, tools, and model capabilities",
+    },
+    Types: {
+      all: "All",
+      skill: "Skills",
+      tool: "Tools",
+      provider: "Model Services",
+    },
+    Status: {
+      Enabled: "Enabled",
+      Installed: "Installed",
+      Configurable: "Configurable",
+      Unavailable: "Unavailable",
+      Paused: "Paused",
+      Error: "Error",
+    },
+    Pricing: {
+      free: "Free",
+      subscription: "Subscription",
+      usage: "Usage-based",
+    },
+    Runtime: {
+      cloud: "Cloud",
+      local: "Local",
+      both: "Cloud / Local",
+    },
+    Source: {
+      Official: "Official",
+      Custom: "Custom",
+      Provider: "Model Service",
+    },
+    SourceLabel: "Source",
+    Manage: "Manage",
+    Enable: "Enable",
+    Use: "Start",
+    MyCapabilities: "My Capabilities",
+    BackToMarket: "Back to Market",
+    SearchMarket: "Search skills, tools, and model services",
+    SearchMine: "Search my capabilities",
+    Empty: "No matching capabilities",
+    ResetFilters: "Clear filters",
+    DefaultSkillDesc:
+      "A task-oriented workflow that can bind models, prompts, and tools.",
+    SkillStarters: (count: number) => `${count} starters`,
+    SkillTools: (count: number) => `${count} bound tools`,
+    RouterProviderTitle: "Community Router",
+    RouterProviderDesc:
+      "Default model service for accessing community-available models.",
+    ProviderDesc: (available: number, total: number, tags: string[]) =>
+      tags.length > 0
+        ? `${available}/${total} models available · ${tags.join(" / ")}`
+        : `${available}/${total} models available`,
+    ToolMcpTitle: "Tool Connectors",
+    ToolMcpDesc:
+      "Connect MCP tools such as search, fetch, filesystem, git, and time.",
+    ToolApiTitle: "API Tools",
+    ToolApiDesc: "Expose external actions to models through API integrations.",
+    ToolApiHighlight: "OpenAPI",
   },
   Mcp: {
-    Name: "MCP",
+    Name: "Tools",
   },
   FineTuned: {
     Sysmessage: "You are an assistant that",
@@ -696,13 +778,13 @@ const en: LocaleType = {
     },
   },
   Plugin: {
-    Name: "Plugin",
+    Name: "API Integration",
     Page: {
-      Title: "Plugins",
-      SubTitle: (count: number) => `${count} plugins`,
-      Search: "Search Plugin",
+      Title: "API Integrations",
+      SubTitle: (count: number) => `${count} API integrations`,
+      Search: "Search API Integration",
       Create: "Create",
-      Find: "You can find awesome plugins on github: ",
+      Find: "You can find API integrations on GitHub: ",
     },
     Item: {
       Info: (count: number) => `${count} method`,
@@ -727,7 +809,7 @@ const en: LocaleType = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `Edit Plugin ${readonly ? "(readonly)" : ""}`,
+        `Edit API Integration ${readonly ? "(readonly)" : ""}`,
       Download: "Download",
       Auth: "Authentication Type",
       Content: "OpenAPI Schema",
@@ -740,12 +822,14 @@ const en: LocaleType = {
     CollectWallet: "collect wallet",
   },
   Mask: {
-    Name: "Mask",
+    Name: "Skills",
     Page: {
-      Title: "Prompt Template",
-      SubTitle: (count: number) => `${count} prompt templates`,
-      Search: "Search Templates",
+      Title: "Skills",
+      SubTitle: (count: number) => `${count} skills`,
+      Search: "Search Skills",
       Create: "Create",
+      AllCategories: "All",
+      Empty: "No matching skills",
     },
     Item: {
       Info: (count: number) => `${count} prompts`,
@@ -757,8 +841,8 @@ const en: LocaleType = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `Edit Prompt Template ${readonly ? "(readonly)" : ""}`,
-      Download: "Download",
+        `Edit Skill ${readonly ? "(readonly)" : ""}`,
+      Download: "Download Skill",
       Clone: "Clone",
     },
     Config: {
@@ -783,8 +867,8 @@ const en: LocaleType = {
           "Automatically collapse/expand overly long code blocks when CodeFold is enabled",
       },
       Share: {
-        Title: "Share This Mask",
-        SubTitle: "Generate a link to this mask",
+        Title: "Share This Skill",
+        SubTitle: "Generate a link to this skill",
         Action: "Copy Link",
       },
     },
@@ -792,12 +876,16 @@ const en: LocaleType = {
   NewChat: {
     Return: "Return",
     Skip: "Just Start",
-    Title: "Pick a Mask",
-    SubTitle: "Chat with the Soul behind the Mask",
-    FeaturedTitle: "Recommended Masks",
-    FeaturedSubTitle:
-      "Pick a working mode first, then start from the example prompts for more stable results.",
-    More: "Find More",
+    Title: "New Chat",
+    SubTitle: "Start blank, or choose a skill for the current task",
+    Placeholder: "Type an idea to start a session",
+    BlankTitle: "Chat",
+    BlankSubTitle: "Start without a preset skill.",
+    ImageTitle: "Image Creation",
+    RecentTitle: "Recent",
+    FeaturedTitle: "Skills",
+    FeaturedSubTitle: "Skills apply task-specific prompts and model settings.",
+    More: "All",
     NotShow: "Never Show Again",
     ConfirmNoShow: "Confirm to disable？You can enable it in settings later.",
   },

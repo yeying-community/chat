@@ -221,15 +221,12 @@ export function WalletAccount(props: { address?: string; title?: string }) {
       className={styles["wallet-account"]}
       title={props.title || props.address}
     >
-      <span className={styles["wallet-address"]}>
-        {formatAddress(props.address || "")}
-      </span>
       <button
         onClick={copyToClipboard}
-        className={styles["wallet-copy"]}
+        className={styles["wallet-address"]}
         type="button"
       >
-        复制
+        {formatAddress(props.address || "")}
       </button>
     </div>
   );

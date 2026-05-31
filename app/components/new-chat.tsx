@@ -1,98 +1,117 @@
-import { Path } from "../constant";
+import { Path, UNFINISHED_INPUT } from "../constant";
 import { IconButton } from "./button";
-import { EmojiAvatar } from "./emoji";
 import styles from "./new-chat.module.scss";
 
 import LeftIcon from "../icons/left.svg";
-import LightningIcon from "../icons/lightning.svg";
 import EyeIcon from "../icons/eye.svg";
+import ImageIcon from "../icons/image.svg";
+import SendWhiteIcon from "../icons/send-white.svg";
 
-import { useLocation, useNavigate } from "react-router-dom";
-import { Mask, useMaskStore } from "../store/mask";
+import { useNavigate } from "react-router-dom";
+import { Skill, useSkillStore } from "../store/skill";
 import Locale from "../locales";
-import { useAppConfig, useChatStore } from "../store";
+import { useChatStore } from "../store";
+import { useSdStore } from "../store/sd";
 import { MaskAvatar } from "./mask";
 import { useCommand } from "../command";
-import { showConfirm } from "./ui-lib";
-import { BUILTIN_MASK_STORE } from "../masks";
+import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
+import { useMemo, useState } from "react";
+import { safeLocalStorage } from "../utils";
 
-function MaskItem(props: {
-  mask: Mask;
-  onClick?: () => void;
-  detailed?: boolean;
-}) {
+function SkillItem(props: { skill: Skill; onClick?: () => void }) {
   return (
-    <div
-      className={clsx(
-        styles["mask"],
-        props.detailed && styles["mask-detailed"],
-      )}
-      onClick={props.onClick}
-    >
+    <div className={styles["mask"]} onClick={props.onClick}>
       <MaskAvatar
-        avatar={props.mask.avatar}
-        model={props.mask.modelConfig.model}
+        avatar={props.skill.avatar}
+        model={props.skill.modelConfig.model}
       />
       <div className={styles["mask-texts"]}>
         <div className={clsx(styles["mask-name"], "one-line")}>
-          {props.mask.name}
+          {props.skill.name}
         </div>
-        {props.detailed && props.mask.description && (
-          <div className={styles["mask-desc"]}>{props.mask.description}</div>
-        )}
-        {props.detailed &&
-          props.mask.starters &&
-          props.mask.starters.length > 0 && (
-            <div className={styles["mask-starters"]}>
-              {props.mask.starters.slice(0, 2).map((starter) => (
-                <div key={starter} className={styles["mask-starter"]}>
-                  {starter}
-                </div>
-              ))}
-            </div>
-          )}
       </div>
     </div>
   );
 }
 
+const localStorage = safeLocalStorage();
+
 export function NewChat() {
   const chatStore = useChatStore();
-  const maskStore = useMaskStore();
+  const skillStore = useSkillStore();
+  const sdStore = useSdStore();
+  const [draft, setDraft] = useState("");
 
-  const masks = maskStore.getAll();
-  const featuredMasks = masks.slice(0, 6);
-  const groupedMasks = masks.reduce(
-    (groups, mask) => {
-      const category = mask.category || "Other";
-      groups[category] ??= [];
-      groups[category].push(mask);
-      return groups;
-    },
-    {} as Record<string, Mask[]>,
-  );
+  const skills = skillStore.getAll();
+  const recentSkills = useMemo(() => {
+    const seen = new Set<string>();
+    return chatStore.sessions
+      .slice()
+      .sort((a, b) => b.lastUpdate - a.lastUpdate)
+      .map((session) => session.mask as Skill | undefined)
+      .filter((skill): skill is Skill => {
+        if (!skill) return false;
+        const hasSkillContent =
+          skill.context?.length > 0 ||
+          !!skill.description ||
+          !!skill.category ||
+          !!skill.starters?.length;
+        if (!hasSkillContent) return false;
+        const key = skill.id || skill.name;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 3);
+  }, [chatStore.sessions]);
+  const entrySkills = useMemo(() => {
+    const seen = new Set<string>();
+    return [...recentSkills, ...skills]
+      .filter((skill) => {
+        const key = skill.id || skill.name;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 8);
+  }, [recentSkills, skills]);
 
   const navigate = useNavigate();
-  const config = useAppConfig();
 
-  const { state } = useLocation();
-
-  const startChat = (mask?: Mask) => {
+  const startChat = (skill?: Skill, initialInput = "") => {
     setTimeout(() => {
-      if (chatStore.newSession(mask) !== false) {
+      if (chatStore.newSession(skill) !== false) {
+        const input = initialInput.trim();
+        const session = useChatStore.getState().sessions[0];
+        if (input && session?.id) {
+          localStorage.setItem(UNFINISHED_INPUT(session.id), input);
+        }
         navigate(Path.Chat);
       }
     }, 10);
   };
 
+  const startDraftChat = () => startChat(undefined, draft);
+  const startImageCreation = () => {
+    const input = draft.trim();
+    sdStore.setCurrentMode("generation");
+    if (input) {
+      sdStore.setCurrentParams({
+        ...useSdStore.getState().currentParams,
+        prompt: input,
+      });
+    }
+    navigate(Path.Sd);
+  };
+
   useCommand({
     mask: (id) => {
       try {
-        const mask = maskStore.get(id) ?? BUILTIN_MASK_STORE.get(id);
-        startChat(mask ?? undefined);
+        const skill = skillStore.get(id) ?? BUILTIN_SKILL_STORE.get(id);
+        startChat(skill ?? undefined);
       } catch {
-        console.error("[New Chat] failed to create chat from mask id=", id);
+        console.error("[New Chat] failed to create chat from skill id=", id);
       }
     },
   });
@@ -105,86 +124,64 @@ export function NewChat() {
           text={Locale.NewChat.Return}
           onClick={() => navigate(Path.Home)}
         ></IconButton>
-        {!state?.fromHome && (
-          <IconButton
-            text={Locale.NewChat.NotShow}
-            onClick={async () => {
-              if (await showConfirm(Locale.NewChat.ConfirmNoShow)) {
-                startChat();
-                config.update(
-                  (config) => (config.dontShowMaskSplashScreen = true),
-                );
-              }
-            }}
-          ></IconButton>
-        )}
       </div>
-      <div className={styles["mask-cards"]}>
-        <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f606" size={24} />
-        </div>
-        <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f916" size={24} />
-        </div>
-        <div className={styles["mask-card"]}>
-          <EmojiAvatar avatar="1f479" size={24} />
+      <div className={styles["title"]}>{Locale.Home.NewChat}</div>
+
+      <div className={styles["launch-panel"]}>
+        <textarea
+          className={styles["launch-input"]}
+          value={draft}
+          placeholder={Locale.NewChat.Placeholder}
+          rows={3}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              startDraftChat();
+            }
+          }}
+        />
+        <div className={styles["launch-actions"]}>
+          <button
+            className={styles["quick-action"]}
+            onClick={startImageCreation}
+            type="button"
+          >
+            <ImageIcon />
+            {Locale.NewChat.ImageTitle}
+          </button>
+          <button
+            className={styles["send-action"]}
+            onClick={startDraftChat}
+            type="button"
+          >
+            {Locale.NewChat.BlankTitle}
+            <SendWhiteIcon />
+          </button>
         </div>
       </div>
 
-      <div className={styles["title"]}>{Locale.NewChat.Title}</div>
-      <div className={styles["sub-title"]}>{Locale.NewChat.SubTitle}</div>
-
-      <div className={styles["actions"]}>
+      <div className={styles["section-header"]}>
+        <div>
+          <div className={styles["section-title"]}>
+            {Locale.NewChat.FeaturedTitle}
+          </div>
+        </div>
         <IconButton
           text={Locale.NewChat.More}
-          onClick={() => navigate(Path.Masks)}
+          onClick={() => navigate(Path.Skills)}
           icon={<EyeIcon />}
           bordered
-          shadow
         />
-
-        <IconButton
-          text={Locale.NewChat.Skip}
-          onClick={() => startChat()}
-          icon={<LightningIcon />}
-          type="primary"
-          shadow
-          className={styles["skip"]}
-        />
-      </div>
-
-      <div className={styles["featured-title"]}>
-        {Locale.NewChat.FeaturedTitle}
-      </div>
-      <div className={styles["featured-subtitle"]}>
-        {Locale.NewChat.FeaturedSubTitle}
       </div>
 
       <div className={styles["featured-masks"]}>
-        {featuredMasks.map((mask) => (
-          <MaskItem
-            key={mask.id}
-            mask={mask}
-            detailed
-            onClick={() => startChat(mask)}
+        {entrySkills.map((skill) => (
+          <SkillItem
+            key={skill.id}
+            skill={skill}
+            onClick={() => startChat(skill)}
           />
-        ))}
-      </div>
-
-      <div className={styles["masks"]}>
-        {Object.entries(groupedMasks).map(([category, categoryMasks]) => (
-          <div key={category} className={styles["mask-group"]}>
-            <div className={styles["mask-group-title"]}>{category}</div>
-            <div className={styles["mask-row"]}>
-              {categoryMasks.map((mask) => (
-                <MaskItem
-                  key={mask.id}
-                  mask={mask}
-                  onClick={() => startChat(mask)}
-                />
-              ))}
-            </div>
-          </div>
         ))}
       </div>
     </div>

@@ -6,6 +6,7 @@ const isApp = !!getClientConfig()?.isApp;
 const cn = {
   WIP: "该功能仍在开发中……",
   Error: {
+    Mermaid: "Mermaid 语法有误，已保留源码。",
     Unauthorized: isApp
       ? `😆 对话遇到了一些问题，不用慌:
        \\ 1️⃣ 想要零配置开箱即用，请使用 Chat AI
@@ -59,7 +60,7 @@ const cn = {
     },
     Commands: {
       new: "新建聊天",
-      newm: "从面具新建聊天",
+      newm: "选择技能新建聊天",
       next: "下一个聊天",
       prev: "上一个聊天",
       clear: "清除上下文",
@@ -75,7 +76,7 @@ const cn = {
         dark: "深色模式",
       },
       Prompt: "快捷指令",
-      Masks: "所有面具",
+      Masks: "技能",
       Clear: "清除聊天",
       Settings: "对话设置",
       UploadImage: "上传图片",
@@ -94,7 +95,7 @@ const cn = {
     StopSpeak: "停止",
     Config: {
       Reset: "清除记忆",
-      SaveAs: "存为面具",
+      SaveAs: "存为技能",
     },
     IsContext: "预设提示词",
     ShortcutKey: {
@@ -119,8 +120,8 @@ const cn = {
       SubTitle: "可以导出 Markdown 文本或者 PNG 图片",
     },
     IncludeContext: {
-      Title: "包含面具上下文",
-      SubTitle: "是否在消息中展示面具上下文",
+      Title: "包含技能上下文",
+      SubTitle: "是否在消息中展示技能预设上下文",
     },
     Steps: {
       Select: "选取",
@@ -150,7 +151,7 @@ const cn = {
     ResetConfirm: "确认清空历史摘要？",
   },
   Home: {
-    NewChat: "新的聊天",
+    NewChat: "会话",
     DeleteChat: "确认删除选中的对话？",
     DeleteToast: "已删除会话",
     Revert: "撤销",
@@ -163,6 +164,16 @@ const cn = {
     SubTitle: "所有设置选项",
     ShowPassword: "显示密码",
 
+    Account: {
+      Address: {
+        Title: "区块链地址",
+      },
+      Logout: {
+        Title: "退出登录",
+        SubTitle: "断开当前钱包账号，并清除本地授权会话。",
+        Action: "退出",
+      },
+    },
     Danger: {
       Reset: {
         Title: "重置所有设置",
@@ -236,6 +247,12 @@ const cn = {
           Title: "同步类型",
           SubTitle: "选择喜爱的同步服务器",
         },
+        AutoSync: {
+          Title: "自动同步",
+        },
+        AutoSyncInterval: {
+          Title: "自动同步间隔（分钟）",
+        },
         Proxy: {
           Title: "启用代理",
           SubTitle: "在浏览器中同步时，必须启用代理以避免跨域限制",
@@ -251,31 +268,34 @@ const cn = {
           BaseUrlSubTitle: "不含路径，例如 https://webdav.example.com",
           Prefix: "WebDAV 前缀",
           PrefixSubTitle: "默认 /dav，可修改",
+          UcanBaseUrl: "WebDAV 后端基础地址",
+          UcanPrefix: "WebDAV 后端前缀",
+          AuthType: "WebDAV 授权方式",
           UserName: "用户名",
           Password: "密码",
         },
 
         UpStash: {
-          Endpoint: "UpStash Redis REST Url",
+          Endpoint: "UpStash Redis REST 地址",
           UserName: "备份名称",
-          Password: "UpStash Redis REST Token",
+          Password: "UpStash Redis REST 令牌",
         },
       },
 
       LocalState: "本地数据",
       Overview: (overview: any) => {
-        return `${overview.chat} 次对话，${overview.message} 条消息，${overview.prompt} 条提示词，${overview.mask} 个面具`;
+        return `${overview.chat} 次对话，${overview.message} 条消息，${overview.prompt} 条提示词，${overview.mask} 个技能`;
       },
       ImportFailed: "导入失败",
     },
     Mask: {
       Splash: {
-        Title: "面具启动页",
-        SubTitle: "新建聊天时，展示面具启动页",
+        Title: "技能选择页",
+        SubTitle: "新建聊天时，展示技能选择页",
       },
       Builtin: {
-        Title: "隐藏内置面具",
-        SubTitle: "在所有面具列表中隐藏内置面具",
+        Title: "隐藏内置技能",
+        SubTitle: "在技能列表中隐藏内置技能",
       },
     },
     Prompt: {
@@ -560,6 +580,7 @@ const cn = {
     CompressModel: {
       Title: "对话摘要模型",
       SubTitle: "用于压缩历史记录、生成对话标题的模型",
+      Auto: "自动选择",
     },
     Temperature: {
       Title: "随机性 (temperature)",
@@ -664,9 +685,66 @@ const cn = {
   },
   Discovery: {
     Name: "发现",
+    Page: {
+      Title: "发现",
+      SubTitle: "浏览和管理技能、工具与模型能力",
+    },
+    Types: {
+      all: "全部",
+      skill: "技能",
+      tool: "工具",
+      provider: "模型服务商",
+    },
+    Status: {
+      Enabled: "已启用",
+      Installed: "已安装",
+      Configurable: "可配置",
+      Unavailable: "不可用",
+      Paused: "已暂停",
+      Error: "异常",
+    },
+    Pricing: {
+      free: "免费",
+      subscription: "订阅",
+      usage: "按量",
+    },
+    Runtime: {
+      cloud: "云端",
+      local: "本地",
+      both: "云端 / 本地",
+    },
+    Source: {
+      Official: "官方",
+      Custom: "自定义",
+      Provider: "模型服务商",
+    },
+    SourceLabel: "来源",
+    Manage: "管理",
+    Enable: "启用",
+    Use: "开始使用",
+    MyCapabilities: "我的能力",
+    BackToMarket: "返回市场",
+    SearchMarket: "搜索技能、工具、模型服务商",
+    SearchMine: "搜索我的能力",
+    Empty: "没有找到匹配的能力",
+    ResetFilters: "清空筛选",
+    DefaultSkillDesc: "面向任务的工作方式，可绑定模型、提示词和工具。",
+    SkillStarters: (count: number) => `${count} 个开场白`,
+    SkillTools: (count: number) => `${count} 个绑定工具`,
+    RouterProviderTitle: "社区 Router",
+    RouterProviderDesc: "默认模型服务商，统一接入社区可用模型。",
+    ProviderDesc: (available: number, total: number, tags: string[]) =>
+      tags.length > 0
+        ? `${available}/${total} 个模型可用 · ${tags.join(" / ")}`
+        : `${available}/${total} 个模型可用`,
+    ToolMcpTitle: "工具连接器",
+    ToolMcpDesc: "连接搜索、抓取、文件、Git、时间等 MCP 工具。",
+    ToolApiTitle: "API 工具",
+    ToolApiDesc: "通过 API 集成为模型提供外部操作能力。",
+    ToolApiHighlight: "OpenAPI",
   },
   Mcp: {
-    Name: "MCP",
+    Name: "工具",
   },
   FineTuned: {
     Sysmessage: "你是一个助手",
@@ -687,13 +765,13 @@ const cn = {
     },
   },
   Plugin: {
-    Name: "插件",
+    Name: "API 集成",
     Page: {
-      Title: "插件",
-      SubTitle: (count: number) => `${count} 个插件`,
-      Search: "搜索插件",
+      Title: "API 集成",
+      SubTitle: (count: number) => `${count} 个 API 集成`,
+      Search: "搜索 API 集成",
       Create: "新建",
-      Find: "您可以在Github上找到优秀的插件：",
+      Find: "您可以在 Github 上找到优秀的 API 集成：",
     },
     Item: {
       Info: (count: number) => `${count} 方法`,
@@ -717,7 +795,8 @@ const cn = {
       LocationBody: "Body",
     },
     EditModal: {
-      Title: (readonly: boolean) => `编辑插件 ${readonly ? "（只读）" : ""}`,
+      Title: (readonly: boolean) =>
+        `编辑 API 集成 ${readonly ? "（只读）" : ""}`,
       Download: "下载",
       Auth: "授权方式",
       Content: "OpenAPI Schema",
@@ -730,12 +809,14 @@ const cn = {
     CollectWallet: "连接钱包",
   },
   Mask: {
-    Name: "面具",
+    Name: "技能",
     Page: {
-      Title: "预设角色面具",
-      SubTitle: (count: number) => `${count} 个预设角色定义`,
-      Search: "搜索角色面具",
+      Title: "技能",
+      SubTitle: (count: number) => `${count} 个技能`,
+      Search: "搜索技能",
       Create: "新建",
+      AllCategories: "全部",
+      Empty: "没有找到匹配的技能",
     },
     Item: {
       Info: (count: number) => `包含 ${count} 条预设对话`,
@@ -746,10 +827,9 @@ const cn = {
       DeleteConfirm: "确认删除？",
     },
     EditModal: {
-      Title: (readonly: boolean) =>
-        `编辑预设面具 ${readonly ? "（只读）" : ""}`,
-      Download: "下载预设",
-      Clone: "克隆预设",
+      Title: (readonly: boolean) => `编辑技能 ${readonly ? "（只读）" : ""}`,
+      Download: "下载技能",
+      Clone: "克隆技能",
     },
     Config: {
       Avatar: "角色头像",
@@ -772,8 +852,8 @@ const cn = {
         SubTitle: "启用之后可以自动折叠/展开过长的代码块",
       },
       Share: {
-        Title: "分享此面具",
-        SubTitle: "生成此面具的直达链接",
+        Title: "分享此技能",
+        SubTitle: "生成此技能的直达链接",
         Action: "复制链接",
       },
     },
@@ -783,12 +863,16 @@ const cn = {
     Skip: "直接开始",
     NotShow: "不再展示",
     ConfirmNoShow: "确认禁用？禁用后可以随时在设置中重新启用。",
-    Title: "挑选一个面具",
-    SubTitle: "现在开始，与面具背后的灵魂思维碰撞",
-    FeaturedTitle: "推荐面具",
-    FeaturedSubTitle:
-      "先选一个工作模式，再按示例开场提问，效果通常会明显更稳定。",
-    More: "查看全部",
+    Title: "新建聊天",
+    SubTitle: "直接开始，或为当前任务选择一个技能",
+    Placeholder: "输入想法，开始会话",
+    BlankTitle: "对话",
+    BlankSubTitle: "不使用预设技能，直接进入对话。",
+    ImageTitle: "图片创作",
+    RecentTitle: "最近使用",
+    FeaturedTitle: "技能",
+    FeaturedSubTitle: "技能会带上适合当前任务的提示词和模型参数。",
+    More: "全部",
   },
 
   URLCommand: {

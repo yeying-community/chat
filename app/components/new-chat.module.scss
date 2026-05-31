@@ -14,7 +14,7 @@
 
   .mask-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     width: 100%;
     min-width: 0;
     padding: 10px;
@@ -23,38 +23,13 @@
     flex-shrink: 0;
   }
 
-  .mask-cards {
-    display: flex;
-    align-self: center;
-    flex-shrink: 0;
-    margin-top: 24px;
-    margin-bottom: 20px;
-    animation: slide-in ease 0.3s;
-
-    .mask-card {
-      padding: 20px 10px;
-      border: var(--border-in-light);
-      box-shadow: var(--card-shadow);
-      border-radius: 14px;
-      background-color: var(--white);
-      transform: scale(1);
-
-      &:first-child {
-        transform: rotate(-15deg) translateY(5px);
-      }
-
-      &:last-child {
-        transform: rotate(15deg) translateY(5px);
-      }
-    }
-  }
-
   .title {
     flex-shrink: 0;
     text-align: center;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: bolder;
-    margin-bottom: 1vh;
+    margin-top: 36px;
+    margin-bottom: 0;
     animation: slide-in ease 0.35s;
   }
 
@@ -64,13 +39,28 @@
     animation: slide-in ease 0.4s;
   }
 
-  .featured-title {
+  .section-header {
+    width: min(720px, calc(100% - 40px));
+    margin: 24px auto 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    animation: slide-in ease 0.45s;
+  }
+
+  .section-title {
     flex-shrink: 0;
-    width: min(1100px, calc(100% - 40px));
-    margin: 28px auto 0;
-    font-size: 18px;
+    width: min(720px, calc(100% - 40px));
+    margin: 24px auto 0;
+    font-size: 15px;
     font-weight: 700;
     animation: slide-in ease 0.45s;
+  }
+
+  .section-header .section-title {
+    width: auto;
+    margin: 0;
   }
 
   .featured-subtitle {
@@ -83,68 +73,111 @@
     animation: slide-in ease 0.5s;
   }
 
-  .actions {
-    flex-shrink: 0;
-    margin-top: 28px;
-    margin-bottom: 2vh;
-    animation: slide-in ease 0.45s;
-    display: flex;
-    justify-content: center;
-    font-size: 12px;
+  .section-header .featured-subtitle {
+    width: auto;
+  }
 
-    .skip {
-      margin-left: 10px;
+  .launch-panel {
+    width: min(720px, calc(100% - 40px));
+    margin: 24px auto 0;
+    padding: 12px;
+    border: var(--border-in-light);
+    border-radius: 18px;
+    background: var(--white);
+    box-shadow: var(--card-shadow);
+    animation: slide-in ease 0.45s;
+  }
+
+  .launch-input {
+    width: 100%;
+    min-height: 96px;
+    padding: 8px 10px;
+    border: 0;
+    outline: none;
+    resize: none;
+    box-sizing: border-box;
+    background: transparent;
+    color: var(--black);
+    font-size: 16px;
+    line-height: 1.55;
+    font-family: inherit;
+  }
+
+  .launch-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .quick-action,
+  .send-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 0;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all ease 0.25s;
+
+    svg {
+      width: 18px;
+      height: 18px;
     }
   }
 
-  .masks {
-    flex-grow: 0;
-    width: 100%;
-    min-width: 0;
-    overflow: visible;
-    padding: 20px 20px 40px;
-    animation: slide-in ease 0.5s;
+  .quick-action {
+    background: var(--hover-color);
+    color: var(--black);
+  }
+
+  .send-action {
+    background: var(--primary);
+    color: white;
+  }
+
+  .quick-action:hover,
+  .send-action:hover {
+    transform: translateY(-1px);
   }
 
   .featured-masks {
+    width: min(720px, calc(100% - 40px));
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 40px;
+    flex-shrink: 0;
+  }
+
+  .recent-skills {
     width: min(1100px, calc(100% - 40px));
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
-    margin-top: 18px;
+    margin-top: 12px;
     margin-left: auto;
     margin-right: auto;
     flex-shrink: 0;
   }
 
-  .mask-group {
-    width: min(1100px, 100%);
-    min-width: 0;
-    margin: 0 auto 20px;
-  }
-
-  .mask-group-title {
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    opacity: 0.8;
-  }
-
-  .mask-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 10px;
-    align-items: stretch;
-    min-width: 0;
-  }
-
   .mask {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     min-width: 0;
-    padding: 14px 16px;
+    min-height: 58px;
+    padding: 10px 12px;
     border: var(--border-in-light);
     box-shadow: var(--card-shadow);
     background-color: var(--white);
@@ -164,45 +197,15 @@
     }
 
     .mask-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 600;
     }
-
-    .mask-desc {
-      margin-top: 6px;
-      font-size: 12px;
-      line-height: 1.5;
-      opacity: 0.75;
-    }
-
-    .mask-starters {
-      margin-top: 10px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .mask-starter {
-      font-size: 12px;
-      line-height: 1.45;
-      padding: 8px 10px;
-      border-radius: 10px;
-      background: var(--hover-color);
-    }
-  }
-
-  .mask-detailed {
-    min-height: 180px;
-    width: 100%;
   }
 
   @media screen and (max-width: 600px) {
-    .mask-cards {
-      margin-top: 16px;
-      margin-bottom: 16px;
-    }
-
     .title {
       font-size: 26px;
+      margin-top: 20px;
       padding: 0 12px;
     }
 
@@ -210,22 +213,38 @@
       padding: 0 12px;
     }
 
-    .featured-title,
+    .section-header,
+    .section-title,
     .featured-subtitle {
       width: calc(100% - 24px);
     }
 
+    .section-header {
+      align-items: flex-start;
+    }
+
+    .launch-panel,
+    .recent-skills {
+      width: calc(100% - 24px);
+    }
+
+    .launch-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .quick-action,
+    .send-action {
+      width: 100%;
+    }
+
     .featured-masks {
       width: calc(100% - 24px);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .recent-skills {
       grid-template-columns: 1fr;
-    }
-
-    .masks {
-      padding: 16px 12px 28px;
-    }
-
-    .mask-group {
-      width: 100%;
     }
   }
 }

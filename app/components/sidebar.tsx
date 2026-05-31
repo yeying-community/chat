@@ -6,9 +6,6 @@ import { IconButton } from "./button";
 import SettingsIcon from "../icons/settings.svg";
 import CenterIcon from "../icons/my-center.svg";
 import AddIcon from "../icons/add.svg";
-import DeleteIcon from "../icons/delete.svg";
-import MaskIcon from "../icons/mask.svg";
-import McpIcon from "../icons/mcp.svg";
 import DragIcon from "../icons/drag.svg";
 import DiscoveryIcon from "../icons/discovery.svg";
 import WalletIcon from "../icons/wallet.svg";
@@ -17,7 +14,6 @@ import {
   connectWallet,
   getCurrentAccount,
   isValidUcanAuthorization,
-  logoutWallet,
   UCAN_AUTH_EVENT,
 } from "../plugins/wallet";
 import { useAppConfig, useChatStore } from "../store";
@@ -34,15 +30,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { isIOS, useMobileScreen } from "../utils";
 import dynamic from "next/dynamic";
-import { Selector, showConfirm } from "./ui-lib";
 import clsx from "clsx";
-import { isMcpEnabled } from "../mcp/actions";
-
-const DISCOVERY = [
-  { name: Locale.Plugin.Name, path: Path.Plugins },
-  { name: Locale.Sd.Title, path: Path.Sd },
-  { name: Locale.SearchChat.Page.Title, path: Path.SearchChat },
-];
 
 const ChatList = dynamic(async () => (await import("./chat-list")).ChatList, {
   loading: () => null,
@@ -254,40 +242,13 @@ export function SideBarSection(props: {
   );
 }
 
-export function SideBarTail(props: {
-  primaryAction?: React.ReactNode;
-  secondaryAction?: React.ReactNode;
-}) {
-  const { primaryAction, secondaryAction } = props;
-
-  return (
-    <div className={styles["sidebar-tail"]}>
-      <div className={styles["sidebar-actions"]}>{primaryAction}</div>
-      <div className={styles["sidebar-actions"]}>{secondaryAction}</div>
-    </div>
-  );
-}
-
 export function SideBar(props: { className?: string }) {
   useHotKey();
   const { onDragStart, shouldNarrow } = useDragSideBar();
-  const [showDiscoverySelector, setshowDiscoverySelector] = useState(false);
   const show = useWalletAccount();
 
   const navigate = useNavigate();
   const config = useAppConfig();
-  const chatStore = useChatStore();
-  const [mcpEnabled, setMcpEnabled] = useState(false);
-
-  useEffect(() => {
-    // 检查 MCP 是否启用
-    const checkMcpStatus = async () => {
-      const enabled = await isMcpEnabled();
-      setMcpEnabled(enabled);
-      console.log("[SideBar] MCP enabled:", enabled);
-    };
-    checkMcpStatus();
-  }, []);
 
   return (
     <SideBarContainer
@@ -315,16 +276,22 @@ export function SideBar(props: { className?: string }) {
         }
         subTitle={show ? "" : undefined}
         extra={
-          show ? (
-            <IconButton
-              text="退出"
-              bordered
-              className={styles["sidebar-header-logout"]}
-              onClick={async () => {
-                await logoutWallet();
-              }}
-            />
-          ) : undefined
+          <>
+            <Link to={Path.Settings}>
+              <IconButton
+                aria={Locale.Settings.Title}
+                icon={<SettingsIcon />}
+                shadow
+              />
+            </Link>
+            <Link to={Path.Centers}>
+              <IconButton
+                aria={Locale.Export.MessageFromChatGPT}
+                icon={<CenterIcon />}
+                shadow
+              />
+            </Link>
+          </>
         }
       >
         {!show && (
@@ -344,53 +311,22 @@ export function SideBar(props: { className?: string }) {
         )}
         <div className={styles["sidebar-header-bar"]}>
           <IconButton
-            icon={<MaskIcon />}
-            text={shouldNarrow ? undefined : Locale.Mask.Name}
-            className={styles["sidebar-bar-button"]}
-            onClick={() => {
-              if (config.dontShowMaskSplashScreen !== true) {
-                navigate(Path.NewChat, { state: { fromHome: true } });
-              } else {
-                navigate(Path.Masks, { state: { fromHome: true } });
-              }
-            }}
-            shadow
-          />
-          {mcpEnabled && (
-            <IconButton
-              icon={<McpIcon />}
-              text={shouldNarrow ? undefined : Locale.Mcp.Name}
-              className={styles["sidebar-bar-button"]}
-              onClick={() => {
-                navigate(Path.McpMarket, { state: { fromHome: true } });
-              }}
-              shadow
-            />
-          )}
-          <IconButton
             icon={<DiscoveryIcon />}
             text={shouldNarrow ? undefined : Locale.Discovery.Name}
             className={styles["sidebar-bar-button"]}
-            onClick={() => setshowDiscoverySelector(true)}
+            onClick={() =>
+              navigate(Path.Discovery, { state: { fromHome: true } })
+            }
+            shadow
+          />
+          <IconButton
+            icon={<AddIcon />}
+            text={shouldNarrow ? undefined : Locale.Home.NewChat}
+            className={styles["sidebar-bar-button"]}
+            onClick={() => navigate(Path.NewChat)}
             shadow
           />
         </div>
-        {showDiscoverySelector && (
-          <Selector
-            items={[
-              ...DISCOVERY.map((item) => {
-                return {
-                  title: item.name,
-                  value: item.path,
-                };
-              }),
-            ]}
-            onClose={() => setshowDiscoverySelector(false)}
-            onSelection={(s) => {
-              navigate(s[0], { state: { fromHome: true } });
-            }}
-          />
-        )}
       </SideBarHeader>
       <SideBarBody
         onClick={(e) => {
@@ -401,55 +337,6 @@ export function SideBar(props: { className?: string }) {
       >
         <ChatList narrow={shouldNarrow} />
       </SideBarBody>
-      <SideBarTail
-        primaryAction={
-          <>
-            <div className={clsx(styles["sidebar-action"], styles.mobile)}>
-              <IconButton
-                icon={<DeleteIcon />}
-                onClick={async () => {
-                  if (await showConfirm(Locale.Home.DeleteChat)) {
-                    chatStore.deleteSession(chatStore.currentSessionIndex);
-                  }
-                }}
-              />
-            </div>
-            <div className={styles["sidebar-action"]}>
-              <Link to={Path.Settings}>
-                <IconButton
-                  aria={Locale.Settings.Title}
-                  icon={<SettingsIcon />}
-                  shadow
-                />
-              </Link>
-            </div>
-            <div className={styles["sidebar-action"]}>
-              <Link to={Path.Centers}>
-                <IconButton
-                  aria={Locale.Export.MessageFromChatGPT}
-                  icon={<CenterIcon />}
-                  shadow
-                />
-              </Link>
-            </div>
-          </>
-        }
-        secondaryAction={
-          <IconButton
-            icon={<AddIcon />}
-            text={shouldNarrow ? undefined : Locale.Home.NewChat}
-            onClick={() => {
-              if (config.dontShowMaskSplashScreen) {
-                chatStore.newSession();
-                navigate(Path.Chat);
-              } else {
-                navigate(Path.NewChat);
-              }
-            }}
-            shadow
-          />
-        }
-      />
     </SideBarContainer>
   );
 }

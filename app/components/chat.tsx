@@ -172,8 +172,8 @@ const MCPAction = () => {
 
   return (
     <ChatAction
-      onClick={() => navigate(Path.McpMarket)}
-      text={`MCP${count ? ` (${count})` : ""}`}
+      onClick={() => navigate(`${Path.Discovery}?type=tool`)}
+      text={`${Locale.Mcp.Name}${count ? ` (${count})` : ""}`}
       icon={<McpToolIcon />}
     />
   );
@@ -212,7 +212,7 @@ export function SessionConfigModel(props: { onClose: () => void }) {
             bordered
             text={Locale.Chat.Config.SaveAs}
             onClick={() => {
-              navigate(Path.Masks);
+              navigate(Path.Skills);
               setTimeout(() => {
                 maskStore.create(session.mask);
               }, 500);
@@ -734,7 +734,7 @@ export function ChatActions(props: {
 
         <ChatAction
           onClick={() => {
-            navigate(Path.Masks);
+            navigate(Path.Skills);
           }}
           text={Locale.Chat.InputActions.Masks}
           icon={<MaskIcon />}
@@ -1202,7 +1202,7 @@ function ChatView() {
 
     if (hasCandidateModelRestriction && sessionModels.length === 0) {
       showToast(
-        "该面具当前没有任何可用模型，请检查 router 分组配置或调整面具候选模型",
+        "该技能当前没有任何可用模型，请检查 router 分组配置或调整技能候选模型",
       );
       return;
     }
@@ -1215,7 +1215,7 @@ function ChatView() {
     );
 
     if (hasCandidateModelRestriction && !hasCurrentModel) {
-      showToast("面具默认模型当前不可用，请先选择一个可用模型");
+      showToast("技能默认模型当前不可用，请先选择一个可用模型");
       return;
     }
 
