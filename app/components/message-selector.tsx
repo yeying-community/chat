@@ -75,6 +75,7 @@ export function MessageSelector(props: {
   const LATEST_COUNT = 4;
   const chatStore = useChatStore();
   const session = chatStore.currentSession();
+  const sessionSkill = session.mask;
   const isValid = (m: ChatMessage) => m.content && !m.isError && !m.streaming;
   const allMessages = useMemo(() => {
     let startIndex = Math.max(0, session.clearContextIndex ?? 0);
@@ -212,8 +213,8 @@ export function MessageSelector(props: {
                   <Avatar avatar={config.avatar}></Avatar>
                 ) : (
                   <SkillAvatar
-                    avatar={session.mask.avatar}
-                    model={m.model || session.mask.modelConfig.model}
+                    avatar={sessionSkill.avatar}
+                    model={m.model || sessionSkill.modelConfig.model}
                   />
                 )}
               </div>

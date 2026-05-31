@@ -288,7 +288,8 @@ const en: LocaleType = {
 
       LocalState: "Local Data",
       Overview: (overview: any) => {
-        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${overview.mask} skills`;
+        const skillCount = overview.skill ?? overview.mask ?? 0;
+        return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${skillCount} skills`;
       },
       ImportFailed: "Failed to import from file",
     },

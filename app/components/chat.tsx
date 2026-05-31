@@ -660,8 +660,9 @@ export function ChatActions(props: {
       // show next model to default model if exist
       let nextModel = models.find((model) => model.isDefault) || models[0];
       chatStore.updateTargetSession(session, (session) => {
-        session.mask.modelConfig.model = nextModel.name;
-        session.mask.modelConfig.providerName = nextModel?.provider
+        const sessionSkill = session.mask;
+        sessionSkill.modelConfig.model = nextModel.name;
+        sessionSkill.modelConfig.providerName = nextModel?.provider
           ?.providerName as ServiceProvider;
       });
       showToast(
@@ -773,15 +774,16 @@ export function ChatActions(props: {
               if (s.length === 0) return;
               const [model, providerName] = getModelProvider(s[0]);
               chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.model = model as ModelType;
-                session.mask.modelConfig.providerName =
+                const sessionSkill = session.mask;
+                sessionSkill.modelConfig.model = model as ModelType;
+                sessionSkill.modelConfig.providerName =
                   providerName as ServiceProvider;
-                session.mask.modelConfig.quality = isGptImageModel(model)
+                sessionSkill.modelConfig.quality = isGptImageModel(model)
                   ? "auto"
                   : isDalle3(model)
                     ? "standard"
-                    : session.mask.modelConfig.quality;
-                session.mask.syncGlobalConfig = false;
+                    : sessionSkill.modelConfig.quality;
+                sessionSkill.syncGlobalConfig = false;
               });
               if (providerName == ServiceProvider.Volcengine) {
                 const selectedModel = models.find(
@@ -817,7 +819,8 @@ export function ChatActions(props: {
               if (s.length === 0) return;
               const size = s[0];
               chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.size = size;
+                const sessionSkill = session.mask;
+                sessionSkill.modelConfig.size = size;
               });
               showToast(size);
             }}
@@ -844,7 +847,8 @@ export function ChatActions(props: {
               if (q.length === 0) return;
               const quality = q[0] as ImageQuality;
               chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.quality = quality;
+                const sessionSkill = session.mask;
+                sessionSkill.modelConfig.quality = quality;
               });
               showToast(quality);
             }}
@@ -871,7 +875,8 @@ export function ChatActions(props: {
               if (s.length === 0) return;
               const style = s[0];
               chatStore.updateTargetSession(session, (session) => {
-                session.mask.modelConfig.style = style;
+                const sessionSkill = session.mask;
+                sessionSkill.modelConfig.style = style;
               });
               showToast(style);
             }}
@@ -1386,9 +1391,10 @@ function ChatView() {
   };
 
   const onPinMessage = (message: ChatMessage) => {
-    chatStore.updateTargetSession(session, (session) =>
-      session.mask.context.push(message),
-    );
+    chatStore.updateTargetSession(session, (session) => {
+      const sessionSkill = session.mask;
+      sessionSkill.context.push(message);
+    });
 
     showToast(Locale.Chat.Actions.PinToastContent, {
       text: Locale.Chat.Actions.PinToastAction,
@@ -1932,7 +1938,8 @@ function ChatView() {
                                     chatStore.updateTargetSession(
                                       session,
                                       (session) => {
-                                        const m = session.mask.context
+                                        const sessionSkill = session.mask;
+                                        const m = sessionSkill.context
                                           .concat(session.messages)
                                           .find((m) => m.id === message.id);
                                         if (m) {
