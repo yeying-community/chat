@@ -1,4 +1,4 @@
-import { Path, UNFINISHED_INPUT } from "../constant";
+import { AUTO_SUBMIT_INPUT, Path, UNFINISHED_INPUT } from "../constant";
 import { IconButton } from "./button";
 import styles from "./new-chat.module.scss";
 
@@ -83,16 +83,18 @@ export function NewChat() {
   const navigate = useNavigate();
 
   const startChat = (skill?: Skill, initialInput = "") => {
-    setTimeout(() => {
-      if (chatStore.newSession(skill) !== false) {
-        const input = initialInput.trim();
-        const session = useChatStore.getState().sessions[0];
-        if (input && session?.id) {
-          localStorage.setItem(UNFINISHED_INPUT(session.id), input);
-        }
-        navigate(Path.Chat);
-      }
-    }, 10);
+    if (chatStore.newSession(skill) === false) {
+      return;
+    }
+
+    const input = initialInput.trim();
+    const session = useChatStore.getState().sessions[0];
+    if (input && session?.id) {
+      localStorage.removeItem(UNFINISHED_INPUT(session.id));
+      localStorage.setItem(AUTO_SUBMIT_INPUT(session.id), input);
+    }
+
+    navigate(Path.Chat);
   };
 
   const startDraftChat = () => startChat(undefined, draft);

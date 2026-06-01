@@ -112,6 +112,7 @@ import {
 } from "./ui-lib";
 import { useNavigate } from "react-router-dom";
 import {
+  AUTO_SUBMIT_INPUT,
   CHAT_PAGE_SIZE,
   DEFAULT_TTS_ENGINE,
   ModelProvider,
@@ -1405,6 +1406,9 @@ function ChatView() {
   };
 
   const accessStore = useAccessStore();
+  const pendingAutoSubmitInput =
+    localStorage.getItem(AUTO_SUBMIT_INPUT(session.id)) ?? "";
+  const hasPendingAutoSubmit = pendingAutoSubmitInput.length > 0;
   const [speechStatus, setSpeechStatus] = useState(false);
   const [speechLoading, setSpeechLoading] = useState(false);
 
@@ -1456,14 +1460,14 @@ function ChatView() {
   }, [sessionSkill.context, sessionSkill.hideContext]);
 
   if (
+    !hasPendingAutoSubmit &&
     context.length === 0 &&
-    session.messages.at(0)?.content !== BOT_HELLO.content
+    session.messages.length === 0 &&
+    !accessStore.isAuthorized()
   ) {
-    const copiedHello = Object.assign({}, BOT_HELLO);
-    if (!accessStore.isAuthorized()) {
-      copiedHello.content = Locale.Error.Unauthorized;
-    }
-    context.push(copiedHello);
+    const unauthorizedMessage = Object.assign({}, BOT_HELLO);
+    unauthorizedMessage.content = Locale.Error.Unauthorized;
+    context.push(unauthorizedMessage);
   }
 
   // preview messages
@@ -1615,20 +1619,29 @@ function ChatView() {
 
   // remember unfinished input
   useEffect(() => {
-    // try to load from local storage
-    const key = UNFINISHED_INPUT(session.id);
-    const mayBeUnfinishedInput = localStorage.getItem(key);
-    if (mayBeUnfinishedInput && userInput.length === 0) {
-      setUserInput(mayBeUnfinishedInput);
-      localStorage.removeItem(key);
+    const unfinishedInputKey = UNFINISHED_INPUT(session.id);
+    const autoSubmitInputKey = AUTO_SUBMIT_INPUT(session.id);
+    const pendingAutoSubmitInput = localStorage.getItem(autoSubmitInputKey);
+
+    if (pendingAutoSubmitInput) {
+      localStorage.removeItem(autoSubmitInputKey);
+      setTimeout(() => {
+        doSubmit(pendingAutoSubmitInput);
+      }, 0);
+    } else {
+      const mayBeUnfinishedInput = localStorage.getItem(unfinishedInputKey);
+      if (mayBeUnfinishedInput && userInput.length === 0) {
+        setUserInput(mayBeUnfinishedInput);
+        localStorage.removeItem(unfinishedInputKey);
+      }
     }
 
     const dom = inputRef.current;
     return () => {
-      localStorage.setItem(key, dom?.value ?? "");
+      localStorage.setItem(unfinishedInputKey, dom?.value ?? "");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [session.id]);
 
   const handlePaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
