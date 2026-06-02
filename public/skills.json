@@ -144,6 +144,10 @@
       ],
       "lang": "cn",
       "createdAt": 1700000001005,
+      "syncGlobalConfig": false,
+      "launch": {
+        "type": "sd"
+      },
       "context": [
         {
           "id": "cn-image-0",
@@ -160,13 +164,14 @@
         "sendMemory": true,
         "historyMessageCount": 6,
         "compressMessageLengthThreshold": 2000,
+        "model": "gpt-image-1",
+        "providerName": "OpenAI",
         "size": "1024x1024",
         "quality": "auto",
         "style": "vivid"
       },
       "builtin": true,
-      "hideContext": true,
-      "syncGlobalConfig": true
+      "hideContext": true
     }
   ],
   "en": [
@@ -314,6 +319,10 @@
       ],
       "lang": "en",
       "createdAt": 1700000002005,
+      "syncGlobalConfig": false,
+      "launch": {
+        "type": "sd"
+      },
       "context": [
         {
           "id": "en-image-0",
@@ -330,13 +339,14 @@
         "sendMemory": true,
         "historyMessageCount": 6,
         "compressMessageLengthThreshold": 2000,
+        "model": "gpt-image-1",
+        "providerName": "OpenAI",
         "size": "1024x1024",
         "quality": "auto",
         "style": "vivid"
       },
       "builtin": true,
-      "hideContext": true,
-      "syncGlobalConfig": true
+      "hideContext": true
     }
   ]
 }

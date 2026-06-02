@@ -88,15 +88,6 @@
     animation: slide-in ease 0.45s;
   }
 
-  .launch-toolbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-
-  .selected-skill,
   .model-selector {
     display: inline-flex;
     align-items: center;
@@ -109,25 +100,6 @@
     background: var(--hover-color);
     color: var(--black);
     box-sizing: border-box;
-  }
-
-  .selected-skill {
-    flex: 1;
-    justify-content: flex-start;
-    cursor: pointer;
-  }
-
-  .selected-skill-empty {
-    opacity: 0.8;
-  }
-
-  .selected-skill-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 13px;
-    font-weight: 600;
   }
 
   .model-selector {
@@ -167,7 +139,7 @@
   .launch-actions {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     gap: 10px;
     margin-top: 8px;
   }
@@ -245,11 +217,6 @@
       border-color: var(--primary);
     }
 
-    &.mask-selected {
-      border-color: var(--primary);
-      background: color-mix(in srgb, var(--primary) 10%, var(--white));
-    }
-
     .mask-texts {
       margin-left: 10px;
       min-width: 0;
@@ -287,27 +254,18 @@
       width: calc(100% - 24px);
     }
 
-    .launch-toolbar {
-      align-items: stretch;
-      flex-direction: column;
-    }
-
-    .selected-skill,
-    .model-selector {
-      width: 100%;
-    }
-
-    .model-selector select {
-      max-width: none;
-      width: 100%;
-    }
-
     .launch-actions {
       align-items: stretch;
       flex-direction: column;
     }
 
+    .model-selector,
     .send-action {
+      width: 100%;
+    }
+
+    .model-selector select {
+      max-width: none;
       width: 100%;
     }
 

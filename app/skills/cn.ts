@@ -121,6 +121,8 @@ export const CN_SKILLS: BuiltinSkill[] = [
     ],
     lang: "cn",
     createdAt: 1700000001005,
+    syncGlobalConfig: false,
+    launch: { type: "sd" },
     context: [
       {
         id: "cn-image-0",
@@ -131,6 +133,8 @@ export const CN_SKILLS: BuiltinSkill[] = [
       },
     ],
     modelConfig: {
+      model: "gpt-image-1",
+      providerName: "OpenAI",
       temperature: 0.7,
       historyMessageCount: 6,
       size: "1024x1024",

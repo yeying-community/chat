@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { getLaunchableSkills, Skill, useSkillStore } from "../store/skill";
 import Locale from "../locales";
 import { ModelType, useAppConfig, useChatStore } from "../store";
+import { useSdStore } from "../store/sd";
 import { SkillAvatar } from "./mask";
 import { useCommand } from "../command";
 import { BUILTIN_SKILL_STORE } from "../skills";
@@ -18,26 +19,12 @@ import clsx from "clsx";
 import { useMemo, useState } from "react";
 import { safeLocalStorage } from "../utils";
 import { useSessionModels } from "../utils/hooks";
-import {
-  getModelProvider,
-  matchesModelCandidate,
-  normalizeModelCandidates,
-  normalizeProviderName,
-} from "../utils/model";
+import { getModelProvider, normalizeProviderName } from "../utils/model";
 import { ServiceProvider } from "../constant";
 
-function SkillItem(props: {
-  skill: Skill;
-  selected?: boolean;
-  onClick?: () => void;
-}) {
+function SkillItem(props: { skill: Skill; onClick?: () => void }) {
   return (
-    <div
-      className={clsx(styles["mask"], {
-        [styles["mask-selected"]]: props.selected,
-      })}
-      onClick={props.onClick}
-    >
+    <div className={styles["mask"]} onClick={props.onClick}>
       <SkillAvatar
         avatar={props.skill.avatar}
         model={props.skill.modelConfig.model}
@@ -56,9 +43,9 @@ const localStorage = safeLocalStorage();
 export function NewChat() {
   const chatStore = useChatStore();
   const skillStore = useSkillStore();
+  const sdStore = useSdStore();
   const config = useAppConfig();
   const [draft, setDraft] = useState("");
-  const [selectedSkillId, setSelectedSkillId] = useState<string>();
   const [selectedModelValue, setSelectedModelValue] = useState("");
 
   const skills = useMemo(
@@ -97,41 +84,19 @@ export function NewChat() {
       })
       .slice(0, 8);
   }, [recentSkills, skills]);
-  const allSelectableSkills = useMemo(() => {
-    const seen = new Set<string>();
-    return [...recentSkills, ...skills].filter((skill) => {
-      const key = skill.id || skill.name;
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [recentSkills, skills]);
-  const selectedSkill = useMemo(
-    () => allSelectableSkills.find((skill) => skill.id === selectedSkillId),
-    [allSelectableSkills, selectedSkillId],
-  );
-  const selectedCandidateModels = useMemo(
-    () => normalizeModelCandidates(selectedSkill?.candidateModels),
-    [selectedSkill?.candidateModels],
-  );
-  const availableModels = useSessionModels(selectedCandidateModels);
+  const availableModels = useSessionModels();
 
   const navigate = useNavigate();
 
   const fallbackModelValue = useMemo(() => {
-    const preferredModel =
-      selectedSkill?.modelConfig.model ?? config.modelConfig.model;
+    const preferredModel = config.modelConfig.model;
     const preferredProviderName =
-      normalizeProviderName(
-        selectedSkill?.modelConfig.providerName ??
-          config.modelConfig.providerName,
-      ) ?? ServiceProvider.OpenAI;
-
-    const matchedModel = availableModels.find((model) =>
-      matchesModelCandidate(model, {
-        model: preferredModel,
-        providerName: preferredProviderName,
-      }),
+      normalizeProviderName(config.modelConfig.providerName) ??
+      ServiceProvider.OpenAI;
+    const matchedModel = availableModels.find(
+      (model) =>
+        model.name === preferredModel &&
+        model.provider?.providerName === preferredProviderName,
     );
     const fallbackModel =
       matchedModel ??
@@ -147,8 +112,6 @@ export function NewChat() {
     availableModels,
     config.modelConfig.model,
     config.modelConfig.providerName,
-    selectedSkill?.modelConfig.model,
-    selectedSkill?.modelConfig.providerName,
   ]);
 
   const activeModelValue = useMemo(() => {
@@ -171,23 +134,15 @@ export function NewChat() {
     return modelName || config.modelConfig.model;
   }, [activeModelValue, availableModels, config.modelConfig.model]);
 
-  const startChat = (skill?: Skill, initialInput = "") => {
-    const launchSkill = skill
-      ? {
-          ...skill,
-          modelConfig: { ...skill.modelConfig },
-          candidateModels: selectedCandidateModels,
-        }
-      : undefined;
-
-    if (chatStore.newSession(launchSkill) === false) {
+  const startChat = (skill?: Skill, initialInput = "", modelValue?: string) => {
+    if (chatStore.newSession(skill) === false) {
       return;
     }
 
     const input = initialInput.trim();
     const session = useChatStore.getState().sessions[0];
-    if (session) {
-      const [model, providerName] = getModelProvider(activeModelValue);
+    if (session && modelValue) {
+      const [model, providerName] = getModelProvider(modelValue);
       const normalizedProviderName =
         normalizeProviderName(providerName) ??
         session.mask.modelConfig.providerName;
@@ -214,23 +169,41 @@ export function NewChat() {
     navigate(Path.Chat);
   };
 
-  const startDraftChat = () => startChat(selectedSkill, draft);
+  const startDraftChat = () => startChat(undefined, draft, activeModelValue);
+  const startSkill = (skill?: Skill) => {
+    if (!skill) return;
+
+    if (skill.launch?.type === "sd") {
+      const input = draft.trim();
+      sdStore.setCurrentMode("generation");
+      if (input) {
+        sdStore.setCurrentParams({
+          ...useSdStore.getState().currentParams,
+          prompt: input,
+        });
+      }
+      navigate(Path.Sd);
+      return;
+    }
+
+    startChat(skill);
+  };
 
   useCommand({
     mask: (id) => {
       try {
         const skill = skillStore.get(id) ?? BUILTIN_SKILL_STORE.get(id);
-        setSelectedSkillId(skill?.id);
+        startSkill(skill);
       } catch {
-        console.error("[New Chat] failed to select skill id=", id);
+        console.error("[New Chat] failed to create chat from skill id=", id);
       }
     },
     skill: (id) => {
       try {
         const skill = skillStore.get(id) ?? BUILTIN_SKILL_STORE.get(id);
-        setSelectedSkillId(skill?.id);
+        startSkill(skill);
       } catch {
-        console.error("[New Chat] failed to select skill id=", id);
+        console.error("[New Chat] failed to create chat from skill id=", id);
       }
     },
   });
@@ -247,30 +220,20 @@ export function NewChat() {
       <div className={styles["title"]}>{Locale.Home.NewChat}</div>
 
       <div className={styles["launch-panel"]}>
-        <div className={styles["launch-toolbar"]}>
-          <button
-            className={clsx(styles["selected-skill"], {
-              [styles["selected-skill-empty"]]: !selectedSkill,
-            })}
-            onClick={() => setSelectedSkillId(undefined)}
-            type="button"
-          >
-            {selectedSkill ? (
-              <>
-                <SkillAvatar
-                  avatar={selectedSkill.avatar}
-                  model={selectedSkill.modelConfig.model}
-                />
-                <span className={styles["selected-skill-name"]}>
-                  {selectedSkill.name}
-                </span>
-              </>
-            ) : (
-              <span className={styles["selected-skill-name"]}>
-                {Locale.NewChat.BlankTitle}
-              </span>
-            )}
-          </button>
+        <textarea
+          className={styles["launch-input"]}
+          value={draft}
+          placeholder={Locale.NewChat.Placeholder}
+          rows={3}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              startDraftChat();
+            }
+          }}
+        />
+        <div className={styles["launch-actions"]}>
           <label className={styles["model-selector"]}>
             <RobotIcon />
             <select
@@ -296,21 +259,6 @@ export function NewChat() {
               )}
             </select>
           </label>
-        </div>
-        <textarea
-          className={styles["launch-input"]}
-          value={draft}
-          placeholder={Locale.NewChat.Placeholder}
-          rows={3}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              startDraftChat();
-            }
-          }}
-        />
-        <div className={styles["launch-actions"]}>
           <button
             className={styles["send-action"]}
             onClick={startDraftChat}
@@ -341,12 +289,7 @@ export function NewChat() {
           <SkillItem
             key={skill.id}
             skill={skill}
-            selected={selectedSkillId === skill.id}
-            onClick={() =>
-              setSelectedSkillId((current) =>
-                current === skill.id ? undefined : skill.id,
-              )
-            }
+            onClick={() => startSkill(skill)}
           />
         ))}
       </div>
