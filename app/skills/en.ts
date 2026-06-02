@@ -113,4 +113,34 @@ export const EN_SKILLS: BuiltinSkill[] = [
       historyMessageCount: 10,
     },
   }),
+  createBuiltinSkill({
+    avatar: "1f5bc-fe0f",
+    name: "Image Creation",
+    description:
+      "Use a session tuned for visual ideas, prompting, and image-generation output.",
+    category: "Creative",
+    starters: [
+      "Create a poster-style cover image and refine the prompt first.",
+      "Turn this product idea into a strong prompt for an image model.",
+      "Give me three visual directions first, then continue with the one I choose.",
+    ],
+    lang: "en",
+    createdAt: 1700000002005,
+    context: [
+      {
+        id: "en-image-0",
+        role: "system",
+        content:
+          "You are doing an image creation task. First understand the subject, style, composition, lighting, materials, text elements, and intended use, then produce output that works well for image-generation models. By default, provide a refined prompt, style directions, negative constraints, and size or quality suggestions. If the current model supports image generation, generate the image directly. If it does not, say so clearly and help the user refine the prompt first.",
+        date: "",
+      },
+    ],
+    modelConfig: {
+      temperature: 0.7,
+      historyMessageCount: 6,
+      size: "1024x1024",
+      quality: "auto",
+      style: "vivid",
+    },
+  }),
 ];
