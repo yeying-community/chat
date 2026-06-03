@@ -16,6 +16,7 @@ export {
   type SkillVisibility,
   resolveLocalizedText,
   skillPackageToSkill,
+  skillToSkillPackage,
 } from "./package";
 
 export const BUILTIN_SKILL_ID = 100000;

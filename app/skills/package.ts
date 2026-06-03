@@ -3,6 +3,7 @@ import type { Lang } from "../locales";
 import type { ChatMessage } from "../store/chat";
 import type { ModelConfig } from "../store/config";
 import type { Skill } from "../store/skill";
+import type { BuiltinSkill } from "./typing";
 
 export type LocalizedText = string | Partial<Record<Lang, string>>;
 
@@ -169,5 +170,87 @@ export function skillPackageToSkill(
     builtin: false,
     plugin: skillPackage.tools?.map((tool) => tool.id) ?? [],
     launch: resolveLegacyLaunch(skillPackage.launch),
+  };
+}
+
+function resolvePackageLaunch(skill: Pick<Skill, "launch">): SkillLaunch {
+  if (skill.launch?.type === "sd") {
+    return { type: "workspace", target: "sd" };
+  }
+  return { type: "chat" };
+}
+
+function resolvePackageInstructions(
+  skill: Pick<Skill | BuiltinSkill, "context">,
+): SkillInstructions | undefined {
+  const content = skill.context
+    .filter((message) => message.role === "system" && message.content)
+    .map((message) => message.content)
+    .join("\n\n");
+
+  if (!content) return undefined;
+  return { type: "inline", content };
+}
+
+export function skillToSkillPackage(skill: Skill | BuiltinSkill): SkillPackage {
+  const modelConfig = skill.modelConfig;
+  const defaultModel =
+    modelConfig.providerName || modelConfig.model
+      ? {
+          provider: modelConfig.providerName,
+          model: modelConfig.model,
+        }
+      : undefined;
+
+  return {
+    schemaVersion: "1.0",
+    id: "id" in skill ? skill.id : `builtin.${skill.lang}.${skill.createdAt}`,
+    version: "1.0.0",
+    name: {
+      [skill.lang]: skill.name,
+    },
+    description: skill.description
+      ? {
+          [skill.lang]: skill.description,
+        }
+      : undefined,
+    icon: {
+      type: "emoji",
+      value: skill.avatar,
+    },
+    category: skill.category,
+    visibility: {
+      scope: "public",
+    },
+    launch: resolvePackageLaunch(skill),
+    instructions: resolvePackageInstructions(skill),
+    starters: skill.starters,
+    model: {
+      syncGlobalConfig: skill.syncGlobalConfig,
+      default: defaultModel,
+      candidates: skill.candidateModels,
+      params: modelConfig,
+    },
+    tools: skill.plugin?.map((plugin) => ({
+      id: plugin,
+      name: plugin,
+      required: false,
+    })),
+    mcp: {
+      servers: [],
+    },
+    permissions: {
+      network: false,
+      filesystem: false,
+      wallet: false,
+      externalTools: skill.plugin ?? [],
+    },
+    compatibility: {
+      appVersion: ">=0.1.0",
+    },
+    release: {
+      status: "published",
+      review: "approved",
+    },
   };
 }
