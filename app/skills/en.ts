@@ -1,5 +1,6 @@
 import { BuiltinSkill } from "./typing";
 import { createBuiltinSkill } from "./utils";
+import { ServiceProvider } from "../constant";
 
 export const EN_SKILLS: BuiltinSkill[] = [
   createBuiltinSkill({
@@ -139,7 +140,7 @@ export const EN_SKILLS: BuiltinSkill[] = [
     ],
     modelConfig: {
       model: "gpt-image-1",
-      providerName: "OpenAI",
+      providerName: ServiceProvider.OpenAI,
       temperature: 0.7,
       historyMessageCount: 6,
       size: "1024x1024",

@@ -2,6 +2,21 @@ import { Skill } from "../store/skill";
 
 import { type BuiltinSkill } from "./typing";
 export { type BuiltinSkill, type BuiltinMask } from "./typing";
+export {
+  type LocalizedText,
+  type SkillIcon,
+  type SkillInstructions,
+  type SkillLaunch,
+  type SkillMcpServer,
+  type SkillPackage,
+  type SkillPackageModel,
+  type SkillPermissions,
+  type SkillRelease,
+  type SkillTool,
+  type SkillVisibility,
+  resolveLocalizedText,
+  skillPackageToSkill,
+} from "./package";
 
 export const BUILTIN_SKILL_ID = 100000;
 
