@@ -42,6 +42,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -101,6 +102,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -160,6 +162,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -219,6 +222,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -288,6 +292,7 @@
                     "style": "vivid"
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -349,6 +354,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -408,6 +414,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -467,6 +474,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -526,6 +534,7 @@
                     "compressMessageLengthThreshold": 2000
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },
@@ -595,6 +604,7 @@
                     "style": "vivid"
                 }
             },
+            "tools": [],
             "mcp": {
                 "servers": []
             },

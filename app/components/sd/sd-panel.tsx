@@ -603,7 +603,7 @@ function ModelSelectorPanel(props: {
 }
 
 function PanelSection(props: {
-  title: string;
+  title?: string;
   subTitle?: string;
   children?: React.ReactNode;
   hideTitle?: boolean;

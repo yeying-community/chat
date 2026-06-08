@@ -699,6 +699,7 @@ const cn = {
     Status: {
       Enabled: "已启用",
       Installed: "已安装",
+      Installable: "可安装",
       Configurable: "可配置",
       Unavailable: "不可用",
       Paused: "已暂停",
@@ -716,12 +717,14 @@ const cn = {
     },
     Source: {
       Official: "官方",
+      Community: "社区",
       Custom: "自定义",
       Provider: "模型服务商",
     },
     SourceLabel: "来源",
     Manage: "管理",
     Enable: "启用",
+    Install: "安装",
     Use: "开始使用",
     MyCapabilities: "我的能力",
     BackToMarket: "返回市场",
@@ -763,13 +766,13 @@ const cn = {
     },
   },
   Plugin: {
-    Name: "API 集成",
+    Name: "OpenAPI 导入",
     Page: {
-      Title: "API 集成",
-      SubTitle: (count: number) => `${count} 个 API 集成`,
-      Search: "搜索 API 集成",
+      Title: "OpenAPI 导入",
+      SubTitle: (count: number) => `${count} 个 OpenAPI 接口`,
+      Search: "搜索 OpenAPI 接口",
       Create: "新建",
-      Find: "您可以在 Github 上找到优秀的 API 集成：",
+      Find: "通过 OpenAPI 描述导入 HTTP 接口，后续可适配为 MCP 工具：",
     },
     Item: {
       Info: (count: number) => `${count} 方法`,
@@ -794,7 +797,7 @@ const cn = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `编辑 API 集成 ${readonly ? "（只读）" : ""}`,
+        `编辑 OpenAPI 导入 ${readonly ? "（只读）" : ""}`,
       Download: "下载",
       Auth: "授权方式",
       Content: "OpenAPI Schema",

@@ -17,6 +17,7 @@ export type SkillToolsConfig = {
 
 export type Skill = {
   id: string;
+  packageId?: string;
   createdAt: number;
   avatar: string;
   name: string;

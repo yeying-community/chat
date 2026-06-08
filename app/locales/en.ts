@@ -709,6 +709,7 @@ const en: LocaleType = {
     Status: {
       Enabled: "Enabled",
       Installed: "Installed",
+      Installable: "Installable",
       Configurable: "Configurable",
       Unavailable: "Unavailable",
       Paused: "Paused",
@@ -726,12 +727,14 @@ const en: LocaleType = {
     },
     Source: {
       Official: "Official",
+      Community: "Community",
       Custom: "Custom",
       Provider: "Model Service",
     },
     SourceLabel: "Source",
     Manage: "Manage",
     Enable: "Enable",
+    Install: "Install",
     Use: "Start",
     MyCapabilities: "My Capabilities",
     BackToMarket: "Back to Market",
@@ -776,13 +779,13 @@ const en: LocaleType = {
     },
   },
   Plugin: {
-    Name: "API Integration",
+    Name: "OpenAPI Import",
     Page: {
-      Title: "API Integrations",
-      SubTitle: (count: number) => `${count} API integrations`,
-      Search: "Search API Integration",
+      Title: "OpenAPI Import",
+      SubTitle: (count: number) => `${count} OpenAPI interfaces`,
+      Search: "Search OpenAPI interfaces",
       Create: "Create",
-      Find: "You can find API integrations on GitHub: ",
+      Find: "Import HTTP APIs from OpenAPI schemas. They can be adapted into MCP tools later: ",
     },
     Item: {
       Info: (count: number) => `${count} method`,
@@ -807,7 +810,7 @@ const en: LocaleType = {
     },
     EditModal: {
       Title: (readonly: boolean) =>
-        `Edit API Integration ${readonly ? "(readonly)" : ""}`,
+        `Edit OpenAPI Import ${readonly ? "(readonly)" : ""}`,
       Download: "Download",
       Auth: "Authentication Type",
       Content: "OpenAPI Schema",

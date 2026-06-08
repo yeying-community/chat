@@ -61,7 +61,7 @@ export function resolveSkillRuntimeStatus(params: {
   const runtimeModels = collectModelsWithDefaultModel(
     models,
     [customModels, accessCustomModels].filter(Boolean).join(","),
-    defaultModel,
+    defaultModel ?? "",
   ).filter((model) => model.available);
   const candidateModels = normalizeModelCandidates(skill.candidateModels);
   const sessionModels = filterModelsByCandidates(

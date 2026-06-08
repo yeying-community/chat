@@ -80,7 +80,7 @@ import {
 } from "../utils/model";
 import { OFFICIAL_MCP_PRESET_SERVERS } from "../mcp/preset-servers";
 
-type SkillPackageCatalog = Partial<Record<Lang, SkillPackage[]>>;
+type SkillPackageList = Partial<Record<Lang, SkillPackage[]>>;
 
 const BUILT_IN_SKILL_TOOL_ITEMS = [
   {
@@ -91,21 +91,22 @@ const BUILT_IN_SKILL_TOOL_ITEMS = [
 ];
 
 function getSkillPackageId(skill: Skill) {
+  if (skill.packageId) return skill.packageId;
   return skill.builtin ? `builtin.${skill.lang}.${skill.createdAt}` : skill.id;
 }
 
-function useSkillPackageCatalog() {
-  const [catalog, setCatalog] = useState<SkillPackageCatalog>({});
+function useSkillPackageList() {
+  const [packageList, setPackageList] = useState<SkillPackageList>({});
 
   useEffect(() => {
     let cancelled = false;
     fetch("/skill-packages.json")
       .then((response) => response.json())
       .then((data) => {
-        if (!cancelled) setCatalog(data);
+        if (!cancelled) setPackageList(data);
       })
       .catch((error) => {
-        console.warn("[Skill] failed to load skill package catalog", error);
+        console.warn("[Skill] failed to load skill package list", error);
       });
 
     return () => {
@@ -113,18 +114,18 @@ function useSkillPackageCatalog() {
     };
   }, []);
 
-  return catalog;
+  return packageList;
 }
 
 function useSkillPackage(skill: Skill) {
-  const catalog = useSkillPackageCatalog();
+  const packageList = useSkillPackageList();
   return useMemo(() => {
     const packageId = getSkillPackageId(skill);
-    const fromCatalog = catalog[skill.lang]?.find((item) => {
+    const fromPackageList = packageList[skill.lang]?.find((item) => {
       return item.id === packageId;
     });
-    return fromCatalog ?? skillToSkillPackage(skill);
-  }, [catalog, skill]);
+    return fromPackageList ?? skillToSkillPackage(skill);
+  }, [packageList, skill]);
 }
 
 function getSkillPackageLabels(lang: Lang) {

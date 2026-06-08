@@ -2,12 +2,7 @@ import type { ModelCandidate } from "../client/api";
 import type { Lang } from "../locales";
 import type { ChatMessage } from "../store/chat";
 import type { ModelConfig } from "../store/config";
-import type { Skill } from "../store/skill";
-import {
-  getSkillApiTools,
-  getSkillMcpTools,
-  syncSkillLegacyPlugin,
-} from "../store/skill";
+import type { BuiltInSkillToolType, Skill } from "../store/skill";
 import type { BuiltinSkill } from "./typing";
 
 export type LocalizedText = string | Partial<Record<Lang, string>>;
@@ -105,6 +100,34 @@ export type SkillPackage = {
   release?: SkillRelease;
 };
 
+const BUILT_IN_TOOL_IDS = new Set<string>(["web_search"]);
+
+function isBuiltInTool(id: string): id is BuiltInSkillToolType {
+  return BUILT_IN_TOOL_IDS.has(id);
+}
+
+function getSkillBuiltInTools(skill: Skill | BuiltinSkill) {
+  return skill.tools?.builtInTools ?? [];
+}
+
+function getSkillApiTools(skill: Skill | BuiltinSkill) {
+  return skill.tools?.apiTools ?? skill.plugin ?? [];
+}
+
+function getSkillMcpTools(skill: Skill | BuiltinSkill) {
+  return skill.tools?.mcpTools ?? [];
+}
+
+function syncSkillLegacyPlugin(skill: Skill) {
+  const apiTools = skill.tools?.apiTools ?? skill.plugin ?? [];
+  skill.plugin = apiTools;
+  skill.tools = {
+    builtInTools: skill.tools?.builtInTools ?? [],
+    mcpTools: skill.tools?.mcpTools ?? [],
+    apiTools,
+  };
+}
+
 export function resolveLocalizedText(
   value: LocalizedText | undefined,
   lang: Lang,
@@ -152,7 +175,13 @@ export function skillPackageToSkill(
   lang: Lang,
   baseModelConfig: ModelConfig,
 ): Skill {
-  const apiTools = skillPackage.tools?.map((tool) => tool.id) ?? [];
+  const packageTools = skillPackage.tools ?? [];
+  const builtInTools = packageTools
+    .map((tool) => tool.id)
+    .filter(isBuiltInTool);
+  const apiTools = packageTools
+    .map((tool) => tool.id)
+    .filter((id) => !isBuiltInTool(id));
   const skill = {
     id: skillPackage.id,
     createdAt: Date.now(),
@@ -176,7 +205,7 @@ export function skillPackageToSkill(
     builtin: false,
     plugin: apiTools,
     tools: {
-      builtInTools: [],
+      builtInTools,
       mcpTools: skillPackage.mcp?.servers?.map((server) => server.id) ?? [],
       apiTools,
     },
@@ -244,11 +273,18 @@ export function skillToSkillPackage(skill: Skill | BuiltinSkill): SkillPackage {
       candidates: skill.candidateModels,
       params: modelConfig,
     },
-    tools: getSkillApiTools(skill as Skill).map((plugin) => ({
-      id: plugin,
-      name: plugin,
-      required: false,
-    })),
+    tools: [
+      ...getSkillBuiltInTools(skill as Skill).map((tool) => ({
+        id: tool,
+        name: tool,
+        required: false,
+      })),
+      ...getSkillApiTools(skill as Skill).map((plugin) => ({
+        id: plugin,
+        name: plugin,
+        required: false,
+      })),
+    ],
     mcp: {
       servers: getSkillMcpTools(skill as Skill).map((id) => ({
         id,
@@ -263,6 +299,7 @@ export function skillToSkillPackage(skill: Skill | BuiltinSkill): SkillPackage {
       wallet: false,
       externalTools: [
         ...getSkillApiTools(skill as Skill),
+        ...getSkillBuiltInTools(skill as Skill),
         ...getSkillMcpTools(skill as Skill),
       ],
     },
