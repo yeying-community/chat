@@ -1,4 +1,5 @@
-import tauriConfig from "../../src-tauri/tauri.conf.json";
+import fs from "fs";
+import path from "path";
 
 function isEnabledEnv(value?: string): boolean {
   const normalized = value?.trim().toLowerCase();
@@ -13,6 +14,12 @@ export const getBuildConfig = () => {
   }
   const buildMode = process.env.BUILD_MODE ?? "standalone";
   const isApp = isEnabledEnv(process.env.BUILD_APP);
+  const tauriConfig = JSON.parse(
+    fs.readFileSync(
+      path.resolve(process.cwd(), "src-tauri/tauri.conf.json"),
+      "utf8",
+    ),
+  ) as { version: string };
   const version = "v" + tauriConfig.version;
 
   const commitInfo = (() => {
