@@ -43,7 +43,7 @@
   },
   "productName": "Chat",
   "mainBinaryName": "chat",
-  "version": "2.16.1",
+  "version": "0.0.31",
   "identifier": "com.yida.chatgpt.next.web",
   "plugins": {
     "updater": {
@@ -51,7 +51,7 @@
         "installMode": "passive"
       },
       "endpoints": [
-        "https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web/releases/latest/download/latest.json"
+        "https://github.com/yeying-community/chat/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERFNDE4MENFM0Y1RTZBOTQKUldTVWFsNC96b0JCM3RqM2NmMnlFTmxIaStRaEJrTHNOU2VqRVlIV1hwVURoWUdVdEc1eDcxVEYK"
     }
