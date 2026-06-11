@@ -16,6 +16,7 @@ import DragIcon from "../icons/drag.svg";
 import {
   DEFAULT_SKILL_AVATAR,
   Skill,
+  allowSkillNativeMcpTools,
   getSkillBuiltInTools,
   getSkillMcpTools,
   getLaunchableSkills,
@@ -320,6 +321,7 @@ export function SkillConfig(props: {
   const skillProviderModels = useMaskProviderModels();
   const selectedBuiltInTools = getSkillBuiltInTools(skill);
   const selectedMcpTools = getSkillMcpTools(skill);
+  const allowNativeMcpTools = allowSkillNativeMcpTools(skill);
   const selectedCandidateModels = useMemo(
     () => normalizeModelCandidates(skill.candidateModels),
     [skill.candidateModels],
@@ -529,6 +531,24 @@ export function SkillConfig(props: {
             readOnly
             value={mcpToolSummary}
             onClick={() => setShowMcpToolSelector(true)}
+          ></input>
+        </ListItem>
+        <ListItem
+          title={Locale.Mask.Config.Tools.NativeMcp.Title}
+          subTitle={Locale.Mask.Config.Tools.NativeMcp.SubTitle}
+        >
+          <input
+            aria-label={Locale.Mask.Config.Tools.NativeMcp.Title}
+            type="checkbox"
+            checked={allowNativeMcpTools}
+            onChange={(e) => {
+              props.updateMask((mask) => {
+                mask.toolStrategy = {
+                  ...mask.toolStrategy,
+                  nativeMcpTools: e.currentTarget.checked ? "auto" : "off",
+                };
+              });
+            }}
           ></input>
         </ListItem>
         <ListItem

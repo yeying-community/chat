@@ -15,6 +15,12 @@ export type SkillToolsConfig = {
   apiTools?: string[];
 };
 
+export type SkillNativeMcpToolsMode = "auto" | "off";
+
+export type SkillToolStrategy = {
+  nativeMcpTools?: SkillNativeMcpToolsMode;
+};
+
 export type Skill = {
   id: string;
   packageId?: string;
@@ -33,6 +39,7 @@ export type Skill = {
   builtin: boolean;
   plugin?: string[];
   tools?: SkillToolsConfig;
+  toolStrategy?: SkillToolStrategy;
   enableArtifacts?: boolean;
   enableCodeFold?: boolean;
   launch?: {
@@ -70,6 +77,9 @@ export const createEmptySkill = () =>
       builtInTools: [],
       mcpTools: [],
       apiTools: [],
+    },
+    toolStrategy: {
+      nativeMcpTools: "auto",
     },
   }) as Skill;
 
@@ -125,6 +135,14 @@ export function getSkillApiTools(skill: Skill) {
   return skill.tools?.apiTools ?? skill.plugin ?? [];
 }
 
+export function getSkillNativeMcpToolsMode(skill: Skill) {
+  return skill.toolStrategy?.nativeMcpTools ?? "auto";
+}
+
+export function allowSkillNativeMcpTools(skill: Skill) {
+  return getSkillNativeMcpToolsMode(skill) !== "off";
+}
+
 export function syncSkillLegacyPlugin(skill: Skill) {
   const apiTools = skill.tools?.apiTools ?? skill.plugin ?? [];
   skill.plugin = apiTools;
@@ -132,6 +150,9 @@ export function syncSkillLegacyPlugin(skill: Skill) {
     builtInTools: skill.tools?.builtInTools ?? [],
     mcpTools: skill.tools?.mcpTools ?? [],
     apiTools,
+  };
+  skill.toolStrategy = {
+    nativeMcpTools: skill.toolStrategy?.nativeMcpTools ?? "auto",
   };
 }
 

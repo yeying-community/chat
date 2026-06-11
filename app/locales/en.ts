@@ -865,7 +865,13 @@ const en: LocaleType = {
         },
         Mcp: {
           Title: "MCP",
-          SubTitle: "MCP services this skill can call",
+          SubTitle:
+            "Restrict which MCP services this skill can call; none selected means unrestricted",
+        },
+        NativeMcp: {
+          Title: "Allow MCP Tools",
+          SubTitle:
+            "When enabled, tool-capable models may call connected MCP services",
         },
       },
       Sync: {

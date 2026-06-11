@@ -850,7 +850,11 @@ const cn = {
         },
         Mcp: {
           Title: "MCP",
-          SubTitle: "选择这个技能可以调用的 MCP 服务",
+          SubTitle: "限制这个技能可调用的 MCP 服务；未选择表示不限制",
+        },
+        NativeMcp: {
+          Title: "允许 MCP 工具",
+          SubTitle: "开启后，支持工具调用的模型可主动调用已连接的 MCP 服务",
         },
       },
       Sync: {

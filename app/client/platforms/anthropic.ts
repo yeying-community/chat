@@ -11,6 +11,9 @@ import {
   useAppConfig,
   useChatStore,
   ChatMessageTool,
+  allowSkillNativeMcpTools,
+  getSkillApiTools,
+  getSkillMcpTools,
 } from "@/app/store";
 import {
   getNativeToolBundle,
@@ -553,15 +556,18 @@ export class ClaudeApi implements LLMApi {
 
     if (shouldStream) {
       let index = -1;
-      const [tools, funcs] = await getNativeToolBundle(
-        useChatStore.getState().currentSession().mask?.plugin || [],
-        {
-          includeMcp: shouldUseNativeMcpTools({
+      const sessionSkill = useChatStore.getState().currentSession().mask;
+      const skillApiTools = getSkillApiTools(sessionSkill);
+      const skillMcpTools = getSkillMcpTools(sessionSkill);
+      const [tools, funcs] = await getNativeToolBundle(skillApiTools, {
+        includeMcp:
+          allowSkillNativeMcpTools(sessionSkill) &&
+          shouldUseNativeMcpTools({
             providerName: options.config.providerName,
             endpointPath: chatEndpointPath,
           }),
-        },
-      );
+        mcpClientIds: skillMcpTools,
+      });
       return stream(
         path,
         requestBody,

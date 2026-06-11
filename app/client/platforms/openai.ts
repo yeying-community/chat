@@ -11,6 +11,7 @@ import {
 } from "@/app/constant";
 import {
   ChatMessageTool,
+  allowSkillNativeMcpTools,
   getSkillApiTools,
   getSkillBuiltInTools,
   getSkillMcpTools,
@@ -951,10 +952,11 @@ export class ChatGPTApi implements LLMApi {
       const skillApiTools = getSkillApiTools(sessionSkill);
       const skillMcpTools = getSkillMcpTools(sessionSkill);
       const skillBuiltInTools = getSkillBuiltInTools(sessionSkill);
+      const allowNativeMcpTools = allowSkillNativeMcpTools(sessionSkill);
       if (shouldStream) {
         const toolPair = (await getNativeToolBundle(skillApiTools, {
           includeMcp:
-            skillMcpTools.length > 0 &&
+            allowNativeMcpTools &&
             shouldUseNativeMcpTools({
               providerName: modelConfig.providerName,
               endpointPath,
