@@ -16,6 +16,7 @@ import DragIcon from "../icons/drag.svg";
 import {
   DEFAULT_SKILL_AVATAR,
   Skill,
+  allowSkillNativeMcpTools,
   getSkillBuiltInTools,
   getSkillMcpTools,
   getLaunchableSkills,
@@ -43,7 +44,7 @@ import {
 } from "./ui-lib";
 import { Avatar, AvatarPicker } from "./emoji";
 import Locale, { AllLangs, ALL_LANG_OPTIONS, Lang } from "../locales";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import chatStyle from "./chat.module.scss";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -320,6 +321,7 @@ export function SkillConfig(props: {
   const skillProviderModels = useMaskProviderModels();
   const selectedBuiltInTools = getSkillBuiltInTools(skill);
   const selectedMcpTools = getSkillMcpTools(skill);
+  const allowNativeMcpTools = allowSkillNativeMcpTools(skill);
   const selectedCandidateModels = useMemo(
     () => normalizeModelCandidates(skill.candidateModels),
     [skill.candidateModels],
@@ -529,6 +531,24 @@ export function SkillConfig(props: {
             readOnly
             value={mcpToolSummary}
             onClick={() => setShowMcpToolSelector(true)}
+          ></input>
+        </ListItem>
+        <ListItem
+          title={Locale.Mask.Config.Tools.NativeMcp.Title}
+          subTitle={Locale.Mask.Config.Tools.NativeMcp.SubTitle}
+        >
+          <input
+            aria-label={Locale.Mask.Config.Tools.NativeMcp.Title}
+            type="checkbox"
+            checked={allowNativeMcpTools}
+            onChange={(e) => {
+              props.updateMask((mask) => {
+                mask.toolStrategy = {
+                  ...mask.toolStrategy,
+                  nativeMcpTools: e.currentTarget.checked ? "auto" : "off",
+                };
+              });
+            }}
           ></input>
         </ListItem>
         <ListItem
@@ -882,6 +902,7 @@ export function ContextPrompts(props: {
 
 export function SkillPage() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const skillStore = useSkillStore();
   const chatStore = useChatStore();
@@ -927,7 +948,23 @@ export function SkillPage() {
   const [editingSkillId, setEditingSkillId] = useState<string | undefined>();
   const editingSkill =
     skillStore.get(editingSkillId) ?? BUILTIN_SKILL_STORE.get(editingSkillId);
-  const closeSkillModal = () => setEditingSkillId(undefined);
+  const closeSkillModal = () => {
+    setEditingSkillId(undefined);
+    if (new URLSearchParams(location.search).has("skill")) {
+      navigate(Path.Skills, { replace: true });
+    }
+  };
+
+  useEffect(() => {
+    const skillId = new URLSearchParams(location.search).get("skill");
+    if (!skillId) return;
+    const matchedSkill = allSkills.find(
+      (skill) => String(skill.id) === skillId,
+    );
+    if (matchedSkill) {
+      setEditingSkillId(String(matchedSkill.id));
+    }
+  }, [allSkills, location.search]);
 
   const downloadAll = () => {
     downloadAs(

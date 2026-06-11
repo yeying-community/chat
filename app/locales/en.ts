@@ -733,6 +733,7 @@ const en: LocaleType = {
     },
     SourceLabel: "Source",
     Manage: "Manage",
+    Configure: "Configure",
     Enable: "Enable",
     Install: "Install",
     Use: "Start",
@@ -865,7 +866,13 @@ const en: LocaleType = {
         },
         Mcp: {
           Title: "MCP",
-          SubTitle: "MCP services this skill can call",
+          SubTitle:
+            "Restrict which MCP services this skill can call; none selected means unrestricted",
+        },
+        NativeMcp: {
+          Title: "MCP Tool Strategy",
+          SubTitle:
+            "Used by skills such as Deep Reasoning; enabled allows Brave/fetch and other connected MCP tools, disabled uses only the model itself",
         },
       },
       Sync: {

@@ -129,6 +129,9 @@ export const EN_SKILLS: BuiltinSkill[] = [
     createdAt: 1700000002006,
     syncGlobalConfig: false,
     candidateModels: [{ capability: "reasoning" }],
+    toolStrategy: {
+      nativeMcpTools: "auto",
+    },
     context: [
       {
         id: "en-deep-reasoning-0",

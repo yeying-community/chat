@@ -723,6 +723,7 @@ const cn = {
     },
     SourceLabel: "来源",
     Manage: "管理",
+    Configure: "配置",
     Enable: "启用",
     Install: "安装",
     Use: "开始使用",
@@ -850,7 +851,12 @@ const cn = {
         },
         Mcp: {
           Title: "MCP",
-          SubTitle: "选择这个技能可以调用的 MCP 服务",
+          SubTitle: "限制这个技能可调用的 MCP 服务；未选择表示不限制",
+        },
+        NativeMcp: {
+          Title: "MCP 工具策略",
+          SubTitle:
+            "用于深度思考等技能；开启后模型可调用 Brave/fetch 等已连接 MCP，关闭后仅使用模型自身能力",
         },
       },
       Sync: {

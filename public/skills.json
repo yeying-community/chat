@@ -150,6 +150,9 @@
                     "capability": "reasoning"
                 }
             ],
+            "toolStrategy": {
+                "nativeMcpTools": "auto"
+            },
             "context": [
                 {
                     "id": "cn-deep-reasoning-0",
@@ -365,6 +368,9 @@
                     "capability": "reasoning"
                 }
             ],
+            "toolStrategy": {
+                "nativeMcpTools": "auto"
+            },
             "context": [
                 {
                     "id": "en-deep-reasoning-0",

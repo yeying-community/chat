@@ -14,6 +14,7 @@ type BuiltinSkillInput = {
   context: ChatMessage[];
   syncGlobalConfig?: boolean;
   candidateModels?: BuiltinSkill["candidateModels"];
+  toolStrategy?: BuiltinSkill["toolStrategy"];
   launch?: BuiltinSkill["launch"];
   modelConfig?: Partial<ModelConfig>;
 };
