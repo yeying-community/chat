@@ -25,17 +25,18 @@ import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
 import {
   getSkillRuntimeStatusOrder,
+  hasSkillMcpRuntimeIssue,
   resolveSkillRuntimeStatus,
   SkillRuntimeResult,
 } from "../skills/runtime";
 import { usePluginStore } from "../store/plugin";
-import { getMcpConfigFromFile } from "../mcp/actions";
-import { McpConfigData } from "../mcp/types";
+import { getClientsStatus, getMcpConfigFromFile } from "../mcp/actions";
+import { McpConfigData, ServerStatusResponse } from "../mcp/types";
 
 function SkillItem(props: {
   skill: Skill;
   runtime: SkillRuntimeResult;
-  statusLabel: string;
+  statusLabel?: string;
   onClick?: () => void;
   onDelete?: () => void;
   deletable?: boolean;
@@ -61,7 +62,9 @@ function SkillItem(props: {
         <div className={clsx(styles["mask-name"], "one-line")}>
           {props.skill.name}
         </div>
-        <div className={styles["mask-status"]}>{props.statusLabel}</div>
+        {props.statusLabel && (
+          <div className={styles["mask-status"]}>{props.statusLabel}</div>
+        )}
       </div>
       {props.deletable && props.onDelete && (
         <button
@@ -97,6 +100,9 @@ export function NewChat() {
   const [draft, setDraft] = useState("");
   const [selectedModelValue, setSelectedModelValue] = useState("");
   const [mcpConfig, setMcpConfig] = useState<McpConfigData>();
+  const [mcpStatuses, setMcpStatuses] = useState<
+    Record<string, ServerStatusResponse> | undefined
+  >();
   const [hiddenOrphanSkillKeys, setHiddenOrphanSkillKeys] = useState(() => {
     const raw = localStorage.getItem(HIDDEN_ORPHAN_SKILL_KEYS);
     if (!raw) return [] as string[];
@@ -145,10 +151,11 @@ export function NewChat() {
 
   useEffect(() => {
     let cancelled = false;
-    getMcpConfigFromFile()
-      .then((config) => {
+    Promise.all([getMcpConfigFromFile(), getClientsStatus()])
+      .then(([config, statuses]) => {
         if (!cancelled) {
           setMcpConfig(config);
+          setMcpStatuses(statuses);
         }
       })
       .catch((error) => {
@@ -173,6 +180,7 @@ export function NewChat() {
           globalModelConfig: config.modelConfig,
           installedPluginIds,
           installedMcpServerIds,
+          mcpStatuses,
         }),
       ]),
     );
@@ -184,6 +192,7 @@ export function NewChat() {
     config.models,
     installedMcpServerIds,
     installedPluginIds,
+    mcpStatuses,
     recentSkills,
     skills,
   ]);
@@ -223,10 +232,11 @@ export function NewChat() {
             globalModelConfig: config.modelConfig,
             installedPluginIds,
             installedMcpServerIds,
+            mcpStatuses,
           });
         const statusLabel =
           runtime.status === "ready"
-            ? Locale.Discovery.Status.Enabled
+            ? undefined
             : runtime.status === "needs_config"
               ? Locale.Discovery.Status.Configurable
               : Locale.Discovery.Status.Unavailable;
@@ -246,6 +256,7 @@ export function NewChat() {
       entrySkills,
       installedMcpServerIds,
       installedPluginIds,
+      mcpStatuses,
       skillRuntimeMap,
     ],
   );
@@ -349,7 +360,7 @@ export function NewChat() {
     if (!skill) return;
     const runtime = skillRuntimeMap.get(getSkillEntryKey(skill));
     if (runtime && runtime.status !== "ready") {
-      navigate(Path.Skills);
+      navigate(hasSkillMcpRuntimeIssue(runtime) ? Path.McpMarket : Path.Skills);
       return;
     }
 
@@ -458,13 +469,24 @@ export function NewChat() {
         </div>
         <IconButton
           text={Locale.NewChat.More}
-          onClick={() => navigate(Path.Skills)}
+          onClick={() => navigate(`${Path.Discovery}?type=skill`)}
           icon={<EyeIcon />}
           bordered
         />
       </div>
 
       <div className={styles["featured-masks"]}>
+        {entrySkillItems.length === 0 && (
+          <div className={styles["empty-skills"]}>
+            <span>{Locale.NewChat.EmptySkills}</span>
+            <button
+              type="button"
+              onClick={() => navigate(`${Path.Discovery}?type=skill`)}
+            >
+              {Locale.NewChat.ExploreSkills}
+            </button>
+          </div>
+        )}
         {entrySkillItems.map(({ skill, runtime, statusLabel }) => (
           <SkillItem
             key={skill.id}

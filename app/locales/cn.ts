@@ -26,7 +26,7 @@ const cn = {
     Confirm: "确认",
     Later: "稍后再说",
     TopTips:
-      "🥳 Chat AI 首发，立刻解锁 qwen3.7-max，deepseek-v4-pro，gpt-5.5，claude-4.7等最新大模型",
+      "🥳 Chat AI 首发，立刻解锁 qwen3.7-max、deepseek-v4-pro、gpt-5.5、claude-4.8等最新大模型",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} 条对话`,
@@ -898,6 +898,8 @@ const cn = {
     FeaturedTitle: "技能",
     FeaturedSubTitle: "技能会带上适合当前任务的提示词和模型参数。",
     More: "全部",
+    EmptySkills: "暂无可用技能",
+    ExploreSkills: "去发现",
   },
 
   URLCommand: {
