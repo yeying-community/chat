@@ -358,22 +358,23 @@ export function NewChat() {
   };
   const startSkill = (skill?: Skill) => {
     if (!skill) return;
-    const runtime = skillRuntimeMap.get(getSkillEntryKey(skill));
-    if (runtime && runtime.status !== "ready") {
-      navigate(hasSkillMcpRuntimeIssue(runtime) ? Path.McpMarket : Path.Skills);
-      return;
-    }
 
     if (skill.launch?.type === "sd") {
       const input = draft.trim();
-      sdStore.setCurrentMode("generation");
       if (input) {
+        sdStore.setCurrentMode("generation");
         sdStore.setCurrentParams({
           ...useSdStore.getState().currentParams,
           prompt: input,
         });
       }
       navigate(Path.Sd);
+      return;
+    }
+
+    const runtime = skillRuntimeMap.get(getSkillEntryKey(skill));
+    if (runtime && runtime.status !== "ready") {
+      navigate(hasSkillMcpRuntimeIssue(runtime) ? Path.McpMarket : Path.Skills);
       return;
     }
 
