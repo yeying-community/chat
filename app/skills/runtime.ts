@@ -100,6 +100,7 @@ export function resolveSkillRuntimeStatus(params: {
         ...globalModelConfig,
         ...skill.modelConfig,
       };
+  const usesWorkspaceRuntime = skill.launch?.type === "sd";
   const hasCandidateModelRestriction = candidateModels.length > 0;
   const hasCurrentModel = sessionModels.some((model) =>
     matchesModelCandidate(model, {
@@ -124,7 +125,7 @@ export function resolveSkillRuntimeStatus(params: {
 
   const issues: SkillRuntimeIssue[] = [];
 
-  if (runtimeModels.length === 0) {
+  if (!usesWorkspaceRuntime && runtimeModels.length === 0) {
     issues.push({
       type: "model",
       message: "当前没有任何可用模型",
@@ -135,7 +136,11 @@ export function resolveSkillRuntimeStatus(params: {
     };
   }
 
-  if (hasCandidateModelRestriction && sessionModels.length === 0) {
+  if (
+    !usesWorkspaceRuntime &&
+    hasCandidateModelRestriction &&
+    sessionModels.length === 0
+  ) {
     issues.push({
       type: "model",
       message: "候选模型当前都不可用",
@@ -146,7 +151,11 @@ export function resolveSkillRuntimeStatus(params: {
     };
   }
 
-  if (!hasCandidateModelRestriction && !hasCurrentModel) {
+  if (
+    !usesWorkspaceRuntime &&
+    !hasCandidateModelRestriction &&
+    !hasCurrentModel
+  ) {
     issues.push({
       type: "model",
       message: "默认模型需要调整",

@@ -101,4 +101,31 @@ describe("skill runtime checks", () => {
     ]);
     expect(hasSkillMcpRuntimeIssue(result)).toBe(true);
   });
+
+  test("does not block SD workspace skill on chat model matching", () => {
+    const result = resolve({
+      skill: {
+        ...baseSkill,
+        id: "image",
+        name: "AI绘画",
+        launch: { type: "sd" },
+        syncGlobalConfig: false,
+        modelConfig: {
+          ...modelConfig,
+          model: "gpt-image-1",
+          providerName: ServiceProvider.OpenAI,
+        },
+        tools: {
+          builtInTools: [],
+          mcpTools: [],
+          apiTools: [],
+        },
+      },
+      models: [model],
+      installedMcpServerIds: [],
+    });
+
+    expect(result.status).toBe("ready");
+    expect(result.issues).toEqual([]);
+  });
 });
