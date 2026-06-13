@@ -26,7 +26,7 @@ const cn = {
     Confirm: "确认",
     Later: "稍后再说",
     TopTips:
-      "🥳 Chat AI 首发，立刻解锁 qwen3.7-max、deepseek-v4-pro、gpt-5.5、claude-4.8等最新大模型",
+      "🥳 Chat AI 首发，立刻解锁 qwen3.7-plus、deepseek-v4-pro、gpt-5.5、claude-4.8等最新大模型",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} 条对话`,

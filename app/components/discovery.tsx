@@ -40,6 +40,7 @@ import ModelServiceIcon from "../icons/llm-icons/default.svg";
 import ToolIcon from "../icons/tool.svg";
 import styles from "./discovery.module.scss";
 import { useAccessStore } from "../store/access";
+import { useSdStore } from "../store/sd";
 import {
   getSkillRuntimeIssueSummary,
   getSkillRuntimeStatusOrder,
@@ -113,6 +114,7 @@ function getCapabilityIcon(type: Capability["type"]) {
 export function DiscoveryPage() {
   const navigate = useNavigate();
   const chatStore = useChatStore();
+  const sdStore = useSdStore();
   const location = useLocation();
   const view = getInitialView(location.search);
   const activeType = getInitialType(location.search);
@@ -529,6 +531,18 @@ export function DiscoveryPage() {
     return matchType && matchView && matchSearch;
   });
 
+  const startSkill = (skill: Skill) => {
+    if (skill.launch?.type === "sd") {
+      sdStore.startBlankCreation();
+      navigate(Path.Sd);
+      return;
+    }
+
+    if (chatStore.newSession(skill) !== false) {
+      navigate(Path.Chat);
+    }
+  };
+
   const handleCapabilityAction = (item: Capability) => {
     if (item.type === "skill" && item.skillPackage && item.skillPackageLang) {
       const skill = skillPackageToSkill(
@@ -540,9 +554,7 @@ export function DiscoveryPage() {
       const installedSkill = useSkillStore.getState().create(skill);
 
       if (item.runtimeStatus === "ready") {
-        if (chatStore.newSession(installedSkill) !== false) {
-          navigate(Path.Chat);
-        }
+        startSkill(installedSkill);
       } else if (hasSkillMcpRuntimeIssue(item.runtimeResult)) {
         navigate(Path.McpMarket);
       } else {
@@ -560,9 +572,7 @@ export function DiscoveryPage() {
         openSkillConfig(item.skill);
         return;
       }
-      if (chatStore.newSession(item.skill) !== false) {
-        navigate(Path.Chat);
-      }
+      startSkill(item.skill);
       return;
     }
     navigate(item.path);
