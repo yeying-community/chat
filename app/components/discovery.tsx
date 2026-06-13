@@ -40,6 +40,7 @@ import ModelServiceIcon from "../icons/llm-icons/default.svg";
 import ToolIcon from "../icons/tool.svg";
 import styles from "./discovery.module.scss";
 import { useAccessStore } from "../store/access";
+import { useSdStore } from "../store/sd";
 import {
   getSkillRuntimeIssueSummary,
   getSkillRuntimeStatusOrder,
@@ -113,6 +114,7 @@ function getCapabilityIcon(type: Capability["type"]) {
 export function DiscoveryPage() {
   const navigate = useNavigate();
   const chatStore = useChatStore();
+  const sdStore = useSdStore();
   const location = useLocation();
   const view = getInitialView(location.search);
   const activeType = getInitialType(location.search);
@@ -531,6 +533,7 @@ export function DiscoveryPage() {
 
   const startSkill = (skill: Skill) => {
     if (skill.launch?.type === "sd") {
+      sdStore.startBlankCreation();
       navigate(Path.Sd);
       return;
     }

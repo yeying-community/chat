@@ -959,7 +959,7 @@ export function SkillPage() {
 
   const startSkill = (skill: Skill) => {
     if (skill.launch?.type === "sd") {
-      sdStore.setCurrentMode("generation");
+      sdStore.startBlankCreation();
       navigate(Path.Sd);
       return;
     }

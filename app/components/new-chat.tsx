@@ -361,13 +361,7 @@ export function NewChat() {
 
     if (skill.launch?.type === "sd") {
       const input = draft.trim();
-      if (input) {
-        sdStore.setCurrentMode("generation");
-        sdStore.setCurrentParams({
-          ...useSdStore.getState().currentParams,
-          prompt: input,
-        });
-      }
+      sdStore.startBlankCreation(input);
       navigate(Path.Sd);
       return;
     }

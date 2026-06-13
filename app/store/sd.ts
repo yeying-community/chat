@@ -133,6 +133,7 @@ export const useSdStore = createPersistStore<
     setEditMaskImage: (image: string, name?: string) => void;
     setCurrentModel: (model: any) => void;
     setCurrentParams: (data: any) => void;
+    startBlankCreation: (prompt?: string) => void;
     deleteDraw: (id: string) => void;
   }
 >(
@@ -290,6 +291,25 @@ export const useSdStore = createPersistStore<
       setCurrentParams(data: any) {
         set({
           currentParams: data,
+        });
+      },
+      startBlankCreation(prompt = "") {
+        const currentModel = _get().currentModel;
+        const currentParams = getModelParamBasicData(
+          currentModel?.params?.({}) ?? [],
+          {},
+        );
+        set({
+          currentMode: "generation",
+          editSourceType: "history",
+          editSourceImage: "",
+          editSourceName: "",
+          editMaskImage: "",
+          editMaskName: "",
+          currentParams: {
+            ...currentParams,
+            prompt,
+          },
         });
       },
     };
