@@ -248,17 +248,12 @@ export function Sd() {
                               {prompt}
                             </button>
                             <div className={styles["sd-img-sub-meta"]}>
+                              <span>{item.created_at}</span>
                               <span>{item.model_name}</span>
                               <span>{item.provider_name}</span>
                             </div>
                           </div>
                           {getSdTaskStatus(item)}
-                        </div>
-                        <div className={styles["sd-img-meta"]}>
-                          <span>{item.created_at}</span>
-                          {item.endpoint_type && (
-                            <span>{item.endpoint_type}</span>
-                          )}
                         </div>
                         <div className={styles["sd-img-actions"]}>
                           <IconButton
