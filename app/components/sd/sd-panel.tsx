@@ -686,7 +686,9 @@ export function ControlParam(props: {
                 hideTitle={hideCompactTitle}
               >
                 <Select
+                  className={styles["control-param-select"]}
                   aria-label={item.name}
+                  style={{ width: "100%" }}
                   value={props.data[item.value]}
                   title={item.name}
                   onChange={(e) => {
