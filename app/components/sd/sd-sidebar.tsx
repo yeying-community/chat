@@ -36,6 +36,7 @@ export function SideBar(props: { className?: string }) {
   const sdStore = useSdStore();
   const currentMode = sdStore.currentMode;
   const editSourceImage = sdStore.editSourceImage;
+  const editMaskImage = sdStore.editMaskImage;
   const currentModel = sdStore.currentModel;
   const params = sdStore.currentParams;
   const setParams = sdStore.setCurrentParams;
