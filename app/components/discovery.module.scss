@@ -150,6 +150,44 @@
   margin-top: 4px;
 }
 
+.config-list {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.config-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.config-delete {
+  flex: 0 0 auto;
+}
+
+.mcp-detail {
+  display: grid;
+  gap: 12px;
+  min-width: min(420px, 80vw);
+}
+
+.mcp-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: var(--border-in-light);
+  font-size: 13px;
+}
+
+.mcp-detail-desc {
+  line-height: 1.6;
+  opacity: 0.8;
+  user-select: text;
+}
+
 .empty {
   min-height: 160px;
   display: flex;
