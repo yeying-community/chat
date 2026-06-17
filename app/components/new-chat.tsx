@@ -87,6 +87,10 @@ const localStorage = safeLocalStorage();
 const HIDDEN_ORPHAN_SKILL_KEYS = "hidden-orphan-skill-keys";
 
 function getSkillEntryKey(skill: Skill) {
+  if (skill.packageId) return `package:${skill.packageId}`;
+  if (skill.createdAt && skill.lang && skill.name) {
+    return `skill:${skill.lang}:${skill.createdAt}:${skill.name}`;
+  }
   return skill.id || skill.name;
 }
 
