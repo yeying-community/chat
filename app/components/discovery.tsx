@@ -123,6 +123,10 @@ function getBuiltinSkillPackageId(skill: Skill) {
   return `builtin.${skill.lang}.${skill.createdAt}`;
 }
 
+function getSkillPackageId(skill: Skill) {
+  return skill.packageId || getBuiltinSkillPackageId(skill);
+}
+
 function getCapabilityIcon(type: Capability["type"]) {
   if (type === "skill") return <BrainIcon />;
   if (type === "mcp") return <ToolIcon />;
@@ -239,13 +243,20 @@ export function DiscoveryPage() {
     );
     if (hideBuiltinSkills) return userSkills;
 
+    const enabledPackageIds = new Set(
+      userSkills.map((skill) => skill.packageId).filter(Boolean),
+    );
     const seen = new Set<string>();
     const builtinSkills = BUILTIN_SKILLS.filter((skill) => {
       if (skill.lang !== getLang() || seen.has(skill.name)) return false;
       seen.add(skill.name);
+      if (enabledPackageIds.has(getBuiltinSkillPackageId(skill as Skill))) {
+        return false;
+      }
       return true;
     }).map((skill) => ({
       ...skill,
+      packageId: getBuiltinSkillPackageId(skill as Skill),
       modelConfig: {
         ...modelConfig,
         ...skill.modelConfig,
@@ -308,11 +319,11 @@ export function DiscoveryPage() {
             runtimeSummary || undefined,
           ].filter(Boolean) as string[],
           status:
-            runtime.status === "ready"
+            !skill.builtin && runtime.status === "ready"
               ? Locale.Discovery.Status.Enabled
-              : runtime.status === "needs_config"
-                ? Locale.Discovery.Status.Configurable
-                : Locale.Discovery.Status.Unavailable,
+              : runtime.status === "unavailable"
+                ? Locale.Discovery.Status.Unavailable
+                : Locale.Discovery.Status.Configurable,
           pricing: "free" as const,
           runtime: "both" as const,
           source: skill.builtin
@@ -567,6 +578,26 @@ export function DiscoveryPage() {
     }
   };
 
+  const enableSkill = (skill: Skill) => {
+    const packageId = getSkillPackageId(skill);
+    const existingSkill = Object.values(useSkillStore.getState().skills).find(
+      (item) =>
+        item.packageId === packageId ||
+        (!item.builtin &&
+          item.lang === skill.lang &&
+          item.createdAt === skill.createdAt &&
+          item.name === skill.name),
+    );
+
+    return (
+      existingSkill ??
+      useSkillStore.getState().create({
+        ...skill,
+        packageId,
+      })
+    );
+  };
+
   useEffect(() => {
     if (!editingMcpServerId) return;
     const preset = communityMcpServers
@@ -816,15 +847,18 @@ export function DiscoveryPage() {
     }
 
     if (item.type === "skill" && item.skill) {
+      const enabledSkill = item.installed
+        ? item.skill
+        : enableSkill(item.skill);
       if (item.runtimeStatus !== "ready") {
         if (hasSkillMcpRuntimeIssue(item.runtimeResult)) {
           navigate(Path.McpMarket);
           return;
         }
-        openSkillConfig(item.skill);
+        openSkillConfig(enabledSkill);
         return;
       }
-      startSkill(item.skill);
+      startSkill(enabledSkill);
       return;
     }
     navigate(item.path);
@@ -836,28 +870,13 @@ export function DiscoveryPage() {
       return;
     }
 
-    const packageId = getBuiltinSkillPackageId(skill);
-    const existingSkill = Object.values(useSkillStore.getState().skills).find(
-      (item) =>
-        item.packageId === packageId ||
-        (!item.builtin &&
-          item.lang === skill.lang &&
-          item.createdAt === skill.createdAt &&
-          item.name === skill.name),
-    );
-    const configurableSkill =
-      existingSkill ??
-      useSkillStore.getState().create({
-        ...skill,
-        packageId,
-      });
-
-    navigate(getSkillConfigPath(configurableSkill));
+    navigate(getSkillConfigPath(enableSkill(skill)));
   };
 
   const getActionText = (item: Capability) => {
     if (item.type === "skill") {
       if (item.skillPackage && !item.installed) return Locale.Discovery.Install;
+      if (!item.installed) return Locale.Discovery.Enable;
       return item.runtimeStatus === "ready"
         ? Locale.Discovery.Use
         : Locale.Discovery.Manage;
