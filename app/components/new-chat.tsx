@@ -87,6 +87,10 @@ const localStorage = safeLocalStorage();
 const HIDDEN_ORPHAN_SKILL_KEYS = "hidden-orphan-skill-keys";
 
 function getSkillEntryKey(skill: Skill) {
+  if (skill.packageId) return `package:${skill.packageId}`;
+  if (skill.createdAt && skill.lang && skill.name) {
+    return `skill:${skill.lang}:${skill.createdAt}:${skill.name}`;
+  }
   return skill.id || skill.name;
 }
 
@@ -124,7 +128,7 @@ export function NewChat() {
   });
 
   const skills = useMemo(
-    () => getLaunchableSkills(skillStore.getAll()),
+    () => getLaunchableSkills(Object.values(skillStore.skills)),
     [skillStore],
   );
   const currentSkillKeys = useMemo(
@@ -151,11 +155,12 @@ export function NewChat() {
         if (!hasSkillContent) return false;
         const key = skill.id || skill.name;
         if (!key || seen.has(key)) return false;
+        if (!currentSkillKeys.has(getSkillEntryKey(skill))) return false;
         seen.add(key);
         return true;
       })
       .slice(0, 3);
-  }, [chatStore.sessions]);
+  }, [chatStore.sessions, currentSkillKeys]);
   const installedPluginIds = useMemo(() => Object.keys(plugins), [plugins]);
   const installedMcpServerIds = useMemo(
     () => Object.keys(mcpConfig?.mcpServers ?? {}),

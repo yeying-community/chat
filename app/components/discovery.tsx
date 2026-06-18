@@ -4,7 +4,11 @@ import clsx from "clsx";
 
 import { COMMUNITY_MARKETPLACE_SKILL_PACKAGES_URL, Path } from "../constant";
 import Locale, { getLang, type Lang } from "../locales";
-import { getClientsStatus, getMcpConfigFromFile } from "../mcp/actions";
+import {
+  addMcpServer,
+  getClientsStatus,
+  getMcpConfigFromFile,
+} from "../mcp/actions";
 import {
   fetchCommunityMcpPresetServers,
   mergeMcpPresetServers,
@@ -32,8 +36,12 @@ import {
 import { usePluginStore } from "../store/plugin";
 import { IconButton } from "./button";
 import { ErrorBoundary } from "./error";
+import { List, ListItem, Modal, showToast } from "./ui-lib";
+import { SkillConfig } from "./mask";
+import AddIcon from "../icons/add.svg";
 import BrainIcon from "../icons/brain.svg";
 import CloseIcon from "../icons/close.svg";
+import DeleteIcon from "../icons/delete.svg";
 import EditIcon from "../icons/edit.svg";
 import EyeIcon from "../icons/eye.svg";
 import ModelServiceIcon from "../icons/llm-icons/default.svg";
@@ -55,6 +63,16 @@ type PricingType = "free" | "subscription" | "usage";
 type RuntimeType = "cloud" | "local" | "both";
 type DiscoveryView = "market" | "mine";
 type SkillPackageList = Partial<Record<Lang, SkillPackage[]>>;
+type DiscoveryConfigProperty = {
+  type: string;
+  description?: string;
+  required?: boolean;
+  minItems?: number;
+  itemLabel?: string;
+  addButtonText?: string;
+  helpUrl?: string;
+  helpLabel?: string;
+};
 
 type Capability = {
   id: string;
@@ -73,6 +91,7 @@ type Capability = {
   skillPackageLang?: Lang;
   runtimeStatus?: SkillRuntimeStatus;
   runtimeResult?: SkillRuntimeResult;
+  presetServer?: PresetServer;
 };
 
 const typeOrder: CapabilityType[] = ["all", "skill", "mcp", "provider"];
@@ -97,12 +116,12 @@ function getDiscoveryPath(view: DiscoveryView, type: CapabilityType) {
   return query ? `${Path.Discovery}?${query}` : Path.Discovery;
 }
 
-function getSkillConfigPath(skill: Skill) {
-  return `${Path.Skills}?skill=${encodeURIComponent(String(skill.id))}`;
-}
-
 function getBuiltinSkillPackageId(skill: Skill) {
   return `builtin.${skill.lang}.${skill.createdAt}`;
+}
+
+function getSkillPackageId(skill: Skill) {
+  return skill.packageId || getBuiltinSkillPackageId(skill);
 }
 
 function getCapabilityIcon(type: Capability["type"]) {
@@ -114,6 +133,7 @@ function getCapabilityIcon(type: Capability["type"]) {
 export function DiscoveryPage() {
   const navigate = useNavigate();
   const chatStore = useChatStore();
+  const skillStore = useSkillStore();
   const sdStore = useSdStore();
   const location = useLocation();
   const view = getInitialView(location.search);
@@ -137,6 +157,12 @@ export function DiscoveryPage() {
   const [communityMcpServers, setCommunityMcpServers] = useState<
     PresetServer[]
   >([]);
+  const [editingMcpServerId, setEditingMcpServerId] = useState<string>();
+  const [viewingMcpCapability, setViewingMcpCapability] =
+    useState<Capability>();
+  const [editingSkillId, setEditingSkillId] = useState<string>();
+  const [mcpUserConfig, setMcpUserConfig] = useState<Record<string, any>>({});
+  const [savingMcpConfig, setSavingMcpConfig] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,27 +236,41 @@ export function DiscoveryPage() {
     return () => controller.abort();
   }, []);
 
-  const skills = useMemo(() => {
+  const skills = useMemo<Skill[]>(() => {
     const userSkills = Object.values(skillRecords).sort(
       (a, b) => b.createdAt - a.createdAt,
     );
     if (hideBuiltinSkills) return userSkills;
 
+    const enabledPackageIds = new Set(
+      userSkills.map((skill) => skill.packageId).filter(Boolean),
+    );
     const seen = new Set<string>();
     const builtinSkills = BUILTIN_SKILLS.filter((skill) => {
       if (skill.lang !== getLang() || seen.has(skill.name)) return false;
       seen.add(skill.name);
+      if (enabledPackageIds.has(getBuiltinSkillPackageId(skill as Skill))) {
+        return false;
+      }
       return true;
-    }).map((skill) => ({
-      ...skill,
-      modelConfig: {
-        ...modelConfig,
-        ...skill.modelConfig,
-      },
-    }));
+    }).map((skill) => {
+      const builtinSkill = skill as Skill;
+      return {
+        ...builtinSkill,
+        packageId: getBuiltinSkillPackageId(builtinSkill),
+        modelConfig: {
+          ...modelConfig,
+          ...builtinSkill.modelConfig,
+        },
+      };
+    });
 
     return [...userSkills, ...builtinSkills];
   }, [hideBuiltinSkills, modelConfig, skillRecords]);
+  const editingSkill = useMemo(
+    () => skills.find((skill) => String(skill.id) === editingSkillId),
+    [editingSkillId, skills],
+  );
   const plugins = useMemo(
     () =>
       Object.values(pluginRecords).sort((a, b) => b.createdAt - a.createdAt),
@@ -270,7 +310,7 @@ export function DiscoveryPage() {
         });
         const runtimeSummary = getSkillRuntimeIssueSummary(runtime);
         return {
-          id: `skill:${"id" in skill ? skill.id : skill.name}`,
+          id: `skill:${skill.id}`,
           type: "skill" as const,
           title: skill.name,
           description: skill.description || Locale.Discovery.DefaultSkillDesc,
@@ -285,11 +325,11 @@ export function DiscoveryPage() {
             runtimeSummary || undefined,
           ].filter(Boolean) as string[],
           status:
-            runtime.status === "ready"
+            !skill.builtin && runtime.status === "ready"
               ? Locale.Discovery.Status.Enabled
-              : runtime.status === "needs_config"
-                ? Locale.Discovery.Status.Configurable
-                : Locale.Discovery.Status.Unavailable,
+              : runtime.status === "unavailable"
+                ? Locale.Discovery.Status.Unavailable
+                : Locale.Discovery.Status.Configurable,
           pricing: "free" as const,
           runtime: "both" as const,
           source: skill.builtin
@@ -417,6 +457,7 @@ export function DiscoveryPage() {
           : Locale.Discovery.Source.Community,
         path: Path.McpMarket,
         installed,
+        presetServer: server,
       };
     });
 
@@ -543,7 +584,255 @@ export function DiscoveryPage() {
     }
   };
 
+  const enableSkill = (skill: Skill) => {
+    const packageId = getSkillPackageId(skill);
+    const existingSkill = Object.values(useSkillStore.getState().skills).find(
+      (item) =>
+        item.packageId === packageId ||
+        (!item.builtin &&
+          item.lang === skill.lang &&
+          item.createdAt === skill.createdAt &&
+          item.name === skill.name),
+    );
+
+    return (
+      existingSkill ??
+      useSkillStore.getState().create({
+        ...skill,
+        packageId,
+      })
+    );
+  };
+
+  useEffect(() => {
+    if (!editingMcpServerId) return;
+    const preset = communityMcpServers
+      .concat(OFFICIAL_MCP_PRESET_SERVERS)
+      .find((server) => server.id === editingMcpServerId);
+    if (!preset?.configSchema) return;
+
+    const currentConfig = mcpConfig?.mcpServers?.[editingMcpServerId];
+    if (!currentConfig) {
+      setMcpUserConfig({});
+      return;
+    }
+
+    const nextUserConfig: Record<string, any> = {};
+    Object.entries(preset.argsMapping || {}).forEach(([key, mapping]) => {
+      if (mapping.type === "spread") {
+        const startPos = mapping.position ?? 0;
+        nextUserConfig[key] = currentConfig.args.slice(startPos);
+      } else if (mapping.type === "single") {
+        nextUserConfig[key] = currentConfig.args[mapping.position ?? 0];
+      } else if (mapping.type === "env" && mapping.key && currentConfig.env) {
+        nextUserConfig[key] = currentConfig.env[mapping.key];
+      }
+    });
+    setMcpUserConfig(nextUserConfig);
+  }, [communityMcpServers, editingMcpServerId, mcpConfig?.mcpServers]);
+
+  const renderMcpPropertyDescription = (prop: DiscoveryConfigProperty) => {
+    if (!prop.description && !prop.helpUrl) return undefined;
+    return (
+      <>
+        {prop.description}
+        {prop.helpUrl && (
+          <>
+            {prop.description ? " " : ""}
+            <a href={prop.helpUrl} target="_blank" rel="noopener noreferrer">
+              {prop.helpLabel || "Open Link"}
+            </a>
+          </>
+        )}
+      </>
+    );
+  };
+
+  const renderMcpConfigForm = () => {
+    const preset = mergeMcpPresetServers(
+      OFFICIAL_MCP_PRESET_SERVERS,
+      communityMcpServers,
+    ).find((server) => server.id === editingMcpServerId);
+    if (!preset?.configSchema) return null;
+
+    return Object.entries(preset.configSchema.properties).map(
+      ([key, prop]: [string, DiscoveryConfigProperty]) => {
+        if (prop.type === "array") {
+          const currentValue = mcpUserConfig[key] || [];
+          const itemLabel = prop.itemLabel || key;
+          const addButtonText = prop.addButtonText || `Add ${itemLabel}`;
+          return (
+            <ListItem
+              key={key}
+              title={key}
+              subTitle={renderMcpPropertyDescription(prop)}
+              vertical
+            >
+              <div className={styles["config-list"]}>
+                {(currentValue as string[]).map(
+                  (value: string, index: number) => (
+                    <div
+                      key={`${key}-${index}`}
+                      className={styles["config-item"]}
+                    >
+                      <input
+                        type="text"
+                        value={value}
+                        placeholder={`${itemLabel} ${index + 1}`}
+                        onChange={(e) => {
+                          const nextValue = [...currentValue] as string[];
+                          nextValue[index] = e.currentTarget.value;
+                          setMcpUserConfig({
+                            ...mcpUserConfig,
+                            [key]: nextValue,
+                          });
+                        }}
+                      />
+                      <IconButton
+                        icon={<DeleteIcon />}
+                        className={styles["config-delete"]}
+                        onClick={() => {
+                          const nextValue = [...currentValue] as string[];
+                          nextValue.splice(index, 1);
+                          setMcpUserConfig({
+                            ...mcpUserConfig,
+                            [key]: nextValue,
+                          });
+                        }}
+                      />
+                    </div>
+                  ),
+                )}
+                <IconButton
+                  icon={<AddIcon />}
+                  text={addButtonText}
+                  bordered
+                  onClick={() => {
+                    const nextValue = [...currentValue, ""] as string[];
+                    setMcpUserConfig({ ...mcpUserConfig, [key]: nextValue });
+                  }}
+                />
+              </div>
+            </ListItem>
+          );
+        }
+
+        const currentValue = mcpUserConfig[key] || "";
+        return (
+          <ListItem
+            key={key}
+            title={key}
+            subTitle={renderMcpPropertyDescription(prop)}
+          >
+            <input
+              aria-label={key}
+              type="text"
+              value={currentValue}
+              placeholder={`Enter ${key}`}
+              onChange={(e) =>
+                setMcpUserConfig({
+                  ...mcpUserConfig,
+                  [key]: e.currentTarget.value,
+                })
+              }
+            />
+          </ListItem>
+        );
+      },
+    );
+  };
+
+  const saveMcpServerConfig = async () => {
+    const preset = mergeMcpPresetServers(
+      OFFICIAL_MCP_PRESET_SERVERS,
+      communityMcpServers,
+    ).find((server) => server.id === editingMcpServerId);
+    if (!preset || !preset.configSchema || !editingMcpServerId) return;
+
+    try {
+      setSavingMcpConfig(true);
+      const args = [...preset.baseArgs];
+      const env: Record<string, string> = {};
+
+      Object.entries(preset.argsMapping || {}).forEach(([key, mapping]) => {
+        const value = mcpUserConfig[key];
+        if (mapping.type === "spread" && Array.isArray(value)) {
+          const pos = mapping.position ?? 0;
+          args.splice(pos, 0, ...value.filter(Boolean));
+        } else if (
+          mapping.type === "single" &&
+          mapping.position !== undefined &&
+          typeof value === "string"
+        ) {
+          args[mapping.position] = value;
+        } else if (
+          mapping.type === "env" &&
+          mapping.key &&
+          typeof value === "string"
+        ) {
+          env[mapping.key] = value;
+        }
+      });
+
+      const serverConfig = {
+        command: preset.command,
+        args,
+        ...(Object.keys(env).length > 0 ? { env } : {}),
+      };
+      const newConfig = await addMcpServer(editingMcpServerId, serverConfig);
+      const statuses = await getClientsStatus();
+      setMcpConfig(newConfig);
+      setMcpStatuses(statuses);
+      setEditingMcpServerId(undefined);
+      setMcpUserConfig({});
+      showToast(Locale.Discovery.Status.Enabled);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Failed to save MCP config",
+      );
+    } finally {
+      setSavingMcpConfig(false);
+    }
+  };
+
   const handleCapabilityAction = (item: Capability) => {
+    if (item.type === "mcp" && item.presetServer) {
+      if (item.installed) {
+        setViewingMcpCapability(item);
+        return;
+      }
+
+      if (item.presetServer.configurable) {
+        setEditingMcpServerId(item.presetServer.id);
+        setMcpUserConfig({});
+        return;
+      }
+
+      const enableMcp = async () => {
+        try {
+          const serverConfig = {
+            command: item.presetServer!.command,
+            args: [...item.presetServer!.baseArgs],
+          };
+          const newConfig = await addMcpServer(
+            item.presetServer!.id,
+            serverConfig,
+          );
+          const statuses = await getClientsStatus();
+          setMcpConfig(newConfig);
+          setMcpStatuses(statuses);
+          showToast(Locale.Discovery.Status.Enabled);
+        } catch (error) {
+          showToast(
+            error instanceof Error ? error.message : "Failed to enable MCP",
+          );
+        }
+      };
+
+      void enableMcp();
+      return;
+    }
+
     if (item.type === "skill" && item.skillPackage && item.skillPackageLang) {
       const skill = skillPackageToSkill(
         item.skillPackage,
@@ -564,15 +853,18 @@ export function DiscoveryPage() {
     }
 
     if (item.type === "skill" && item.skill) {
+      const enabledSkill = item.installed
+        ? item.skill
+        : enableSkill(item.skill);
       if (item.runtimeStatus !== "ready") {
         if (hasSkillMcpRuntimeIssue(item.runtimeResult)) {
           navigate(Path.McpMarket);
           return;
         }
-        openSkillConfig(item.skill);
+        openSkillConfig(enabledSkill);
         return;
       }
-      startSkill(item.skill);
+      startSkill(enabledSkill);
       return;
     }
     navigate(item.path);
@@ -580,35 +872,27 @@ export function DiscoveryPage() {
 
   const openSkillConfig = (skill: Skill) => {
     if (!skill.builtin) {
-      navigate(getSkillConfigPath(skill));
+      setEditingSkillId(String(skill.id));
       return;
     }
 
-    const packageId = getBuiltinSkillPackageId(skill);
-    const existingSkill = Object.values(useSkillStore.getState().skills).find(
-      (item) =>
-        item.packageId === packageId ||
-        (!item.builtin &&
-          item.lang === skill.lang &&
-          item.createdAt === skill.createdAt &&
-          item.name === skill.name),
-    );
-    const configurableSkill =
-      existingSkill ??
-      useSkillStore.getState().create({
-        ...skill,
-        packageId,
-      });
-
-    navigate(getSkillConfigPath(configurableSkill));
+    setEditingSkillId(String(enableSkill(skill).id));
   };
 
   const getActionText = (item: Capability) => {
     if (item.type === "skill") {
       if (item.skillPackage && !item.installed) return Locale.Discovery.Install;
+      if (!item.installed) return Locale.Discovery.Enable;
       return item.runtimeStatus === "ready"
         ? Locale.Discovery.Use
         : Locale.Discovery.Manage;
+    }
+    if (item.type === "mcp") {
+      if (!item.installed && item.presetServer?.configurable) {
+        return Locale.Discovery.ConfigureAndEnable;
+      }
+      if (view === "market" && !item.installed) return Locale.Discovery.Enable;
+      return Locale.Discovery.Manage;
     }
     if (view === "market" && !item.installed) return Locale.Discovery.Enable;
     return Locale.Discovery.Manage;
@@ -752,6 +1036,103 @@ export function DiscoveryPage() {
             )}
           </div>
         </div>
+        {editingMcpServerId && (
+          <div className="modal-mask">
+            <Modal
+              title={`Configure MCP - ${editingMcpServerId}`}
+              onClose={() =>
+                !savingMcpConfig && setEditingMcpServerId(undefined)
+              }
+              actions={[
+                <IconButton
+                  key="cancel"
+                  text="Cancel"
+                  bordered
+                  disabled={savingMcpConfig}
+                  onClick={() => {
+                    setEditingMcpServerId(undefined);
+                    setMcpUserConfig({});
+                  }}
+                />,
+                <IconButton
+                  key="save"
+                  text="Save"
+                  type="primary"
+                  bordered
+                  disabled={savingMcpConfig}
+                  onClick={saveMcpServerConfig}
+                />,
+              ]}
+            >
+              <List>{renderMcpConfigForm()}</List>
+            </Modal>
+          </div>
+        )}
+        {editingSkill && (
+          <div className="modal-mask">
+            <Modal
+              title={Locale.Mask.EditModal.Title(editingSkill.builtin)}
+              onClose={() => setEditingSkillId(undefined)}
+            >
+              <SkillConfig
+                mask={editingSkill}
+                updateMask={(updater) =>
+                  skillStore.updateMask(editingSkill.id, updater)
+                }
+                readonly={editingSkill.builtin}
+              />
+            </Modal>
+          </div>
+        )}
+        {viewingMcpCapability && (
+          <div className="modal-mask">
+            <Modal
+              title={viewingMcpCapability.title}
+              onClose={() => setViewingMcpCapability(undefined)}
+              actions={[
+                <IconButton
+                  key="close"
+                  text={Locale.UI.Close}
+                  bordered
+                  onClick={() => setViewingMcpCapability(undefined)}
+                />,
+                <IconButton
+                  key="manager"
+                  text={Locale.Discovery.OpenMcpManager}
+                  type="primary"
+                  bordered
+                  onClick={() => {
+                    setViewingMcpCapability(undefined);
+                    navigate(Path.McpMarket);
+                  }}
+                />,
+              ]}
+            >
+              <div className={styles["mcp-detail"]}>
+                <div className={styles["mcp-detail-row"]}>
+                  <span>{Locale.Discovery.McpStatus}</span>
+                  <strong>{viewingMcpCapability.status}</strong>
+                </div>
+                <div className={styles["mcp-detail-row"]}>
+                  <span>{Locale.Discovery.SourceLabel}</span>
+                  <strong>{viewingMcpCapability.source}</strong>
+                </div>
+                <div className={styles["mcp-detail-desc"]}>
+                  {viewingMcpCapability.description}
+                </div>
+                {viewingMcpCapability.presetServer?.repo && (
+                  <a
+                    href={viewingMcpCapability.presetServer.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {viewingMcpCapability.presetServer.repo}
+                  </a>
+                )}
+              </div>
+            </Modal>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );
