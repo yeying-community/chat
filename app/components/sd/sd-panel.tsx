@@ -639,11 +639,20 @@ export function ControlParam(props: {
     >
       {props.columns?.map((item) => {
         let element: null | React.ReactNode;
-        const compactSelectRowFields = ["size", "quality", "style"];
+        const compactSelectRowFields = [
+          "size",
+          "image_size",
+          "aspect_ratio",
+          "width",
+          "height",
+          "quality",
+          "n",
+          "style",
+        ];
         const compactSelectIndex = compactSelectRowFields.indexOf(item.value);
         const hideCompactTitle =
           props.compact &&
-          item.type === "select" &&
+          (item.type === "select" || item.type === "number") &&
           compactSelectRowFields.includes(item.value);
         const compactItemClass = props.compact
           ? item.type === "textarea"
@@ -768,6 +777,23 @@ export const getModelParamBasicData = (
   columns.forEach((item: any) => {
     if (clearText && ["text", "textarea", "number"].includes(item.type)) {
       newParams[item.value] = item.default || "";
+    } else if (item.type === "select" && Array.isArray(item.options)) {
+      const currentValue = data[item.value];
+      const optionValues = item.options.map((option: any) => option.value);
+      newParams[item.value] = optionValues.includes(currentValue)
+        ? currentValue
+        : item.default || optionValues[0] || "";
+    } else if (item.type === "number") {
+      const fallback = item.default ?? item.min ?? "";
+      const currentValue = Number(data[item.value] ?? fallback);
+      const nextValue = Number.isFinite(currentValue) ? currentValue : fallback;
+      if (typeof item.min === "number" && nextValue < item.min) {
+        newParams[item.value] = item.min;
+      } else if (typeof item.max === "number" && nextValue > item.max) {
+        newParams[item.value] = item.max;
+      } else {
+        newParams[item.value] = nextValue;
+      }
     } else {
       // @ts-ignore
       newParams[item.value] = data[item.value] || item.default || "";
@@ -808,7 +834,16 @@ export function SdPanel() {
     [currentModel, params],
   );
   const orderedModelParams = React.useMemo(() => {
-    const selectorFields = ["size", "quality", "style"];
+    const selectorFields = [
+      "size",
+      "image_size",
+      "aspect_ratio",
+      "width",
+      "height",
+      "quality",
+      "n",
+      "style",
+    ];
     const selectors = selectorFields
       .map((field) => modelParams.find((item) => item.value === field))
       .filter(Boolean);
@@ -829,6 +864,7 @@ export function SdPanel() {
     );
     if (matched && matched !== currentModel) {
       setCurrentModel(matched);
+      setParams(getModelParamBasicData(matched.params(params), params));
       return;
     }
     if (!matched) {

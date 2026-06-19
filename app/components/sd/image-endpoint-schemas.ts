@@ -1,48 +1,13 @@
 import Locale from "@/app/locales";
+import type { ModelSpecification } from "@/app/client/api";
 import {
   buildOpenAIImageEditFormData,
   resolveOpenAIImageResult,
 } from "./image-endpoint-schema-utils";
-
-function isGptImageModel(model?: string) {
-  return model?.toLowerCase().startsWith("gpt-image") ?? false;
-}
-
-function resolveImageQuality(model: string, quality?: string) {
-  const values = isGptImageModel(model)
-    ? ["auto", "low", "medium", "high"]
-    : ["standard", "hd"];
-  const defaultQuality = isGptImageModel(model) ? "auto" : "standard";
-  return quality && values.includes(quality) ? quality : defaultQuality;
-}
-
-function getImageQualityParam(model?: string): ImageParamSchema {
-  if (isGptImageModel(model)) {
-    return {
-      name: Locale.SdPanel.ImageQuality,
-      value: "quality",
-      type: "select",
-      default: "auto",
-      options: [
-        { name: "auto", value: "auto" },
-        { name: "high", value: "high" },
-        { name: "medium", value: "medium" },
-        { name: "low", value: "low" },
-      ],
-    };
-  }
-
-  return {
-    name: Locale.SdPanel.ImageQuality,
-    value: "quality",
-    type: "select",
-    default: "standard",
-    options: [
-      { name: "standard", value: "standard" },
-      { name: "hd", value: "hd" },
-    ],
-  };
-}
+import {
+  buildImageModelParamSchemas,
+  normalizeImageParamsForModel,
+} from "./image-param-spec";
 
 export type ImageEndpointType = "images-generation" | "images-edits";
 export type ImageFormMode = "generation" | "editing";
@@ -70,6 +35,7 @@ export type ImageEndpointSchema = {
   buildRequestBody: (data: {
     model: string;
     params: Record<string, any>;
+    specification?: ModelSpecification;
     sourceImage?: Blob;
     maskImage?: Blob;
   }) => Record<string, any> | FormData;
@@ -94,17 +60,27 @@ const promptParam: ImageParamSchema = {
   required: true,
 };
 
-const imageSizeParam: ImageParamSchema = {
-  name: Locale.SdPanel.ImageSize,
-  value: "size",
-  type: "select",
-  default: "1024x1024",
-  options: [
-    { name: "1024x1024", value: "1024x1024" },
-    { name: "1792x1024", value: "1792x1024" },
-    { name: "1024x1792", value: "1024x1792" },
-  ],
-};
+function getModelParams(
+  model: string | undefined,
+  endpointType: ImageEndpointType,
+  specification?: ModelSpecification,
+) {
+  return buildImageModelParamSchemas({ model, endpointType, specification });
+}
+
+function normalizeRequestParams(
+  model: string,
+  endpointType: ImageEndpointType,
+  specification: ModelSpecification | undefined,
+  params: Record<string, any>,
+) {
+  return normalizeImageParamsForModel({
+    model,
+    endpointType,
+    specification,
+    params,
+  });
+}
 
 const imageStyleParam: ImageParamSchema = {
   name: Locale.SdPanel.ImageStyle,
@@ -122,21 +98,32 @@ export const imageEndpointSchemas: Record<
   ImageEndpointSchema
 > = {
   "images-generation": {
-    params: (data) => [
-      promptParam,
-      imageSizeParam,
-      getImageQualityParam(data?.model),
-      imageStyleParam,
-    ],
-    buildRequestBody: ({ model, params }) => ({
-      model,
-      prompt: params.prompt,
-      response_format: "b64_json",
-      n: 1,
-      size: params.size || "1024x1024",
-      quality: resolveImageQuality(model, params.quality),
-      style: params.style || "vivid",
-    }),
+    params: (data) =>
+      [
+        promptParam,
+        ...getModelParams(
+          data?.model,
+          "images-generation",
+          data?.specification,
+        ),
+        imageStyleParam,
+      ].filter(Boolean) as ImageParamSchema[],
+    buildRequestBody: ({ model, params, specification }) => {
+      const normalizedParams = normalizeRequestParams(
+        model,
+        "images-generation",
+        specification,
+        params,
+      );
+      return {
+        model,
+        prompt: params.prompt,
+        response_format: "b64_json",
+        n: normalizedParams.n ?? 1,
+        ...normalizedParams,
+        style: params.style || "vivid",
+      };
+    },
     resolveImageResult: resolveOpenAIImageResult,
     resolveErrorMessage: (response) =>
       response?.error?.message ||
@@ -145,12 +132,12 @@ export const imageEndpointSchemas: Record<
       "",
   },
   "images-edits": {
-    params: (data) => [
-      promptParam,
-      imageSizeParam,
-      getImageQualityParam(data?.model),
-      imageStyleParam,
-    ],
+    params: (data) =>
+      [
+        promptParam,
+        ...getModelParams(data?.model, "images-edits", data?.specification),
+        imageStyleParam,
+      ].filter(Boolean) as ImageParamSchema[],
     buildRequestBody: buildOpenAIImageEditFormData,
     resolveImageResult: resolveOpenAIImageResult,
     resolveErrorMessage: (response) =>

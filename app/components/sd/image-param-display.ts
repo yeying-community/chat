@@ -10,9 +10,16 @@ export function getParamLabel(value: string) {
     case "aspect_ratio":
       return Locale.SdPanel.AspectRatio;
     case "size":
+    case "image_size":
       return Locale.SdPanel.ImageSize;
+    case "width":
+      return "Width";
+    case "height":
+      return "Height";
     case "quality":
       return Locale.SdPanel.ImageQuality;
+    case "n":
+      return "N";
     case "style":
       return Locale.SdPanel.ImageStyle;
     case "seed":

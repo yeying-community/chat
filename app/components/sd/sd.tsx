@@ -228,8 +228,9 @@ export function Sd() {
                             </button>
                             <div className={styles["sd-img-sub-meta"]}>
                               <span>{item.created_at}</span>
-                              <span>{item.model_name}</span>
-                              <span>{item.provider_name}</span>
+                              <span title={item.provider_name}>
+                                {item.model_name}
+                              </span>
                             </div>
                           </div>
                           {getSdTaskStatus(item)}
@@ -290,6 +291,7 @@ export function Sd() {
                                 provider: item.provider,
                                 provider_name: item.provider_name,
                                 endpoint_type: item.endpoint_type,
+                                specification: item.specification,
                                 session_id:
                                   item.session_id || activeSessionId || "",
                                 model_def: item.model_def,

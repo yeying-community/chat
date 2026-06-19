@@ -103,6 +103,28 @@ export interface LLMConfig {
   style?: DalleRequestPayload["style"];
 }
 
+export interface ModelParameterSpecification {
+  type?: string;
+  allowed_values?: string[];
+  min?: number;
+  max?: number;
+}
+
+export interface ModelEndpointSpecification {
+  input_modalities?: string[];
+  output_modalities?: string[];
+  parameters?: Record<string, ModelParameterSpecification>;
+  constraints?: {
+    min_pixels?: number;
+    allowed_aspect_ratios?: string[];
+  };
+}
+
+export interface ModelSpecification {
+  version?: number;
+  endpoints?: Record<string, ModelEndpointSpecification>;
+}
+
 export interface SpeechOptions {
   model: string;
   input: string;
@@ -142,6 +164,7 @@ export interface LLMModel {
   status?: string;
   description?: string;
   isDefault?: boolean;
+  specification?: ModelSpecification;
 }
 
 export interface ModelCandidate {

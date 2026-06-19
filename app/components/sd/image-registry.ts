@@ -17,6 +17,7 @@ export type ImageModelDefinition = {
   providerName: string;
   endpointType: ImageEndpointType;
   supportsImage: true;
+  specification?: LLMModel["specification"];
   params: (data: any) => ImageParamSchema[];
 };
 
@@ -70,10 +71,12 @@ function buildRuntimeImageModelForMode(
     providerName,
     endpointType,
     supportsImage: true,
+    specification: model.specification,
     params: (data: any) =>
       getImageEndpointSchema(endpointType).params({
         ...data,
         model: model.name,
+        specification: model.specification,
       }),
   };
 }

@@ -51,6 +51,7 @@ type RouterModelCard = {
   id?: string;
   owned_by?: string;
   tags?: string[];
+  specification?: LLMModel["specification"];
   supported_endpoints?: string[];
 };
 
@@ -65,6 +66,7 @@ type RouterProviderModelDetail = {
   status?: string;
   description?: string;
   tags?: string[];
+  specification?: LLMModel["specification"];
   supported_endpoints?: string[];
 };
 
@@ -442,6 +444,7 @@ function buildModelsFromProviderModels(
         modelType: detail.type?.trim() || undefined,
         status: detail.status?.trim() || undefined,
         description: detail.description?.trim() || undefined,
+        specification: detail.specification,
         provider: {
           id: providerID,
           providerName,
@@ -590,6 +593,7 @@ export class RouterApi implements LLMApi {
           sorted: seq++,
           ownedBy: (item.owned_by || "").trim() || undefined,
           tags: normalizeTags(item.tags),
+          specification: item.specification,
           supportedEndpoints,
           provider: {
             id: providerId(providerName),
