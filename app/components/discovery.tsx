@@ -821,6 +821,11 @@ export function DiscoveryPage() {
           const statuses = await getClientsStatus();
           setMcpConfig(newConfig);
           setMcpStatuses(statuses);
+          setViewingMcpCapability({
+            ...item,
+            installed: true,
+            status: Locale.Discovery.Status.Installed,
+          });
           showToast(Locale.Discovery.Status.Enabled);
         } catch (error) {
           showToast(
@@ -970,7 +975,26 @@ export function DiscoveryPage() {
 
           <div className={styles.grid}>
             {visibleCapabilities.map((item) => (
-              <div key={item.id} className={styles.card}>
+              <div
+                key={item.id}
+                className={clsx(
+                  styles.card,
+                  item.type === "mcp" && styles["card-clickable"],
+                )}
+                role={item.type === "mcp" ? "button" : undefined}
+                tabIndex={item.type === "mcp" ? 0 : undefined}
+                onClick={() => {
+                  if (item.type === "mcp") {
+                    setViewingMcpCapability(item);
+                  }
+                }}
+                onKeyDown={(event) => {
+                  if (item.type !== "mcp") return;
+                  if (event.key !== "Enter" && event.key !== " ") return;
+                  event.preventDefault();
+                  setViewingMcpCapability(item);
+                }}
+              >
                 <div className={styles["card-header"]}>
                   <div className={styles["card-title"]}>
                     <span className={styles["type-icon"]} aria-hidden>
@@ -1004,14 +1028,20 @@ export function DiscoveryPage() {
                     icon={<EyeIcon />}
                     text={getActionText(item)}
                     bordered
-                    onClick={() => handleCapabilityAction(item)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleCapabilityAction(item);
+                    }}
                   />
                   {item.type === "skill" && item.skill && (
                     <IconButton
                       icon={<EditIcon />}
                       text={Locale.Discovery.Configure}
                       bordered
-                      onClick={() => openSkillConfig(item.skill!)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openSkillConfig(item.skill!);
+                      }}
                     />
                   )}
                 </div>

@@ -188,6 +188,7 @@ export const useSdStore = createPersistStore<
         const requestBody = schema.buildRequestBody({
           model: data.model,
           params: data.params,
+          specification: data.specification,
           sourceImage,
           maskImage,
         });
@@ -321,7 +322,9 @@ export const useSdStore = createPersistStore<
         const currentModel = _get().currentModel;
         const sessionId = nanoid();
         const currentParams = getModelParamBasicData(
-          currentModel?.params?.({}) ?? [],
+          currentModel?.params?.({
+            specification: currentModel?.specification,
+          }) ?? [],
           {},
         );
         set({

@@ -72,6 +72,7 @@ export function SideBar(props: { className?: string }) {
       provider: currentModel.provider || "",
       provider_name: currentModel.providerName || "",
       endpoint_type: currentModel.endpointType || "",
+      specification: currentModel.specification,
       session_id: currentSessionId,
       model_def: currentModel,
       model: currentModel.value,
