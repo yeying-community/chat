@@ -347,7 +347,7 @@ function CheckButton() {
   );
 }
 
-function SyncConfigModal(props: { onClose?: () => void }) {
+export function SyncConfigModal(props: { onClose?: () => void }) {
   const syncStore = useSyncStore();
   const webdavEnvBaseUrl =
     getClientConfig()?.webdavBackendBaseUrl?.trim() || "";

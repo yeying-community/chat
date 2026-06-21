@@ -698,13 +698,14 @@ const en: LocaleType = {
     Name: "Discovery",
     Page: {
       Title: "Discovery",
-      SubTitle: "Browse and manage skills, MCP, and model services",
+      SubTitle: "Browse and manage skills, MCP, model services, and storage",
     },
     Types: {
       all: "All",
       skill: "Skills",
       mcp: "MCP",
       provider: "Model Services",
+      storage: "Storage",
     },
     Status: {
       Enabled: "Enabled",
@@ -742,7 +743,7 @@ const en: LocaleType = {
     Use: "Start",
     MyCapabilities: "My Capabilities",
     BackToMarket: "Back to Market",
-    SearchMarket: "Search skills, MCP, and model services",
+    SearchMarket: "Search skills, MCP, model services, and storage",
     SearchMine: "Search my capabilities",
     Empty: "No matching capabilities",
     ResetFilters: "Clear filters",
@@ -753,6 +754,14 @@ const en: LocaleType = {
     RouterProviderTitle: "Community Router",
     RouterProviderDesc:
       "Default model service for accessing community-available models.",
+    CloudStorageTitle: "Cloud Storage",
+    CloudStorageDesc:
+      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through MCP.",
+    StorageAppSync: "App sync",
+    StorageFutureMcp: "Future MCP file capability",
+    StorageQuotaUsage: (used: string, quota: string) =>
+      `${used} / ${quota} used`,
+    StorageQuotaUnlimited: (used: string) => `${used} used / unlimited`,
     ProviderDesc: (available: number, total: number, tags: string[]) =>
       tags.length > 0
         ? `${available}/${total} models available · ${tags.join(" / ")}`
@@ -1068,25 +1077,29 @@ const en: LocaleType = {
     },
     SelectImageFirst: "Choose an image to edit first.",
   },
-  MyCenter: {
-    Title: "person center",
-    SubTitle: "Manage your account and resources",
-    Tab1: {
-      Title: "Storage usage",
-      Info: {
-        Total: "Total disk quota",
-        Used: "Used",
-        Remain: "remaining space",
-      },
-    },
-    Tab4: {
-      Title: "account service",
-      Info: {
-        StorageExpansion: "Storage expansion",
-        Desc1: "Increase your disk quota limit",
-        ImmediatelyExpandCapacity: "Immediately expand capacity",
-      },
-    },
+  Storage: {
+    Title: "Cloud Storage",
+    SubTitle: "Manage app data sync, quota, and storage configuration",
+    StatusReady: "Storage ready",
+    StatusNeedsConfig: "Configuration required",
+    StatusChecking: "Checking",
+    StatusError: "Storage error",
+    StatusDesc:
+      "This currently syncs chats, skills, prompts, and local cache data. Later it can become an MCP file capability for models.",
+    Check: "Check connection",
+    CheckSuccess: "Storage connection is healthy",
+    CheckFail: "Storage connection failed",
+    SyncNow: "Sync now",
+    Configure: "Configure",
+    QuotaTotal: "Total quota",
+    QuotaUsed: "Used",
+    QuotaAvailable: "Available",
+    DataTitle: "Data Management",
+    LastSync: "Last sync",
+    LocalData: "Local data",
+    Expansion: "Storage expansion",
+    ExpansionDesc: "Increase the cloud storage quota",
+    Expand: "Expand now",
   },
 };
 

@@ -45,10 +45,14 @@ import DeleteIcon from "../icons/delete.svg";
 import EditIcon from "../icons/edit.svg";
 import EyeIcon from "../icons/eye.svg";
 import ModelServiceIcon from "../icons/llm-icons/default.svg";
+import CloudStorageIcon from "../icons/cloud-success.svg";
 import ToolIcon from "../icons/tool.svg";
 import styles from "./discovery.module.scss";
 import { useAccessStore } from "../store/access";
 import { useSdStore } from "../store/sd";
+import { useSyncStore } from "../store/sync";
+import { fetchQuota, WebDAVQuota } from "../plugins/webdav";
+import { formatBytes } from "../utils/format";
 import {
   getSkillRuntimeIssueSummary,
   getSkillRuntimeStatusOrder,
@@ -58,7 +62,7 @@ import {
   SkillRuntimeStatus,
 } from "../skills/runtime";
 
-type CapabilityType = "all" | "skill" | "mcp" | "provider";
+type CapabilityType = "all" | "skill" | "mcp" | "provider" | "storage";
 type PricingType = "free" | "subscription" | "usage";
 type RuntimeType = "cloud" | "local" | "both";
 type DiscoveryView = "market" | "mine";
@@ -94,13 +98,26 @@ type Capability = {
   presetServer?: PresetServer;
 };
 
-const typeOrder: CapabilityType[] = ["all", "skill", "mcp", "provider"];
+const typeOrder: CapabilityType[] = [
+  "all",
+  "skill",
+  "mcp",
+  "provider",
+  "storage",
+];
 
 function getInitialType(search: string): CapabilityType {
   const type = new URLSearchParams(search).get("type");
   if (type === "model") return "provider";
   if (type === "tool") return "mcp";
-  if (type === "skill" || type === "mcp" || type === "provider") return type;
+  if (
+    type === "skill" ||
+    type === "mcp" ||
+    type === "provider" ||
+    type === "storage"
+  ) {
+    return type;
+  }
   return "all";
 }
 
@@ -127,6 +144,7 @@ function getSkillPackageId(skill: Skill) {
 function getCapabilityIcon(type: Capability["type"]) {
   if (type === "skill") return <BrainIcon />;
   if (type === "mcp") return <ToolIcon />;
+  if (type === "storage") return <CloudStorageIcon />;
   return <ModelServiceIcon />;
 }
 
@@ -135,6 +153,9 @@ export function DiscoveryPage() {
   const chatStore = useChatStore();
   const skillStore = useSkillStore();
   const sdStore = useSdStore();
+  const storageConfigured = useSyncStore((state) => state.cloudSync());
+  const storageProvider = useSyncStore((state) => state.provider);
+  const storageWebdav = useSyncStore((state) => state.webdav);
   const location = useLocation();
   const view = getInitialView(location.search);
   const activeType = getInitialType(location.search);
@@ -163,6 +184,10 @@ export function DiscoveryPage() {
   const [editingSkillId, setEditingSkillId] = useState<string>();
   const [mcpUserConfig, setMcpUserConfig] = useState<Record<string, any>>({});
   const [savingMcpConfig, setSavingMcpConfig] = useState(false);
+  const [storageQuota, setStorageQuota] = useState<WebDAVQuota>();
+  const [storageQuotaStatus, setStorageQuotaStatus] = useState<
+    "idle" | "checking" | "ready" | "error"
+  >("idle");
 
   useEffect(() => {
     let cancelled = false;
@@ -205,6 +230,44 @@ export function DiscoveryPage() {
 
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!storageConfigured) {
+      setStorageQuota(undefined);
+      setStorageQuotaStatus("idle");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setStorageQuotaStatus("checking");
+    fetchQuota()
+      .then((quota) => {
+        if (cancelled) return;
+        setStorageQuota(quota);
+        setStorageQuotaStatus(quota ? "ready" : "error");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn("[Discovery] failed to load storage quota", error);
+        setStorageQuota(undefined);
+        setStorageQuotaStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    storageConfigured,
+    storageProvider,
+    storageWebdav.authType,
+    storageWebdav.baseUrl,
+    storageWebdav.prefix,
+    storageWebdav.username,
+    storageWebdav.password,
+  ]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -479,11 +542,44 @@ export function DiscoveryPage() {
       },
     ];
 
+    const storageQuotaText = storageQuota
+      ? storageQuota.unlimited
+        ? Locale.Discovery.StorageQuotaUnlimited(formatBytes(storageQuota.used))
+        : Locale.Discovery.StorageQuotaUsage(
+            formatBytes(storageQuota.used),
+            formatBytes(storageQuota.quota),
+          )
+      : undefined;
+    const storageItems: Capability[] = [
+      {
+        id: "storage:cloud",
+        type: "storage",
+        title: Locale.Discovery.CloudStorageTitle,
+        description: Locale.Discovery.CloudStorageDesc,
+        highlights: [
+          Locale.Discovery.StorageAppSync,
+          Locale.Discovery.StorageFutureMcp,
+          storageQuotaText,
+        ].filter(Boolean) as string[],
+        status: !storageConfigured
+          ? Locale.Discovery.Status.Configurable
+          : storageQuotaStatus === "error"
+            ? Locale.Discovery.Status.Error
+            : Locale.Discovery.Status.Enabled,
+        pricing: "free",
+        runtime: "cloud",
+        source: Locale.Discovery.Source.Official,
+        path: Path.Storage,
+        installed: storageConfigured,
+      },
+    ];
+
     return [
       ...skillItems,
       ...communitySkillItems,
       ...mcpItems,
       ...providerItems,
+      ...storageItems,
     ];
   }, [
     accessCustomModels,
@@ -494,9 +590,13 @@ export function DiscoveryPage() {
     mcpConfig?.mcpServers,
     mcpStatuses,
     modelConfig,
+    models,
     plugins,
     skillRecords,
     skills,
+    storageConfigured,
+    storageQuota,
+    storageQuotaStatus,
   ]);
 
   const visibleCapabilities = capabilities.filter((item) => {
@@ -818,6 +918,10 @@ export function DiscoveryPage() {
       startSkill(enabledSkill);
       return;
     }
+    if (item.type === "storage") {
+      navigate(Path.Storage);
+      return;
+    }
     navigate(item.path);
   };
 
@@ -844,6 +948,11 @@ export function DiscoveryPage() {
       }
       if (view === "market" && !item.installed) return Locale.Discovery.Enable;
       return Locale.Discovery.Manage;
+    }
+    if (item.type === "storage") {
+      return item.installed
+        ? Locale.Discovery.Manage
+        : Locale.Discovery.Configure;
     }
     if (view === "market" && !item.installed) return Locale.Discovery.Enable;
     return Locale.Discovery.Manage;

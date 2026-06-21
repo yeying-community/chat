@@ -105,9 +105,12 @@ const RouterPage = dynamic(
     loading: () => <Loading noLogo />,
   },
 );
-const Centers = dynamic(async () => (await import("./my-center")).Centers, {
-  loading: () => <Loading noLogo />,
-});
+const StoragePage = dynamic(
+  async () => (await import("./storage-page")).StoragePage,
+  {
+    loading: () => <Loading noLogo />,
+  },
+);
 const Chat = dynamic(async () => (await import("./chat")).Chat, {
   loading: () => <Loading noLogo />,
 });
@@ -329,7 +332,7 @@ function Screen() {
               <Route path={Path.Chat} element={<Chat />} />
               <Route path={Path.Settings} element={<Settings />} />
               <Route path={Path.Router} element={<RouterPage />} />
-              <Route path={Path.Centers} element={<Centers />} />
+              <Route path={Path.Storage} element={<StoragePage />} />
               <Route path={Path.Discovery} element={<DiscoveryPage />} />
               <Route path={Path.McpMarket} element={<McpMarketPage />} />
             </Routes>
