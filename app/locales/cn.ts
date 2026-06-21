@@ -233,16 +233,11 @@ const cn = {
       SubTitle: "根据对话内容生成合适的标题",
     },
     Sync: {
-      CloudState: "云端数据",
       NotSyncYet: "还没有进行过同步",
       Success: "同步成功",
       Fail: "同步失败",
 
       Config: {
-        Modal: {
-          Title: "配置云同步",
-          Check: "检查可用性",
-        },
         SyncType: {
           Title: "同步类型",
           SubTitle: "选择喜爱的同步服务器",
@@ -282,7 +277,6 @@ const cn = {
         },
       },
 
-      LocalState: "本地数据",
       Overview: (overview: any) => {
         const skillCount = overview.skill ?? overview.mask ?? 0;
         return `${overview.chat} 次对话，${overview.message} 条消息，${overview.prompt} 条提示词，${skillCount} 个技能`;
@@ -1067,7 +1061,7 @@ const cn = {
     CheckSuccess: "存储连接正常",
     CheckFail: "存储连接失败",
     SyncNow: "立即同步",
-    Configure: "配置",
+    ConfigTitle: "存储配置",
     QuotaTotal: "总配额",
     QuotaUsed: "已使用",
     QuotaAvailable: "剩余空间",

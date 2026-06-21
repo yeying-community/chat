@@ -236,16 +236,11 @@ const en: LocaleType = {
       SubTitle: "Generate a suitable title based on the conversation content",
     },
     Sync: {
-      CloudState: "Last Update",
       NotSyncYet: "Not sync yet",
       Success: "Sync Success",
       Fail: "Sync Fail",
 
       Config: {
-        Modal: {
-          Title: "Config Sync",
-          Check: "Check Connection",
-        },
         SyncType: {
           Title: "Sync Type",
           SubTitle: "Choose your favorite sync service",
@@ -286,7 +281,6 @@ const en: LocaleType = {
         },
       },
 
-      LocalState: "Local Data",
       Overview: (overview: any) => {
         const skillCount = overview.skill ?? overview.mask ?? 0;
         return `${overview.chat} chats，${overview.message} messages，${overview.prompt} prompts，${skillCount} skills`;
@@ -1090,7 +1084,7 @@ const en: LocaleType = {
     CheckSuccess: "Storage connection is healthy",
     CheckFail: "Storage connection failed",
     SyncNow: "Sync now",
-    Configure: "Configure",
+    ConfigTitle: "Storage Configuration",
     QuotaTotal: "Total quota",
     QuotaUsed: "Used",
     QuotaAvailable: "Available",

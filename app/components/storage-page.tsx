@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getClientConfig } from "../config/client";
-import { Path } from "../constant";
+import { Path, STORAGE_KEY } from "../constant";
 import CloseIcon from "../icons/close.svg";
-import ConfigIcon from "../icons/config.svg";
 import ConnectionIcon from "../icons/connection.svg";
 import DownloadIcon from "../icons/download.svg";
 import ResetIcon from "../icons/reload.svg";
@@ -16,11 +15,11 @@ import { useChatStore } from "../store";
 import { usePromptStore } from "../store/prompt";
 import { useSkillStore } from "../store/skill";
 import { useSyncStore } from "../store/sync";
+import { ProviderType } from "../utils/cloud";
 import { formatBytes } from "../utils/format";
 import { IconButton } from "./button";
 import { ErrorBoundary } from "./error";
-import { SyncConfigModal } from "./settings";
-import { List, ListItem, showToast } from "./ui-lib";
+import { List, ListItem, PasswordInput, showToast } from "./ui-lib";
 import styles from "./storage-page.module.scss";
 
 type CheckState = "none" | "checking" | "success" | "failed";
@@ -59,7 +58,13 @@ export function StoragePage() {
   const [quotaState, setQuotaState] = useState<QuotaState>("idle");
   const [checkState, setCheckState] = useState<CheckState>("none");
   const [syncing, setSyncing] = useState(false);
-  const [showSyncConfigModal, setShowSyncConfigModal] = useState(false);
+  const webdavEnvBaseUrl =
+    getClientConfig()?.webdavBackendBaseUrl?.trim() || "";
+  const webdavEnvPrefix = getClientConfig()?.webdavBackendPrefix?.trim() || "";
+  const webdavBaseUrl = syncStore.webdav.baseUrl || webdavEnvBaseUrl;
+  const webdavPrefix = syncStore.webdav.baseUrl.trim()
+    ? syncStore.webdav.prefix
+    : syncStore.webdav.prefix || webdavEnvPrefix;
 
   const stateOverview = useMemo(() => {
     const sessions = chatStore.sessions;
@@ -221,13 +226,6 @@ export function StoragePage() {
                   disabled={!configured || syncing}
                   onClick={syncNow}
                 />
-                <IconButton
-                  icon={<ConfigIcon />}
-                  text={Locale.Storage.Configure}
-                  type="primary"
-                  bordered
-                  onClick={() => setShowSyncConfigModal(true)}
-                />
               </div>
             </div>
 
@@ -262,6 +260,229 @@ export function StoragePage() {
           </div>
 
           <div className={styles["section-title"]}>
+            {Locale.Storage.ConfigTitle}
+          </div>
+          <List>
+            <ListItem
+              title={Locale.Settings.Sync.Config.SyncType.Title}
+              subTitle={Locale.Settings.Sync.Config.SyncType.SubTitle}
+            >
+              <select
+                value={syncStore.provider}
+                onChange={(e) => {
+                  syncStore.update(
+                    (config) =>
+                      (config.provider = e.target.value as ProviderType),
+                  );
+                }}
+              >
+                {Object.entries(ProviderType).map(([k, v]) => (
+                  <option value={v} key={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </ListItem>
+
+            <ListItem title={Locale.Settings.Sync.Config.AutoSync.Title}>
+              <input
+                type="checkbox"
+                checked={syncStore.autoSync}
+                onChange={(e) => {
+                  syncStore.update(
+                    (config) => (config.autoSync = e.currentTarget.checked),
+                  );
+                }}
+              ></input>
+            </ListItem>
+
+            {syncStore.autoSync ? (
+              <ListItem
+                title={Locale.Settings.Sync.Config.AutoSyncInterval.Title}
+              >
+                <input
+                  type="number"
+                  min={1}
+                  max={120}
+                  value={Math.max(
+                    1,
+                    Math.round(syncStore.autoSyncIntervalMs / 60000),
+                  )}
+                  onChange={(e) => {
+                    const minutes = Number(e.currentTarget.value);
+                    if (!Number.isFinite(minutes)) return;
+                    syncStore.update(
+                      (config) =>
+                        (config.autoSyncIntervalMs =
+                          Math.max(1, minutes) * 60000),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+            ) : null}
+
+            <ListItem
+              title={Locale.Settings.Sync.Config.Proxy.Title}
+              subTitle={Locale.Settings.Sync.Config.Proxy.SubTitle}
+            >
+              <input
+                type="checkbox"
+                checked={syncStore.useProxy}
+                onChange={(e) => {
+                  syncStore.update(
+                    (config) => (config.useProxy = e.currentTarget.checked),
+                  );
+                }}
+              ></input>
+            </ListItem>
+
+            {syncStore.useProxy ? (
+              <ListItem
+                title={Locale.Settings.Sync.Config.ProxyUrl.Title}
+                subTitle={Locale.Settings.Sync.Config.ProxyUrl.SubTitle}
+              >
+                <input
+                  type="text"
+                  value={syncStore.proxyUrl}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) => (config.proxyUrl = e.currentTarget.value),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+            ) : null}
+          </List>
+
+          {syncStore.provider === ProviderType.WebDAV && (
+            <List>
+              <ListItem title={Locale.Settings.Sync.Config.WebDav.AuthType}>
+                <select
+                  value={syncStore.webdav.authType}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.webdav.authType = e.target
+                          .value as typeof config.webdav.authType),
+                    );
+                  }}
+                >
+                  <option value="basic">Basic</option>
+                  <option value="ucan">UCAN</option>
+                </select>
+              </ListItem>
+              <ListItem
+                title={
+                  syncStore.webdav.authType === "ucan"
+                    ? Locale.Settings.Sync.Config.WebDav.UcanBaseUrl
+                    : Locale.Settings.Sync.Config.WebDav.BaseUrl
+                }
+                subTitle={Locale.Settings.Sync.Config.WebDav.BaseUrlSubTitle}
+              >
+                <input
+                  type="text"
+                  value={webdavBaseUrl}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.webdav.baseUrl = e.currentTarget.value),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+              <ListItem
+                title={
+                  syncStore.webdav.authType === "ucan"
+                    ? Locale.Settings.Sync.Config.WebDav.UcanPrefix
+                    : Locale.Settings.Sync.Config.WebDav.Prefix
+                }
+                subTitle={Locale.Settings.Sync.Config.WebDav.PrefixSubTitle}
+              >
+                <input
+                  type="text"
+                  placeholder="/dav"
+                  value={webdavPrefix}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.webdav.prefix = e.currentTarget.value),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+              {syncStore.webdav.authType === "basic" ? (
+                <>
+                  <ListItem title={Locale.Settings.Sync.Config.WebDav.UserName}>
+                    <input
+                      type="text"
+                      value={syncStore.webdav.username}
+                      onChange={(e) => {
+                        syncStore.update(
+                          (config) =>
+                            (config.webdav.username = e.currentTarget.value),
+                        );
+                      }}
+                    ></input>
+                  </ListItem>
+                  <ListItem title={Locale.Settings.Sync.Config.WebDav.Password}>
+                    <PasswordInput
+                      value={syncStore.webdav.password}
+                      onChange={(e) => {
+                        syncStore.update(
+                          (config) =>
+                            (config.webdav.password = e.currentTarget.value),
+                        );
+                      }}
+                    ></PasswordInput>
+                  </ListItem>
+                </>
+              ) : null}
+            </List>
+          )}
+
+          {syncStore.provider === ProviderType.UpStash && (
+            <List>
+              <ListItem title={Locale.Settings.Sync.Config.UpStash.Endpoint}>
+                <input
+                  type="text"
+                  value={syncStore.upstash.endpoint}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.upstash.endpoint = e.currentTarget.value),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+
+              <ListItem title={Locale.Settings.Sync.Config.UpStash.UserName}>
+                <input
+                  type="text"
+                  value={syncStore.upstash.username}
+                  placeholder={STORAGE_KEY}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.upstash.username = e.currentTarget.value),
+                    );
+                  }}
+                ></input>
+              </ListItem>
+              <ListItem title={Locale.Settings.Sync.Config.UpStash.Password}>
+                <PasswordInput
+                  value={syncStore.upstash.apiKey}
+                  onChange={(e) => {
+                    syncStore.update(
+                      (config) =>
+                        (config.upstash.apiKey = e.currentTarget.value),
+                    );
+                  }}
+                ></PasswordInput>
+              </ListItem>
+            </List>
+          )}
+
+          <div className={styles["section-title"]}>
             {Locale.Storage.DataTitle}
           </div>
           <List>
@@ -281,13 +502,13 @@ export function StoragePage() {
             >
               <div className={styles.actions}>
                 <IconButton
-                  aria={Locale.Settings.Sync.LocalState + Locale.UI.Export}
+                  aria={Locale.Storage.LocalData + Locale.UI.Export}
                   icon={<UploadIcon />}
                   text={Locale.UI.Export}
                   onClick={() => syncStore.export()}
                 />
                 <IconButton
-                  aria={Locale.Settings.Sync.LocalState + Locale.UI.Import}
+                  aria={Locale.Storage.LocalData + Locale.UI.Import}
                   icon={<DownloadIcon />}
                   text={Locale.UI.Import}
                   onClick={() => syncStore.import()}
@@ -314,10 +535,6 @@ export function StoragePage() {
             </ListItem>
           </List>
         </div>
-
-        {showSyncConfigModal && (
-          <SyncConfigModal onClose={() => setShowSyncConfigModal(false)} />
-        )}
       </div>
     </ErrorBoundary>
   );
