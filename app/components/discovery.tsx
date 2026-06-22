@@ -14,6 +14,11 @@ import {
   fetchCommunityMcpPresetServers,
   mergeMcpPresetServers,
 } from "../mcp/marketplace";
+import {
+  getMissingMcpConfigKeys,
+  readMcpConfigBoolean,
+  stringifyMcpConfigValue,
+} from "../mcp/config-schema";
 import { OFFICIAL_MCP_PRESET_SERVERS } from "../mcp/preset-servers";
 import {
   McpConfigData,
@@ -767,6 +772,29 @@ export function DiscoveryPage() {
           );
         }
 
+        if (prop.type === "boolean") {
+          const currentValue = readMcpConfigBoolean(mcpUserConfig[key]);
+          return (
+            <ListItem
+              key={key}
+              title={key}
+              subTitle={renderMcpPropertyDescription(prop)}
+            >
+              <input
+                aria-label={key}
+                type="checkbox"
+                checked={currentValue}
+                onChange={(e) =>
+                  setMcpUserConfig({
+                    ...mcpUserConfig,
+                    [key]: e.currentTarget.checked,
+                  })
+                }
+              />
+            </ListItem>
+          );
+        }
+
         const currentValue = mcpUserConfig[key] || "";
         return (
           <ListItem
@@ -801,6 +829,15 @@ export function DiscoveryPage() {
 
     try {
       setSavingMcpConfig(true);
+      const missingKeys = getMissingMcpConfigKeys(
+        preset.configSchema.properties,
+        mcpUserConfig,
+      );
+      if (missingKeys.length > 0) {
+        showToast(`缺少必填 MCP 配置：${missingKeys.join(", ")}`);
+        return;
+      }
+
       const args = [...preset.baseArgs];
       const env: Record<string, string> = {};
 
@@ -815,12 +852,11 @@ export function DiscoveryPage() {
           typeof value === "string"
         ) {
           args[mapping.position] = value;
-        } else if (
-          mapping.type === "env" &&
-          mapping.key &&
-          typeof value === "string"
-        ) {
-          env[mapping.key] = value;
+        } else if (mapping.type === "env" && mapping.key) {
+          const envValue = stringifyMcpConfigValue(value);
+          if (envValue !== undefined) {
+            env[mapping.key] = envValue;
+          }
         }
       });
 

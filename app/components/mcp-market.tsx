@@ -33,6 +33,11 @@ import {
   fetchCommunityMcpPresetServers,
   mergeMcpPresetServers,
 } from "../mcp/marketplace";
+import {
+  getMissingMcpConfigKeys,
+  readMcpConfigBoolean,
+  stringifyMcpConfigValue,
+} from "../mcp/config-schema";
 import clsx from "clsx";
 import PlayIcon from "../icons/play.svg";
 import StopIcon from "../icons/pause.svg";
@@ -197,6 +202,15 @@ export function McpMarketPage() {
     const preset = presetServers.find((s) => s.id === editingServerId);
     if (!preset || !preset.configSchema || !editingServerId) return;
 
+    const missingKeys = getMissingMcpConfigKeys(
+      preset.configSchema.properties,
+      userConfig,
+    );
+    if (missingKeys.length > 0) {
+      showToast(`缺少必填 MCP 配置：${missingKeys.join(", ")}`);
+      return;
+    }
+
     const savingServerId = editingServerId;
     setEditingServerId(undefined);
 
@@ -216,12 +230,11 @@ export function McpMarketPage() {
           mapping.position !== undefined
         ) {
           args[mapping.position] = value;
-        } else if (
-          mapping.type === "env" &&
-          mapping.key &&
-          typeof value === "string"
-        ) {
-          env[mapping.key] = value;
+        } else if (mapping.type === "env" && mapping.key) {
+          const envValue = stringifyMcpConfigValue(value);
+          if (envValue !== undefined) {
+            env[mapping.key] = envValue;
+          }
         }
       });
 
@@ -418,6 +431,26 @@ export function McpMarketPage() {
                   }}
                 />
               </div>
+            </ListItem>
+          );
+        } else if (prop.type === "boolean") {
+          const currentValue = readMcpConfigBoolean(
+            userConfig[key as keyof typeof userConfig],
+          );
+          return (
+            <ListItem
+              key={key}
+              title={key}
+              subTitle={renderPropertyDescription(prop)}
+            >
+              <input
+                aria-label={key}
+                type="checkbox"
+                checked={currentValue}
+                onChange={(e) => {
+                  setUserConfig({ ...userConfig, [key]: e.target.checked });
+                }}
+              />
             </ListItem>
           );
         } else if (prop.type === "string") {
