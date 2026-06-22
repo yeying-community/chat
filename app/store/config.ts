@@ -16,6 +16,7 @@ import {
 import { createPersistStore } from "../utils/store";
 import { normalizeModels, normalizeProviderName } from "../utils/model";
 import type { ReasoningEffort, ReasoningMode } from "../client/reasoning";
+import type { ResponsesConversationMode } from "../client/api";
 import type { Voice } from "rt-client";
 
 export type ModelType = string;
@@ -79,6 +80,7 @@ export const createDefaultConfig = () => {
       supportedEndpoints: undefined as string[] | undefined,
       ownedBy: undefined as string | undefined,
       tags: undefined as string[] | undefined,
+      responsesMode: undefined as ResponsesConversationMode | undefined,
       sendMemory: true,
       historyMessageCount: 4,
       compressMessageLengthThreshold: 1000,
