@@ -193,8 +193,8 @@ export function resolveSkillRuntimeStatus(params: {
       type: "mcp_missing",
       message:
         missingMcpServerCount === 1
-          ? "缺少 1 个 MCP 配置"
-          : `缺少 ${missingMcpServerCount} 个 MCP 配置`,
+          ? "缺少 1 个工具配置"
+          : `缺少 ${missingMcpServerCount} 个工具配置`,
     });
   }
 
@@ -203,8 +203,8 @@ export function resolveSkillRuntimeStatus(params: {
       type: "mcp_inactive",
       message:
         inactiveMcpServerCount === 1
-          ? "1 个 MCP 未正常运行"
-          : `${inactiveMcpServerCount} 个 MCP 未正常运行`,
+          ? "1 个工具未正常运行"
+          : `${inactiveMcpServerCount} 个工具未正常运行`,
     });
   }
 

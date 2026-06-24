@@ -22,7 +22,7 @@ fi
 
 if [ ! -f "${MARKETPLACE_DIR}/mcp/packages.json" ]; then
   echo "Error: missing ${MARKETPLACE_DIR}/mcp/packages.json" >&2
-  echo "Generate marketplace MCP packages before starting local preview." >&2
+  echo "Generate marketplace tool packages before starting local preview." >&2
   exit 1
 fi
 
@@ -78,7 +78,7 @@ export MARKETPLACE_MCP_PACKAGES_URL="${MARKETPLACE_BASE_URL}/mcp/packages.json"
 
 echo "Chat marketplace sources:"
 echo "  skills: ${MARKETPLACE_SKILL_PACKAGES_URL}"
-echo "  mcp:    ${MARKETPLACE_MCP_PACKAGES_URL}"
+echo "  tools:  ${MARKETPLACE_MCP_PACKAGES_URL}"
 
 cd "${ROOT_DIR}"
 npm run dev

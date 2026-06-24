@@ -1084,7 +1084,7 @@ const cn = {
     StatusChecking: "检查中",
     StatusError: "存储异常",
     StatusDesc:
-      "当前阶段用于聊天、技能、提示词和本地缓存的云端同步；后续可扩展为模型可访问的 MCP 文件能力。",
+      "当前阶段用于聊天、技能、提示词和本地缓存的云端同步；后续可扩展为模型可访问的工具文件能力。",
     Check: "检查连接",
     CheckSuccess: "存储连接正常",
     CheckFail: "存储连接失败",

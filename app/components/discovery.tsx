@@ -983,7 +983,7 @@ export function DiscoveryPage() {
         mcpUserConfig,
       );
       if (missingKeys.length > 0) {
-        showToast(`缺少必填 MCP 配置：${missingKeys.join(", ")}`);
+        showToast(`缺少必填工具配置：${missingKeys.join(", ")}`);
         return;
       }
 
@@ -1023,7 +1023,7 @@ export function DiscoveryPage() {
       showToast(Locale.Discovery.Status.Enabled);
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Failed to save MCP config",
+        error instanceof Error ? error.message : "Failed to save tool config",
       );
     } finally {
       setSavingMcpConfig(false);
@@ -1064,7 +1064,7 @@ export function DiscoveryPage() {
           showToast(Locale.Discovery.Status.Enabled);
         } catch (error) {
           showToast(
-            error instanceof Error ? error.message : "Failed to enable MCP",
+            error instanceof Error ? error.message : "Failed to enable tool",
           );
         }
       };
@@ -1342,7 +1342,7 @@ export function DiscoveryPage() {
         {editingMcpServerId && (
           <div className="modal-mask">
             <Modal
-              title={`Configure MCP - ${editingMcpServerId}`}
+              title={`Configure Tool - ${editingMcpServerId}`}
               onClose={() =>
                 !savingMcpConfig && setEditingMcpServerId(undefined)
               }

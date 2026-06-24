@@ -79,7 +79,7 @@ export async function getNativeToolBundle(
         function: {
           name: functionName,
           description: [
-            `MCP client: ${client.clientId}`,
+            `Tool client: ${client.clientId}`,
             tool.description || "",
           ]
             .filter(Boolean)

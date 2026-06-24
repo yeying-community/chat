@@ -43,10 +43,10 @@ flowchart LR
 
 ### 关键点
 
-1. `isMcpEnabled()` 在 `app/mcp/actions.ts` 中是 `"use server"` Server Action。  
-2. 前端组件并不直接读 `process.env`，而是调用这个 Server Action 获取开关状态。  
-3. MCP 客户端初始化和执行请求都发生在服务端（Next 进程）侧。  
-4. Tauri 静态导出没有 Next Server Action 运行环境，因此当前不读取 `data/mcp_config.json`。  
+1. `isMcpEnabled()` 在 `app/mcp/actions.ts` 中是 `"use server"` Server Action。
+2. 前端组件并不直接读 `process.env`，而是调用这个 Server Action 获取开关状态。
+3. MCP 客户端初始化和执行请求都发生在服务端（Next 进程）侧。
+4. Tauri 静态导出没有 Next Server Action 运行环境，因此当前不读取 `data/mcp_config.json`。
 
 ## 4. 开关影响范围
 
@@ -77,14 +77,14 @@ flowchart LR
 - 不存在时会回落默认空配置（`DEFAULT_MCP_CONFIG`）
 - 该文件只适用于 standalone / 本地 Next Node 进程；Tauri 当前不使用该文件
 
-`marketplace` 仓库只管理 MCP/Skill 的可发现定义，例如名称、描述、启动命令、配置项 schema 和分类标签。standalone 当前实例是否启用某个 MCP、用户自带 API Key、允许访问的本地路径等运行时配置属于当前 Chat 实例，只写入 `data/mcp_config.json` 或 `MCP_CONFIG_PATH` 指定文件，不进入 marketplace。
+`marketplace` 仓库只管理 Tool/Skill 的可发现定义，例如名称、描述、启动命令、配置项 schema 和分类标签。standalone 当前实例是否启用某个工具、用户自带 API Key、允许访问的本地路径等运行时配置属于当前 Chat 实例，只写入 `data/mcp_config.json` 或 `MCP_CONFIG_PATH` 指定文件，不进入 marketplace。
 
 ### 5.2 standalone 与 Tauri 的区别
 
-| 模式 | MCP 当前状态 | 配置保存位置 | 适用场景 |
-| --- | --- | --- | --- |
-| `standalone` / `npm run dev` | 可用，依赖 Next Node 进程和 Server Action | `data/mcp_config.json` 或 `MCP_CONFIG_PATH` | 本地开发、私有部署、单实例受控服务 |
-| Tauri 桌面端 | 当前禁用，构建时使用 `actions.export.ts` | 暂无 | 后续如果支持，应使用 Tauri 用户数据目录，而不是源码目录或打包目录 |
+| 模式                         | MCP 当前状态                              | 配置保存位置                                | 适用场景                                                          |
+| ---------------------------- | ----------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------- |
+| `standalone` / `npm run dev` | 可用，依赖 Next Node 进程和 Server Action | `data/mcp_config.json` 或 `MCP_CONFIG_PATH` | 本地开发、私有部署、单实例受控服务                                |
+| Tauri 桌面端                 | 当前禁用，构建时使用 `actions.export.ts`  | 暂无                                        | 后续如果支持，应使用 Tauri 用户数据目录，而不是源码目录或打包目录 |
 
 ### 5.3 客户端启动方式
 

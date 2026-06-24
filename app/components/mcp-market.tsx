@@ -41,7 +41,7 @@ import clsx from "clsx";
 import PlayIcon from "../icons/play.svg";
 import StopIcon from "../icons/pause.svg";
 import { Path } from "../constant";
-import { getLang } from "../locales";
+import Locale, { getLang } from "../locales";
 import { getOfficialMcpPresetServers } from "../mcp/preset-servers";
 
 interface ConfigProperty {
@@ -79,7 +79,7 @@ export function McpMarketPage() {
     {},
   );
 
-  // 检查 MCP 是否启用
+  // 检查工具功能是否启用
   useEffect(() => {
     const checkMcpStatus = async () => {
       const enabled = await isMcpEnabled();
@@ -108,7 +108,7 @@ export function McpMarketPage() {
     return () => clearInterval(timer);
   }, [mcpEnabled, config]);
 
-  // 加载 MCP 市场服务器
+  // 加载工具市场服务器
   useEffect(() => {
     const controller = new AbortController();
 
@@ -213,7 +213,7 @@ export function McpMarketPage() {
       userConfig,
     );
     if (missingKeys.length > 0) {
-      showToast(`缺少必填 MCP 配置：${missingKeys.join(", ")}`);
+      showToast(`缺少必填工具配置：${missingKeys.join(", ")}`);
       return;
     }
 
@@ -294,7 +294,7 @@ export function McpMarketPage() {
     if (!preset.configurable) {
       try {
         const serverId = preset.id;
-        updateLoadingState(serverId, "Creating MCP client...");
+        updateLoadingState(serverId, "Creating tool client...");
 
         const serverConfig: ServerConfig = {
           command: preset.command,
@@ -712,7 +712,7 @@ export function McpMarketPage() {
         <div className="window-header">
           <div className="window-header-title">
             <div className="window-header-main-title">
-              MCP
+              {Locale.Mcp.Name}
               {loadingStates["all"] && (
                 <span className={styles["loading-indicator"]}>
                   {loadingStates["all"]}
@@ -720,7 +720,9 @@ export function McpMarketPage() {
               )}
             </div>
             <div className="window-header-sub-title">
-              {Object.keys(config?.mcpServers ?? {}).length} servers configured
+              {currentLang === "cn"
+                ? `已配置 ${Object.keys(config?.mcpServers ?? {}).length} 个工具`
+                : `${Object.keys(config?.mcpServers ?? {}).length} tools configured`}
             </div>
           </div>
 
@@ -750,7 +752,7 @@ export function McpMarketPage() {
             <input
               type="text"
               className={styles["search-bar"]}
-              placeholder={"搜索 MCP"}
+              placeholder={currentLang === "cn" ? "搜索工具" : "Search tools"}
               autoFocus
               onInput={(e) => setSearchText(e.currentTarget.value)}
             />
@@ -763,7 +765,7 @@ export function McpMarketPage() {
         {editingServerId && (
           <div className="modal-mask">
             <Modal
-              title={`Configure Server - ${editingServerId}`}
+              title={`Configure Tool - ${editingServerId}`}
               onClose={() => !isLoading && setEditingServerId(undefined)}
               actions={[
                 <IconButton

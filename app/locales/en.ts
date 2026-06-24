@@ -704,12 +704,12 @@ const en: LocaleType = {
     Name: "Discovery",
     Page: {
       Title: "Discovery",
-      SubTitle: "Browse and manage skills, MCP, model services, and storage",
+      SubTitle: "Browse and manage skills, tools, models, and storage",
     },
     Types: {
       all: "All",
       skill: "Skills",
-      mcp: "MCP",
+      mcp: "Tools",
       provider: "Model Services",
       storage: "Storage",
     },
@@ -739,12 +739,12 @@ const en: LocaleType = {
       Provider: "Model Service",
     },
     SourceLabel: "Source",
-    McpStatus: "MCP Status",
+    McpStatus: "Tool Status",
     ConfigMode: "Config mode",
-    McpUserProvided: "User-provided config",
+    McpUserProvided: "User-provided tool config",
     McpUserConfigHint:
-      "MCP currently uses user-provided configuration and only applies to standalone or local Next processes. API keys and other secrets are written to this instance's MCP config file, not shipped as marketplace data. Configure them only in a trusted environment.",
-    OpenMcpManager: "Open MCP Manager",
+      "Tools currently use user-provided configuration and only apply to standalone or local Next processes. API keys and other secrets are written to this instance's tool runtime config file, not shipped as marketplace data. Configure them only in a trusted environment.",
+    OpenMcpManager: "Open Tool Manager",
     Manage: "Manage",
     Configure: "Configure",
     Enable: "Enable",
@@ -753,20 +753,20 @@ const en: LocaleType = {
     Use: "Start",
     MyCapabilities: "My Capabilities",
     BackToMarket: "Back to Market",
-    SearchMarket: "Search skills, MCP, model services, and storage",
+    SearchMarket: "Search skills, tools, models, and storage",
     SearchMine: "Search my capabilities",
     Empty: "No matching capabilities",
     ResetFilters: "Clear filters",
     ReloadMarketplace: "Reload Market",
     MarketplaceSource: "Market source",
     MarketplaceSkillSource: "Skill market source",
-    MarketplaceMcpSource: "MCP market source",
+    MarketplaceMcpSource: "Tool market source",
     MarketplaceLoading: "Loading market data",
     MarketplaceLoaded: (
       currentLangSkills: number,
       totalSkills: number,
       mcps: number,
-    ) => `Loaded ${currentLangSkills}/${totalSkills} skills and ${mcps} MCP`,
+    ) => `Loaded ${currentLangSkills}/${totalSkills} skills and ${mcps} tools`,
     MarketplaceError: (message: string) => `Market load failed: ${message}`,
     DefaultSkillDesc:
       "A task-oriented workflow that can bind models, prompts, and tools.",
@@ -777,9 +777,9 @@ const en: LocaleType = {
       "Default model service for accessing community-available models.",
     CloudStorageTitle: "Cloud Storage",
     CloudStorageDesc:
-      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through MCP.",
+      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through tools.",
     StorageAppSync: "App sync",
-    StorageFutureMcp: "Future MCP file capability",
+    StorageFutureMcp: "Future tool file capability",
     StorageQuotaUsage: (used: string, quota: string) =>
       `${used} / ${quota} used`,
     StorageQuotaUnlimited: (used: string) => `${used} used / unlimited`,
@@ -787,9 +787,9 @@ const en: LocaleType = {
       tags.length > 0
         ? `${available}/${total} models available · ${tags.join(" / ")}`
         : `${available}/${total} models available`,
-    ToolMcpTitle: "MCP",
+    ToolMcpTitle: "Tools",
     ToolMcpDesc:
-      "Connect MCP tools such as search, fetch, filesystem, git, and time.",
+      "Connect tool capabilities such as search, fetch, filesystem, git, and time. Currently mainly backed by MCP.",
   },
   Mcp: {
     Name: "Tools",
@@ -819,7 +819,7 @@ const en: LocaleType = {
       SubTitle: (count: number) => `${count} OpenAPI interfaces`,
       Search: "Search OpenAPI interfaces",
       Create: "Create",
-      Find: "Import HTTP APIs from OpenAPI schemas. They can be adapted into MCP tools later: ",
+      Find: "Import HTTP APIs from OpenAPI schemas. They can be adapted into tools later: ",
     },
     Item: {
       Info: (count: number) => `${count} method`,
@@ -1106,7 +1106,7 @@ const en: LocaleType = {
     StatusChecking: "Checking",
     StatusError: "Storage error",
     StatusDesc:
-      "This currently syncs chats, skills, prompts, and local cache data. Later it can become an MCP file capability for models.",
+      "This currently syncs chats, skills, prompts, and local cache data. Later it can become a tool-backed file capability for models.",
     Check: "Check connection",
     CheckSuccess: "Storage connection is healthy",
     CheckFail: "Storage connection failed",
