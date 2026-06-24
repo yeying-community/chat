@@ -898,14 +898,14 @@ const en: LocaleType = {
           SubTitle: "Model platform capabilities such as Web Search",
         },
         Mcp: {
-          Title: "MCP",
+          Title: "Tools",
           SubTitle:
-            "Restrict which MCP services this skill can call; none selected means unrestricted",
+            "Restrict which tool services this skill can call; none selected means unrestricted",
         },
         NativeMcp: {
-          Title: "MCP Tool Strategy",
+          Title: "Tool Strategy",
           SubTitle:
-            "Used by skills such as Deep Reasoning; enabled allows Brave/fetch and other connected MCP tools, disabled uses only the model itself",
+            "Used by skills such as Deep Reasoning; enabled allows Brave/fetch and other connected tools, disabled uses only the model itself",
         },
       },
       Sync: {

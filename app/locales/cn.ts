@@ -694,12 +694,12 @@ const cn = {
     Name: "发现",
     Page: {
       Title: "发现",
-      SubTitle: "浏览和管理技能、MCP、模型服务与存储",
+      SubTitle: "浏览和管理技能、工具、模型与存储",
     },
     Types: {
       all: "全部",
       skill: "技能",
-      mcp: "MCP",
+      mcp: "工具",
       provider: "模型服务商",
       storage: "存储",
     },
@@ -729,12 +729,12 @@ const cn = {
       Provider: "模型服务商",
     },
     SourceLabel: "来源",
-    McpStatus: "MCP 状态",
+    McpStatus: "工具状态",
     ConfigMode: "配置模式",
-    McpUserProvided: "用户自带配置",
+    McpUserProvided: "用户自带工具配置",
     McpUserConfigHint:
-      "当前 MCP 使用用户自带配置模式，仅适用于 standalone 或本地 Next 进程。API Key 等密钥会写入该实例的 MCP 配置文件，不会作为市场数据下发；请只在可信环境中配置。",
-    OpenMcpManager: "打开 MCP 管理",
+      "当前工具使用用户自带配置模式，仅适用于 standalone 或本地 Next 进程。API Key 等密钥会写入该实例的工具运行配置文件，不会作为市场数据下发；请只在可信环境中配置。",
+    OpenMcpManager: "打开工具管理",
     Manage: "管理",
     Configure: "配置",
     Enable: "启用",
@@ -743,20 +743,20 @@ const cn = {
     Use: "开始使用",
     MyCapabilities: "我的能力",
     BackToMarket: "返回市场",
-    SearchMarket: "搜索技能、MCP、模型服务商、存储",
+    SearchMarket: "搜索技能、工具、模型、存储",
     SearchMine: "搜索我的能力",
     Empty: "没有找到匹配的能力",
     ResetFilters: "清空筛选",
     ReloadMarketplace: "重新加载市场",
     MarketplaceSource: "市场源",
     MarketplaceSkillSource: "技能市场源",
-    MarketplaceMcpSource: "MCP 市场源",
+    MarketplaceMcpSource: "工具市场源",
     MarketplaceLoading: "正在加载市场数据",
     MarketplaceLoaded: (
       currentLangSkills: number,
       totalSkills: number,
       mcps: number,
-    ) => `已加载 ${currentLangSkills}/${totalSkills} 个技能，${mcps} 个 MCP`,
+    ) => `已加载 ${currentLangSkills}/${totalSkills} 个技能，${mcps} 个工具`,
     MarketplaceError: (message: string) => `市场加载失败：${message}`,
     DefaultSkillDesc: "面向任务的工作方式，可绑定模型、提示词和工具。",
     SkillStarters: (count: number) => `${count} 个开场白`,
@@ -765,9 +765,9 @@ const cn = {
     RouterProviderDesc: "默认模型服务商，统一接入社区可用模型。",
     CloudStorageTitle: "云端存储",
     CloudStorageDesc:
-      "管理聊天、技能等本地数据的云端同步；后续可作为 MCP 文件能力提供给模型。",
+      "管理聊天、技能等本地数据的云端同步；后续可作为工具文件能力提供给模型。",
     StorageAppSync: "应用同步",
-    StorageFutureMcp: "后续 MCP 文件能力",
+    StorageFutureMcp: "后续工具文件能力",
     StorageQuotaUsage: (used: string, quota: string) =>
       `已用 ${used} / ${quota}`,
     StorageQuotaUnlimited: (used: string) => `已用 ${used} / 无限空间`,
@@ -775,8 +775,9 @@ const cn = {
       tags.length > 0
         ? `${available}/${total} 个模型可用 · ${tags.join(" / ")}`
         : `${available}/${total} 个模型可用`,
-    ToolMcpTitle: "MCP",
-    ToolMcpDesc: "连接搜索、抓取、文件、Git、时间等 MCP 工具。",
+    ToolMcpTitle: "工具",
+    ToolMcpDesc:
+      "连接搜索、抓取、文件、Git、时间等工具能力。当前主要由 MCP 承载。",
   },
   Mcp: {
     Name: "工具",
@@ -806,7 +807,7 @@ const cn = {
       SubTitle: (count: number) => `${count} 个 OpenAPI 接口`,
       Search: "搜索 OpenAPI 接口",
       Create: "新建",
-      Find: "通过 OpenAPI 描述导入 HTTP 接口，后续可适配为 MCP 工具：",
+      Find: "通过 OpenAPI 描述导入 HTTP 接口，后续可适配为工具：",
     },
     Item: {
       Info: (count: number) => `${count} 方法`,
@@ -883,13 +884,13 @@ const cn = {
           SubTitle: "模型平台提供的能力，例如 Web Search",
         },
         Mcp: {
-          Title: "MCP",
-          SubTitle: "限制这个技能可调用的 MCP 服务；未选择表示不限制",
+          Title: "工具",
+          SubTitle: "限制这个技能可调用的工具服务；未选择表示不限制",
         },
         NativeMcp: {
-          Title: "MCP 工具策略",
+          Title: "工具策略",
           SubTitle:
-            "用于深度思考等技能；开启后模型可调用 Brave/fetch 等已连接 MCP，关闭后仅使用模型自身能力",
+            "用于深度思考等技能；开启后模型可调用 Brave/fetch 等已连接工具，关闭后仅使用模型自身能力",
         },
       },
       Sync: {
