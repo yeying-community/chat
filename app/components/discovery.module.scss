@@ -213,13 +213,24 @@
   flex: 0 0 auto;
 }
 
-.mcp-detail {
+.tool-config-hint {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: var(--border-in-light);
+  border-radius: 10px;
+  background: var(--hover-color);
+  font-size: 12px;
+  line-height: 1.55;
+  opacity: 0.86;
+}
+
+.tool-detail {
   display: grid;
   gap: 12px;
   min-width: min(420px, 80vw);
 }
 
-.mcp-detail-row {
+.tool-detail-row {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -228,7 +239,7 @@
   font-size: 13px;
 }
 
-.mcp-detail-desc {
+.tool-detail-desc {
   line-height: 1.6;
   opacity: 0.8;
   user-select: text;

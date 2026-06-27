@@ -1,7 +1,8 @@
 import { getClientConfig } from "../config/client";
-import { SubmitKey } from "../store/config";
-import { LocaleType } from "./index";
+import type { LocaleType } from "./index";
 // if you are adding a new translation, please use PartialLocaleType instead of LocaleType
+
+const ENTER_KEY = "Enter";
 
 const isApp = !!getClientConfig()?.isApp;
 const en: LocaleType = {
@@ -86,7 +87,7 @@ const en: LocaleType = {
     Typing: "Typing…",
     Input: (submitKey: string) => {
       var inputHints = `${submitKey} to send`;
-      if (submitKey === String(SubmitKey.Enter)) {
+      if (submitKey === ENTER_KEY) {
         inputHints += ", Shift + Enter to wrap";
       }
       return inputHints + ", / to search prompts, : to use commands";
@@ -644,6 +645,18 @@ const en: LocaleType = {
         SubTitle: "API Key",
         Placeholder: "API Key",
       },
+      Router: {
+        Endpoint: {
+          Title: "Router Endpoint",
+          SubTitle: "Leave empty to use the Router page or runtime endpoint",
+          Placeholder: "https://llm.yeying.pub",
+        },
+        Token: {
+          Title: "Router Token",
+          SubTitle: "Leave empty to use the token selected on the Router page",
+          Placeholder: "Router token, optional",
+        },
+      },
       Azure: {
         Endpoint: {
           Title: "Endpoint",
@@ -661,7 +674,7 @@ const en: LocaleType = {
     },
   },
   Store: {
-    DefaultTopic: "New Conversation",
+    DefaultTopic: "Direct Chat",
     BotHello: "Hello! How can I assist you today?",
     Error: "Something went wrong, please try again later.",
     Prompt: {
@@ -692,12 +705,12 @@ const en: LocaleType = {
     Name: "Discovery",
     Page: {
       Title: "Discovery",
-      SubTitle: "Browse and manage skills, MCP, model services, and storage",
+      SubTitle: "Browse and manage skills, tools, models, and storage",
     },
     Types: {
       all: "All",
       skill: "Skills",
-      mcp: "MCP",
+      tool: "Tools",
       provider: "Model Services",
       storage: "Storage",
     },
@@ -727,8 +740,12 @@ const en: LocaleType = {
       Provider: "Model Service",
     },
     SourceLabel: "Source",
-    McpStatus: "MCP Status",
-    OpenMcpManager: "Open MCP Manager",
+    ToolStatus: "Tool Status",
+    ConfigMode: "Config mode",
+    ToolUserProvided: "User-provided tool config",
+    ToolUserConfigHint:
+      "Tools currently use user-provided configuration and only apply to standalone or local Next processes. API keys and other secrets are written to this instance's tool runtime config file, not shipped as marketplace data. Configure them only in a trusted environment.",
+    OpenToolManager: "Open Tool Manager",
     Manage: "Manage",
     Configure: "Configure",
     Enable: "Enable",
@@ -737,20 +754,20 @@ const en: LocaleType = {
     Use: "Start",
     MyCapabilities: "My Capabilities",
     BackToMarket: "Back to Market",
-    SearchMarket: "Search skills, MCP, model services, and storage",
+    SearchMarket: "Search skills, tools, models, and storage",
     SearchMine: "Search my capabilities",
     Empty: "No matching capabilities",
     ResetFilters: "Clear filters",
     ReloadMarketplace: "Reload Market",
     MarketplaceSource: "Market source",
     MarketplaceSkillSource: "Skill market source",
-    MarketplaceMcpSource: "MCP market source",
+    MarketplaceToolSource: "Tool market source",
     MarketplaceLoading: "Loading market data",
     MarketplaceLoaded: (
       currentLangSkills: number,
       totalSkills: number,
-      mcps: number,
-    ) => `Loaded ${currentLangSkills}/${totalSkills} skills and ${mcps} MCP`,
+      tools: number,
+    ) => `Loaded ${currentLangSkills}/${totalSkills} skills and ${tools} tools`,
     MarketplaceError: (message: string) => `Market load failed: ${message}`,
     DefaultSkillDesc:
       "A task-oriented workflow that can bind models, prompts, and tools.",
@@ -761,9 +778,9 @@ const en: LocaleType = {
       "Default model service for accessing community-available models.",
     CloudStorageTitle: "Cloud Storage",
     CloudStorageDesc:
-      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through MCP.",
+      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through tools.",
     StorageAppSync: "App sync",
-    StorageFutureMcp: "Future MCP file capability",
+    StorageFutureTool: "Future tool file capability",
     StorageQuotaUsage: (used: string, quota: string) =>
       `${used} / ${quota} used`,
     StorageQuotaUnlimited: (used: string) => `${used} used / unlimited`,
@@ -771,11 +788,11 @@ const en: LocaleType = {
       tags.length > 0
         ? `${available}/${total} models available · ${tags.join(" / ")}`
         : `${available}/${total} models available`,
-    ToolMcpTitle: "MCP",
-    ToolMcpDesc:
-      "Connect MCP tools such as search, fetch, filesystem, git, and time.",
+    ToolTitle: "Tools",
+    ToolDesc:
+      "Connect tool capabilities such as search, fetch, filesystem, git, and time. Currently mainly backed by the tool layer.",
   },
-  Mcp: {
+  Tool: {
     Name: "Tools",
   },
   FineTuned: {
@@ -803,7 +820,7 @@ const en: LocaleType = {
       SubTitle: (count: number) => `${count} OpenAPI interfaces`,
       Search: "Search OpenAPI interfaces",
       Create: "Create",
-      Find: "Import HTTP APIs from OpenAPI schemas. They can be adapted into MCP tools later: ",
+      Find: "Import HTTP APIs from OpenAPI schemas. They can be adapted into tools later: ",
     },
     Item: {
       Info: (count: number) => `${count} method`,
@@ -881,15 +898,15 @@ const en: LocaleType = {
           Title: "Built-in Tools",
           SubTitle: "Model platform capabilities such as Web Search",
         },
-        Mcp: {
-          Title: "MCP",
+        ToolServers: {
+          Title: "Tools",
           SubTitle:
-            "Restrict which MCP services this skill can call; none selected means unrestricted",
+            "Restrict which tool services this skill can call; none selected means unrestricted",
         },
-        NativeMcp: {
-          Title: "MCP Tool Strategy",
+        NativeToolBridge: {
+          Title: "Tool Strategy",
           SubTitle:
-            "Used by skills such as Deep Reasoning; enabled allows Brave/fetch and other connected MCP tools, disabled uses only the model itself",
+            "Used by skills such as Deep Reasoning; enabled allows Brave/fetch and other connected tools, disabled uses only the model itself",
         },
       },
       Sync: {
@@ -1090,7 +1107,7 @@ const en: LocaleType = {
     StatusChecking: "Checking",
     StatusError: "Storage error",
     StatusDesc:
-      "This currently syncs chats, skills, prompts, and local cache data. Later it can become an MCP file capability for models.",
+      "This currently syncs chats, skills, prompts, and local cache data. Later it can become a tool-backed file capability for models.",
     Check: "Check connection",
     CheckSuccess: "Storage connection is healthy",
     CheckFail: "Storage connection failed",

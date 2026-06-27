@@ -16,6 +16,7 @@ Chat（UCAN 定制版）
 
 - 用户使用手册：`docs/用户使用手册.md`
 - 常见问题：`docs/常见问题.md`
+- AI Native 能力分层架构：`docs/AI-Native能力分层架构.md`
 - 架构 / 部署 / 安全清单：`docs/架构部署安全清单.md`
 - 运行时配置与发包：`docs/运行时配置与发包.md`
 - 模型端点选择与支持机制：`docs/模型端点选择与支持机制.md`
@@ -27,7 +28,7 @@ Chat（UCAN 定制版）
 - Cloudflare Pages 部署指南：`docs/CloudflarePages部署指南.md`
 - Vercel 使用说明：`docs/Vercel使用说明.md`
 - 文生图与上传图片聊天工作流实现说明：`docs/文生图与上传图片聊天工作流实现说明.md`
-- MCP 启用机制与演进：`docs/MCP启用机制与演进.md`
+- 工具启用机制与演进：`docs/工具启用机制与演进.md`
 - 新增翻译指南：`docs/新增翻译指南.md`
 
 # 环境要求
@@ -74,15 +75,15 @@ cp .env.build.template .env.build
 
 ## 部署前准备
 
-1) **统一使用 npm 安装依赖**。
-2) 配置运行期环境变量（`.env`）：
-   - `ROUTER_BACKEND_URL`：router 鉴权后端地址  
+1. **统一使用 npm 安装依赖**。
+2. 配置运行期环境变量（`.env`）：
+   - `ROUTER_BACKEND_URL`：router 鉴权后端地址
    - `CENTRAL_UCAN_APP_ID`：中心化 UCAN 应用 AppId（在 Node 应用市场发布后获得）
    - `UCAN_LOGIN_FORCE_MODE`：登录路径强制模式（`auto`/`wallet`/`central`，默认 `auto`）
    - `WEBDAV_BACKEND_BASE_URL`：WebDAV 后端基础地址（按需配置，不含路径）
    - `WEBDAV_BACKEND_PREFIX`：WebDAV 路径前缀（默认 `/dav`，可选修改）
    - 以及你实际使用的 provider 配置（如 OpenAI / Gemini / Anthropic / Volcengine 等）
-3) 如需调整构建细节变量，配置 `.env.build`：
+3. 如需调整构建细节变量，配置 `.env.build`：
    - `DISABLE_CHUNK`
    - Tauri 签名相关变量
 
@@ -167,15 +168,19 @@ bash scripts/package.sh app
 bash scripts/package.sh app-release
 ```
 
-# MCP
+# 工具
 
-如需启用 MCP：
+工具层当前只适用于 `standalone` 部署或本地 `npm run dev` 这种有 Next Node 进程的运行方式，底层主要通过 MCP 协议承载。Tauri 桌面端当前走静态导出，构建时会使用禁用版 tool actions，不读取 `data/tool_config.json`。
 
-1. 在 `.env` 中设置 `ENABLE_MCP=1`
+standalone 如需启用工具能力：
+
+1. 在 `.env` 中设置 `ENABLE_TOOLS=1`
 2. 确保运行环境允许启动外部命令
-3. 确保服务进程对 `app/mcp/mcp_config.json` 可读写
+3. 确保服务进程对 `data/tool_config.json` 可读写
 
-更完整的说明见：`docs/MCP启用机制与演进.md`
+`marketplace` 仓库管理 Tool/Skill 的可发现定义，例如名称、描述、启动命令和配置项 schema。standalone 当前实例的工具启用状态、用户自带 Key 和运行时参数写入 `data/tool_config.json`，也可以通过 `TOOL_CONFIG_PATH` 指定自定义路径。真实 Key 不应放进源码目录或 marketplace 数据。
+
+更完整的说明见：`docs/工具启用机制与演进.md`
 
 # 贡献指南
 
