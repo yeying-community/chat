@@ -17,6 +17,64 @@
   gap: 12px;
 }
 
+.action-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: var(--border-in-light);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--white));
+  box-shadow: var(--card-shadow);
+}
+
+.action-banner-copy {
+  min-width: 0;
+}
+
+.action-banner-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.action-banner-desc {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  opacity: 0.74;
+}
+
+.action-banner-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.action-banner-primary,
+.action-banner-secondary {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.action-banner-primary {
+  border: 0;
+  background: var(--primary);
+  color: white;
+}
+
+.action-banner-secondary {
+  border: var(--border-in-light);
+  background: var(--white);
+  color: var(--black);
+}
+
 .panel {
   min-width: 0;
   padding: 14px;
@@ -24,6 +82,19 @@
   border-radius: 12px;
   background: var(--white);
   box-shadow: var(--card-shadow);
+  scroll-margin-top: 16px;
+  transition:
+    border-color ease 0.25s,
+    box-shadow ease 0.25s,
+    background-color ease 0.25s;
+}
+
+.panel-focus {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 4%, var(--white));
+  box-shadow:
+    var(--card-shadow),
+    0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .panel-header {
@@ -335,6 +406,21 @@
 @media (max-width: 720px) {
   .router-content {
     padding: 14px;
+  }
+
+  .action-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .action-banner-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .action-banner-primary,
+  .action-banner-secondary {
+    width: 100%;
   }
 
   .panel-actions,

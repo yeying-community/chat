@@ -26,7 +26,7 @@ import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { safeLocalStorage } from "../utils";
-import { useSessionModels } from "../utils/hooks";
+import { useRouterTokenStatus, useSessionModels } from "../utils/hooks";
 import { getModelProvider, normalizeProviderName } from "../utils/model";
 import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
@@ -331,6 +331,37 @@ export function NewChat() {
   );
 
   const navigate = useNavigate();
+  const hasRouterToken = accessStore.selectedRouterToken.trim().length > 0;
+  const hasRouterApiKey = accessStore.openaiApiKey.trim().length > 0;
+  const hasTextModels = textAvailableModels.length > 0;
+  const routerTokenStatus = useRouterTokenStatus();
+  const routerAction =
+    !hasRouterToken && !hasRouterApiKey
+      ? "select"
+      : routerTokenStatus.disabled
+        ? "disabled"
+        : routerTokenStatus.expired
+          ? "renew"
+          : routerTokenStatus.depleted
+            ? "recharge"
+            : "token";
+  const routerRedirectTarget = `${Path.Router}?redirect=${encodeURIComponent(
+    Path.NewChat,
+  )}&action=${routerAction}`;
+  const routerGuidanceTitle =
+    !hasRouterToken && !hasRouterApiKey
+      ? "先开通可用令牌，再开始对话"
+      : "当前还没有可用文本模型";
+  const routerGuidanceDescription =
+    !hasRouterToken && !hasRouterApiKey
+      ? "前往 Router 选择或充值令牌后，返回 Chat 即可立即开始体验。"
+      : routerTokenStatus.disabled
+        ? "当前令牌已被禁用，请前往 Router 重新选择可用令牌。"
+        : routerTokenStatus.expired
+          ? "当前令牌已过期，请前往 Router 更换或充值后继续使用。"
+          : routerTokenStatus.depleted
+            ? "当前令牌额度不足，请前往 Router 充值后继续使用。"
+            : "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌。";
 
   const fallbackModelValue = useMemo(() => {
     const preferredModel = config.modelConfig.model;
@@ -413,8 +444,13 @@ export function NewChat() {
     navigate(Path.Chat);
   };
 
-  const startDraftChat = () =>
+  const startDraftChat = () => {
+    if (!hasTextModels) {
+      navigate(routerRedirectTarget);
+      return;
+    }
     startChat(defaultChatSkill, draft, activeModelValue);
+  };
   const hideOrphanSkill = (skill: Skill) => {
     const key = getSkillEntryKey(skill);
     if (!key) return;
@@ -476,6 +512,28 @@ export function NewChat() {
       </div>
       <div className={styles["title"]}>{Locale.Home.NewChat}</div>
 
+      {!hasTextModels && (
+        <div className={styles["router-guidance"]}>
+          <div className={styles["router-guidance-texts"]}>
+            <div className={styles["router-guidance-title"]}>
+              {routerGuidanceTitle}
+            </div>
+            <div className={styles["router-guidance-desc"]}>
+              {routerGuidanceDescription}
+            </div>
+          </div>
+          <div className={styles["router-guidance-actions"]}>
+            <button
+              type="button"
+              className={styles["router-guidance-primary"]}
+              onClick={() => navigate(routerRedirectTarget)}
+            >
+              前往 Router
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles["launch-panel"]}>
         <textarea
           className={styles["launch-input"]}
@@ -496,6 +554,7 @@ export function NewChat() {
             <select
               value={activeModelValue}
               onChange={(event) => setSelectedModelValue(event.target.value)}
+              disabled={!hasTextModels}
             >
               {textAvailableModels.map((model) => (
                 <option

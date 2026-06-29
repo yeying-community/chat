@@ -20,6 +20,18 @@ function normalizeBaseUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
 }
 
+function deriveDefaultRouterPortalUrl(routerBackendUrl: string): string {
+  try {
+    const parsed = new URL(routerBackendUrl);
+    if (parsed.hostname === "llm.yeying.pub") {
+      return "https://router.yeying.pub";
+    }
+  } catch {
+    // ignore invalid backend url and use hosted portal fallback
+  }
+  return "https://router.yeying.pub";
+}
+
 function normalizePrefix(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === "/") return "";
@@ -60,6 +72,9 @@ export type RuntimePublicConfig = BuildConfig & {
   visionModels: string;
   enableTools: boolean;
   routerBackendUrl: string;
+  routerPortalUrl: string;
+  routerPortalTokenUrl: string;
+  routerPortalRechargeUrl: string;
   webdavBackendBaseUrl: string;
   webdavBackendPrefix: string;
   webdavBackendUrl: string;
@@ -112,6 +127,16 @@ export function getRuntimePublicConfig(): RuntimePublicConfig {
   const routerBackendUrl = normalizeBaseUrl(
     process.env.ROUTER_BACKEND_URL?.trim() || defaultRouterBackendUrl,
   );
+  const routerPortalUrl = normalizeBaseUrl(
+    process.env.ROUTER_PORTAL_URL?.trim() ||
+      deriveDefaultRouterPortalUrl(routerBackendUrl),
+  );
+  const routerPortalTokenUrl = normalizeBaseUrl(
+    process.env.ROUTER_PORTAL_TOKEN_URL?.trim() || routerPortalUrl,
+  );
+  const routerPortalRechargeUrl = normalizeBaseUrl(
+    process.env.ROUTER_PORTAL_RECHARGE_URL?.trim() || routerPortalTokenUrl,
+  );
 
   return {
     ...buildConfig,
@@ -126,6 +151,9 @@ export function getRuntimePublicConfig(): RuntimePublicConfig {
     visionModels: serverConfig.visionModels,
     enableTools: serverConfig.enableTools,
     routerBackendUrl,
+    routerPortalUrl,
+    routerPortalTokenUrl,
+    routerPortalRechargeUrl,
     webdavBackendBaseUrl,
     webdavBackendPrefix,
     webdavBackendUrl: joinBasePrefix(webdavBackendBaseUrl, webdavBackendPrefix),

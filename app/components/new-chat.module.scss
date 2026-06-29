@@ -88,6 +88,57 @@
     animation: slide-in ease 0.45s;
   }
 
+  .router-guidance {
+    width: min(720px, calc(100% - 40px));
+    margin: 24px auto 0;
+    padding: 16px 18px;
+    border: var(--border-in-light);
+    border-radius: 12px;
+    background: var(--white);
+    box-shadow: var(--card-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    animation: slide-in ease 0.4s;
+  }
+
+  .router-guidance-texts {
+    min-width: 0;
+  }
+
+  .router-guidance-title {
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .router-guidance-desc {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--black);
+    opacity: 0.72;
+  }
+
+  .router-guidance-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .router-guidance-primary {
+    height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--primary);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
   .model-selector {
     display: inline-flex;
     align-items: center;
@@ -316,8 +367,19 @@
     }
 
     .launch-panel,
-    .recent-skills {
+    .recent-skills,
+    .router-guidance {
       width: calc(100% - 24px);
+    }
+
+    .router-guidance {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .router-guidance-actions,
+    .router-guidance-primary {
+      width: 100%;
     }
 
     .launch-actions {

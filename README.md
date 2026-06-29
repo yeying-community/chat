@@ -78,6 +78,9 @@ cp .env.build.template .env.build
 1. **统一使用 npm 安装依赖**。
 2. 配置运行期环境变量（`.env`）：
    - `ROUTER_BACKEND_URL`：router 鉴权后端地址
+   - `ROUTER_PORTAL_URL`：Router 管理中心地址（可选，默认 `https://router.yeying.pub`）
+   - `ROUTER_PORTAL_TOKEN_URL`：Router 令牌页地址（可选，默认继承 `ROUTER_PORTAL_URL`）
+   - `ROUTER_PORTAL_RECHARGE_URL`：Router 充值页地址（可选，默认继承 `ROUTER_PORTAL_TOKEN_URL`）
    - `CENTRAL_UCAN_APP_ID`：中心化 UCAN 应用 AppId（在 Node 应用市场发布后获得）
    - `UCAN_LOGIN_FORCE_MODE`：登录路径强制模式（`auto`/`wallet`/`central`，默认 `auto`）
    - `WEBDAV_BACKEND_BASE_URL`：WebDAV 后端基础地址（按需配置，不含路径）
