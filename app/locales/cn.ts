@@ -107,6 +107,20 @@ const cn = {
       showShortcutKey: "显示快捷方式",
       clearContext: "清除上下文",
     },
+    RouterPrompt: {
+      Action: "前往 Router",
+      MissingToken:
+        "当前还没有可用令牌，请前往 Router 选择或充值令牌后再开始对话",
+      DisabledToken: "当前令牌已被禁用，请前往 Router 重新选择可用令牌",
+      ExpiredToken: "当前令牌已过期，请前往 Router 更换或充值后继续使用",
+      DepletedToken: "当前令牌额度不足，请前往 Router 充值后继续使用",
+      NoTextModels:
+        "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌",
+      NoSkillModels:
+        "该技能当前没有匹配到可用模型，请前往 Router 检查技能候选模型和令牌支持范围",
+      DefaultModelUnavailable:
+        "技能默认模型当前不可用，请切换到当前令牌支持的模型，或前往 Router 调整令牌配置",
+    },
   },
   Export: {
     Title: "分享聊天记录",
@@ -834,8 +848,28 @@ const cn = {
   Wallet: {
     CollectWallet: "连接钱包",
   },
-  Mask: {
+  Skill: {
     Name: "技能",
+    Package: {
+      Title: "技能包配置",
+      Labels: {
+        runtime: "运行方式",
+        model: "模型",
+        permissions: "权限",
+        tools: "工具",
+        visibility: "可见范围",
+        version: "版本",
+        chat: "会话",
+        sd: "图片创作",
+        external: "外部入口",
+        globalModel: "跟随全局模型",
+        none: "无",
+        noExtraPermissions: "无需额外权限",
+        public: "公开",
+        organization: "组织",
+        private: "私有",
+      },
+    },
     Page: {
       Title: "技能",
       SubTitle: (count: number) => `${count} 个技能`,
@@ -931,6 +965,106 @@ const cn = {
     More: "全部",
     EmptySkills: "暂无可用技能",
     ExploreSkills: "去发现",
+    Router: {
+      SetupTitle: "先开通可用令牌，再开始对话",
+      NoModelTitle: "当前还没有可用文本模型",
+      SetupDesc: "前往 Router 选择或充值令牌后，返回 Chat 即可立即开始体验。",
+      DisabledDesc: "当前令牌已被禁用，请前往 Router 重新选择可用令牌。",
+      ExpiredDesc: "当前令牌已过期，请前往 Router 更换或充值后继续使用。",
+      DepletedDesc: "当前令牌额度不足，请前往 Router 充值后继续使用。",
+      NoModelDesc:
+        "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌。",
+      OpenRouter: "前往 Router",
+    },
+  },
+
+  Router: {
+    RefreshModels: "刷新模型",
+    ReturnToChat: "前往 Chat",
+    ReturnToNewChat: "前往新建会话",
+    Banner: {
+      SelectTitle: "先选择一个可用令牌",
+      SelectDesc:
+        "选择令牌后，Chat 会立即使用该令牌加载文本、图片和实时语音模型。",
+      SelectPrimary: "前往令牌中心",
+      SelectSecondary: "返回 Chat",
+      RechargeTitle: "当前令牌额度不足",
+      RechargeDesc:
+        "请前往 Router 管理中心充值或更换令牌，完成后回到 Chat 即可继续使用。",
+      RechargePrimary: "前往充值",
+      RechargeSecondary: "重新检查",
+      RenewTitle: "当前令牌已过期",
+      RenewDesc:
+        "请在 Router 管理中心续费或切换到新的可用令牌，然后回到 Chat 继续使用。",
+      RenewPrimary: "前往管理中心",
+      RenewSecondary: "重新检查",
+      DisabledTitle: "当前令牌不可用",
+      DisabledDesc:
+        "这个令牌已被禁用或失效，请重新选择一个可用令牌后再回到 Chat。",
+      DisabledPrimary: "重新选择令牌",
+      DisabledSecondary: "返回 Chat",
+      TokenTitle: "完成 Router 配置后即可开始使用",
+      TokenDesc:
+        "优先选择一个可用令牌；如果模型或额度状态刚刚变化，可以先重新检查一次。",
+      TokenPrimary: "重新检查",
+      TokenSecondary: "返回 Chat",
+    },
+    Status: {
+      Title: "Router 状态",
+      SubTitle: "当前令牌状态和账户使用情况。",
+      TokenReady: "模型令牌 已选择",
+      TokenMissing: "模型令牌 未选择",
+      UsageReady: "余额查询 可用",
+      UsagePending: "余额查询 未就绪",
+      Checking: "检查中",
+      TokenName: "当前令牌",
+      AvailableQuota: "可用额度",
+      UsedQuota: "已使用",
+      ExpiresAt: "过期时间",
+      NotSelected: "未选择",
+      Unlimited: "无限",
+      Unavailable: "未获取",
+      NotSet: "未设置",
+    },
+    Config: {
+      Title: "Router 配置",
+      SubTitle: "接入地址和默认模型令牌。",
+      Endpoint: "接口地址",
+      EndpointHint: (url: string) => `默认地址：${url}`,
+      Token: "令牌",
+      UnnamedToken: "未命名",
+      TokensLoading: "令牌加载中",
+      NoTokens: "未找到可用令牌",
+      TokenHint: "文本、图片、语音和模型列表都会优先使用这里选择的令牌。",
+    },
+    Models: {
+      Title: "支持模型",
+      SubTitle: "当前令牌可用的模型。",
+      SearchPlaceholder: "搜索模型名、供应商、端点",
+      Filters: {
+        all: "全部",
+        text: "文本",
+        image: "图片",
+        reasoning: "深度思考",
+      },
+      Headers: {
+        Model: "模型",
+        Provider: "供应商",
+        Capabilities: "能力",
+        Endpoints: "端点",
+      },
+      Capabilities: {
+        Text: "文本",
+        Image: "生图",
+        Edit: "编辑",
+        Reasoning: "深度思考",
+        General: "通用",
+      },
+      EmptyEndpoint: "未声明端点",
+      Loading: "模型加载中",
+      EmptyWithToken: "当前令牌没有返回可用模型",
+      EmptyWithoutToken: "请选择令牌后加载模型",
+    },
   },
 
   URLCommand: {

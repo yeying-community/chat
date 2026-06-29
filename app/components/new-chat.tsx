@@ -350,18 +350,18 @@ export function NewChat() {
   )}&action=${routerAction}`;
   const routerGuidanceTitle =
     !hasRouterToken && !hasRouterApiKey
-      ? "先开通可用令牌，再开始对话"
-      : "当前还没有可用文本模型";
+      ? Locale.NewChat.Router.SetupTitle
+      : Locale.NewChat.Router.NoModelTitle;
   const routerGuidanceDescription =
     !hasRouterToken && !hasRouterApiKey
-      ? "前往 Router 选择或充值令牌后，返回 Chat 即可立即开始体验。"
+      ? Locale.NewChat.Router.SetupDesc
       : routerTokenStatus.disabled
-        ? "当前令牌已被禁用，请前往 Router 重新选择可用令牌。"
+        ? Locale.NewChat.Router.DisabledDesc
         : routerTokenStatus.expired
-          ? "当前令牌已过期，请前往 Router 更换或充值后继续使用。"
+          ? Locale.NewChat.Router.ExpiredDesc
           : routerTokenStatus.depleted
-            ? "当前令牌额度不足，请前往 Router 充值后继续使用。"
-            : "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌。";
+            ? Locale.NewChat.Router.DepletedDesc
+            : Locale.NewChat.Router.NoModelDesc;
 
   const fallbackModelValue = useMemo(() => {
     const preferredModel = config.modelConfig.model;
@@ -528,7 +528,7 @@ export function NewChat() {
               className={styles["router-guidance-primary"]}
               onClick={() => navigate(routerRedirectTarget)}
             >
-              前往 Router
+              {Locale.NewChat.Router.OpenRouter}
             </button>
           </div>
         </div>

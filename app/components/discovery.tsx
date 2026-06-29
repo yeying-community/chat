@@ -1259,7 +1259,7 @@ export function DiscoveryPage() {
         {editingSkill && (
           <div className="modal-mask">
             <Modal
-              title={Locale.Mask.EditModal.Title(editingSkill.builtin)}
+              title={Locale.Skill.EditModal.Title(editingSkill.builtin)}
               onClose={() => setEditingSkillId(undefined)}
             >
               <SkillConfig

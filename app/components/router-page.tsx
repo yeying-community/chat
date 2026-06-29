@@ -33,6 +33,7 @@ import {
   type RouterTokenStatus,
 } from "../client/platforms/router";
 import { buildTokenScopedRouterModelCatalog } from "./router-model-catalog";
+import { getLang } from "../locales";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
@@ -110,19 +111,23 @@ function maskRouterTokenKey(value?: string) {
 
 function capabilityBadges(model: LLMModel) {
   const badges: string[] = [];
-  if (isTextModel(model)) badges.push("文本");
+  if (isTextModel(model)) badges.push(Locale.Router.Models.Capabilities.Text);
   if (supportsImageGenerationEndpoint(model.supportedEndpoints))
-    badges.push("生图");
-  if (supportsImageEditEndpoint(model.supportedEndpoints)) badges.push("编辑");
-  if (isReasoningModel(model)) badges.push("深度思考");
+    badges.push(Locale.Router.Models.Capabilities.Image);
+  if (supportsImageEditEndpoint(model.supportedEndpoints))
+    badges.push(Locale.Router.Models.Capabilities.Edit);
+  if (isReasoningModel(model))
+    badges.push(Locale.Router.Models.Capabilities.Reasoning);
   return badges;
 }
 
 function formatRouterDate(value?: number) {
-  if (!value || value <= 0) return "未设置";
+  if (!value || value <= 0) return Locale.Router.Status.NotSet;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "未设置";
-  return date.toLocaleString("zh-CN", { hour12: false });
+  if (Number.isNaN(date.getTime())) return Locale.Router.Status.NotSet;
+  return date.toLocaleString(getLang() === "cn" ? "zh-CN" : "en-US", {
+    hour12: false,
+  });
 }
 
 function isRouterTokenSelectable(token: RouterPublicToken) {
@@ -282,23 +287,21 @@ export function RouterPage() {
     switch (routerAction) {
       case "select":
         return {
-          title: "先选择一个可用令牌",
-          description:
-            "选择令牌后，Chat 会立即使用该令牌加载文本、图片和实时语音模型。",
-          primaryText: "前往令牌中心",
+          title: Locale.Router.Banner.SelectTitle,
+          description: Locale.Router.Banner.SelectDesc,
+          primaryText: Locale.Router.Banner.SelectPrimary,
           primaryAction: () => window.open(ROUTER_PORTAL_TOKEN_URL, "_blank"),
-          secondaryText: "返回 Chat",
+          secondaryText: Locale.Router.Banner.SelectSecondary,
           secondaryAction: () => navigate(redirectTarget),
         };
       case "recharge":
         return {
-          title: "当前令牌额度不足",
-          description:
-            "请前往 Router 管理中心充值或更换令牌，完成后回到 Chat 即可继续使用。",
-          primaryText: "前往充值",
+          title: Locale.Router.Banner.RechargeTitle,
+          description: Locale.Router.Banner.RechargeDesc,
+          primaryText: Locale.Router.Banner.RechargePrimary,
           primaryAction: () =>
             window.open(ROUTER_PORTAL_RECHARGE_URL, "_blank"),
-          secondaryText: "重新检查",
+          secondaryText: Locale.Router.Banner.RechargeSecondary,
           secondaryAction: () => {
             void loadTokenStatus();
             void checkUsage(true);
@@ -306,13 +309,12 @@ export function RouterPage() {
         };
       case "renew":
         return {
-          title: "当前令牌已过期",
-          description:
-            "请在 Router 管理中心续费或切换到新的可用令牌，然后回到 Chat 继续使用。",
-          primaryText: "前往管理中心",
+          title: Locale.Router.Banner.RenewTitle,
+          description: Locale.Router.Banner.RenewDesc,
+          primaryText: Locale.Router.Banner.RenewPrimary,
           primaryAction: () =>
             window.open(ROUTER_PORTAL_RECHARGE_URL, "_blank"),
-          secondaryText: "重新检查",
+          secondaryText: Locale.Router.Banner.RenewSecondary,
           secondaryAction: () => {
             void loadTokenStatus();
             void checkUsage(true);
@@ -320,30 +322,28 @@ export function RouterPage() {
         };
       case "disabled":
         return {
-          title: "当前令牌不可用",
-          description:
-            "这个令牌已被禁用或失效，请重新选择一个可用令牌后再回到 Chat。",
-          primaryText: "重新选择令牌",
+          title: Locale.Router.Banner.DisabledTitle,
+          description: Locale.Router.Banner.DisabledDesc,
+          primaryText: Locale.Router.Banner.DisabledPrimary,
           primaryAction: () => {
             configPanelRef.current?.scrollIntoView({
               behavior: "smooth",
               block: "start",
             });
           },
-          secondaryText: "返回 Chat",
+          secondaryText: Locale.Router.Banner.DisabledSecondary,
           secondaryAction: () => navigate(redirectTarget),
         };
       case "token":
         return {
-          title: "完成 Router 配置后即可开始使用",
-          description:
-            "优先选择一个可用令牌；如果模型或额度状态刚刚变化，可以先重新检查一次。",
-          primaryText: "重新检查",
+          title: Locale.Router.Banner.TokenTitle,
+          description: Locale.Router.Banner.TokenDesc,
+          primaryText: Locale.Router.Banner.TokenPrimary,
           primaryAction: () => {
             void loadTokenStatus();
             void checkUsage(true);
           },
-          secondaryText: "返回 Chat",
+          secondaryText: Locale.Router.Banner.TokenSecondary,
           secondaryAction: () => navigate(redirectTarget),
         };
       default:
@@ -436,7 +436,7 @@ export function RouterPage() {
             <div className="window-action-button">
               <IconButton
                 icon={<ResetIcon />}
-                text="刷新模型"
+                text={Locale.Router.RefreshModels}
                 bordered
                 onClick={() => void reloadModels()}
                 disabled={loadingModels}
@@ -444,7 +444,11 @@ export function RouterPage() {
             </div>
             <div className="window-action-button">
               <IconButton
-                text={canReturnToChat ? "前往 Chat" : "前往新建会话"}
+                text={
+                  canReturnToChat
+                    ? Locale.Router.ReturnToChat
+                    : Locale.Router.ReturnToNewChat
+                }
                 bordered
                 onClick={() => navigate(redirectTarget)}
               />
@@ -493,9 +497,11 @@ export function RouterPage() {
           <section className={styles.panel}>
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>Router 状态</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Status.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  当前令牌状态和账户使用情况。
+                  {Locale.Router.Status.SubTitle}
                 </div>
               </div>
               <div className={styles["panel-actions"]}>
@@ -507,20 +513,28 @@ export function RouterPage() {
                         : styles["status-off"]
                     }
                   >
-                    模型令牌 {tokenConfigured ? "已选择" : "未选择"}
+                    {tokenConfigured
+                      ? Locale.Router.Status.TokenReady
+                      : Locale.Router.Status.TokenMissing}
                   </span>
                   <span
                     className={
                       showUsage ? styles["status-on"] : styles["status-off"]
                     }
                   >
-                    余额查询 {showUsage ? "可用" : "未就绪"}
+                    {showUsage
+                      ? Locale.Router.Status.UsageReady
+                      : Locale.Router.Status.UsagePending}
                   </span>
                 </div>
                 <div className={styles["action-pair"]}>
                   <IconButton
                     icon={<ResetIcon />}
-                    text={loadingStatus ? "检查中" : "重新检查"}
+                    text={
+                      loadingStatus
+                        ? Locale.Router.Status.Checking
+                        : Locale.Router.Banner.TokenPrimary
+                    }
                     bordered
                     onClick={() => {
                       void loadTokenStatus();
@@ -536,45 +550,45 @@ export function RouterPage() {
               <div className={styles["status-main"]}>
                 <dl className={styles["info-list"]}>
                   <div className={styles["info-item"]}>
-                    <dt>当前令牌</dt>
+                    <dt>{Locale.Router.Status.TokenName}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : tokenStatus?.token_name ||
                           selectedToken?.name ||
-                          "未选择"}
+                          Locale.Router.Status.NotSelected}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>可用额度</dt>
+                    <dt>{Locale.Router.Status.AvailableQuota}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : tokenStatus?.unlimited_quota
-                          ? "无限"
+                          ? Locale.Router.Status.Unlimited
                           : (tokenStatus?.total_available ??
                             tokenStatus?.remaining_amount ??
-                            "未获取")}
+                            Locale.Router.Status.Unavailable)}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>已使用</dt>
+                    <dt>{Locale.Router.Status.UsedQuota}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : (tokenStatus?.total_used ??
                           tokenStatus?.used_amount ??
-                          "未获取")}
+                          Locale.Router.Status.Unavailable)}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>过期时间</dt>
+                    <dt>{Locale.Router.Status.ExpiresAt}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : formatRouterDate(tokenStatus?.expires_at)}
                     </dd>
                   </div>
@@ -604,16 +618,20 @@ export function RouterPage() {
           >
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>Router 配置</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Config.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  接入地址和默认模型令牌。
+                  {Locale.Router.Config.SubTitle}
                 </div>
               </div>
             </div>
 
             <div className={styles.form}>
               <label className={styles.field}>
-                <span className={styles["field-label"]}>接口地址</span>
+                <span className={styles["field-label"]}>
+                  {Locale.Router.Config.Endpoint}
+                </span>
                 <input
                   type="text"
                   value={endpointValue}
@@ -625,12 +643,16 @@ export function RouterPage() {
                   }
                 />
                 <span className={styles["field-hint"]}>
-                  默认地址：{ROUTER_BASE_URL_NORMALIZED}
+                  {Locale.Router.Config.EndpointHint(
+                    ROUTER_BASE_URL_NORMALIZED,
+                  )}
                 </span>
               </label>
 
               <label className={styles.field}>
-                <span className={styles["field-label"]}>令牌</span>
+                <span className={styles["field-label"]}>
+                  {Locale.Router.Config.Token}
+                </span>
                 <select
                   value={selectedRouterToken}
                   onChange={(e) =>
@@ -642,7 +664,8 @@ export function RouterPage() {
                 >
                   {availableTokens.length > 0 ? (
                     availableTokens.map((token) => {
-                      const label = token.name || "未命名";
+                      const label =
+                        token.name || Locale.Router.Config.UnnamedToken;
                       return (
                         <option
                           key={token.id || token.key}
@@ -657,12 +680,14 @@ export function RouterPage() {
                     })
                   ) : (
                     <option value="">
-                      {loadingTokens ? "令牌加载中" : "未找到可用令牌"}
+                      {loadingTokens
+                        ? Locale.Router.Config.TokensLoading
+                        : Locale.Router.Config.NoTokens}
                     </option>
                   )}
                 </select>
                 <span className={styles["field-hint"]}>
-                  文本、图片、语音和模型列表都会优先使用这里选择的令牌。
+                  {Locale.Router.Config.TokenHint}
                 </span>
               </label>
             </div>
@@ -671,9 +696,11 @@ export function RouterPage() {
           <section className={styles.panel}>
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>支持模型</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Models.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  当前令牌可用的模型。
+                  {Locale.Router.Models.SubTitle}
                 </div>
               </div>
             </div>
@@ -682,15 +709,15 @@ export function RouterPage() {
               <input
                 className={styles.search}
                 value={searchText}
-                placeholder="搜索模型名、供应商、端点"
+                placeholder={Locale.Router.Models.SearchPlaceholder}
                 onChange={(e) => setSearchText(e.currentTarget.value)}
               />
               <div className={styles.filters}>
                 {[
-                  ["all", "全部"],
-                  ["text", "文本"],
-                  ["image", "图片"],
-                  ["reasoning", "深度思考"],
+                  ["all", Locale.Router.Models.Filters.all],
+                  ["text", Locale.Router.Models.Filters.text],
+                  ["image", Locale.Router.Models.Filters.image],
+                  ["reasoning", Locale.Router.Models.Filters.reasoning],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -711,10 +738,10 @@ export function RouterPage() {
                 <table className={styles["model-table"]}>
                   <thead>
                     <tr>
-                      <th>模型</th>
-                      <th>供应商</th>
-                      <th>能力</th>
-                      <th>端点</th>
+                      <th>{Locale.Router.Models.Headers.Model}</th>
+                      <th>{Locale.Router.Models.Headers.Provider}</th>
+                      <th>{Locale.Router.Models.Headers.Capabilities}</th>
+                      <th>{Locale.Router.Models.Headers.Endpoints}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -752,7 +779,9 @@ export function RouterPage() {
                                   </span>
                                 ))
                               ) : (
-                                <span className={styles.chip}>通用</span>
+                                <span className={styles.chip}>
+                                  {Locale.Router.Models.Capabilities.General}
+                                </span>
                               )}
                             </div>
                           </td>
@@ -769,7 +798,7 @@ export function RouterPage() {
                                 ))
                               ) : (
                                 <span className={styles["summary-empty"]}>
-                                  未声明端点
+                                  {Locale.Router.Models.EmptyEndpoint}
                                 </span>
                               )}
                             </div>
@@ -783,10 +812,10 @@ export function RouterPage() {
             ) : (
               <div className={styles.empty}>
                 {loadingModels
-                  ? "模型加载中"
+                  ? Locale.Router.Models.Loading
                   : selectedRouterToken
-                    ? "当前令牌没有返回可用模型"
-                    : "请选择令牌后加载模型"}
+                    ? Locale.Router.Models.EmptyWithToken
+                    : Locale.Router.Models.EmptyWithoutToken}
               </div>
             )}
           </section>

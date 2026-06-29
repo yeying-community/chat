@@ -1243,7 +1243,7 @@ function ChatView() {
   const promptRouterSetup = (
     content: string,
     action: "token" | "select" | "recharge" | "renew" | "disabled" = "token",
-    actionText = "前往 Router",
+    actionText = Locale.Chat.RouterPrompt.Action,
   ) => {
     showToast(
       content,
@@ -1260,43 +1260,41 @@ function ChatView() {
   } => {
     if (!hasRouterToken && !hasRouterApiKey) {
       return {
-        message: "当前还没有可用令牌，请前往 Router 选择或充值令牌后再开始对话",
+        message: Locale.Chat.RouterPrompt.MissingToken,
         action: "select",
       };
     }
 
     if (routerTokenStatus.disabled) {
       return {
-        message: "当前令牌已被禁用，请前往 Router 重新选择可用令牌",
+        message: Locale.Chat.RouterPrompt.DisabledToken,
         action: "disabled",
       };
     }
 
     if (routerTokenStatus.expired) {
       return {
-        message: "当前令牌已过期，请前往 Router 更换或充值后继续使用",
+        message: Locale.Chat.RouterPrompt.ExpiredToken,
         action: "renew",
       };
     }
 
     if (routerTokenStatus.depleted) {
       return {
-        message: "当前令牌额度不足，请前往 Router 充值后继续使用",
+        message: Locale.Chat.RouterPrompt.DepletedToken,
         action: "recharge",
       };
     }
 
     if (textAvailableModels.length === 0) {
       return {
-        message:
-          "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌",
+        message: Locale.Chat.RouterPrompt.NoTextModels,
         action: "token",
       };
     }
 
     return {
-      message:
-        "该技能当前没有匹配到可用模型，请前往 Router 检查技能候选模型和令牌支持范围",
+      message: Locale.Chat.RouterPrompt.NoSkillModels,
       action: "token",
     };
   };
@@ -1344,7 +1342,7 @@ function ChatView() {
 
     if (hasCandidateModelRestriction && !hasCurrentModel) {
       promptRouterSetup(
-        "技能默认模型当前不可用，请切换到当前令牌支持的模型，或前往 Router 调整令牌配置",
+        Locale.Chat.RouterPrompt.DefaultModelUnavailable,
         "token",
       );
       return;
