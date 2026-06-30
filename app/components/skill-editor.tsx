@@ -51,7 +51,13 @@ import {
   showConfirm,
 } from "./ui-lib";
 import { Avatar, AvatarPicker } from "./emoji";
-import Locale, { AllLangs, ALL_LANG_OPTIONS, getLang, Lang } from "../locales";
+import Locale, {
+  AllLangs,
+  ALL_LANG_OPTIONS,
+  getLang,
+  getLocaleByLang,
+  Lang,
+} from "../locales";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import chatStyle from "./chat.module.scss";
@@ -139,43 +145,7 @@ function useSkillPackage(skill: Skill) {
 }
 
 function getSkillPackageLabels(lang: Lang) {
-  if (lang === "cn") {
-    return {
-      runtime: "运行方式",
-      model: "模型",
-      permissions: "权限",
-      tools: "工具",
-      visibility: "可见范围",
-      version: "版本",
-      chat: "会话",
-      sd: "图片创作",
-      external: "外部入口",
-      globalModel: "跟随全局模型",
-      none: "无",
-      noExtraPermissions: "无需额外权限",
-      public: "公开",
-      organization: "组织",
-      private: "私有",
-    };
-  }
-
-  return {
-    runtime: "Runtime",
-    model: "Model",
-    permissions: "Permissions",
-    tools: "Tools",
-    visibility: "Visibility",
-    version: "Version",
-    chat: "Session",
-    sd: "Image Creation",
-    external: "External",
-    globalModel: "Use global model",
-    none: "None",
-    noExtraPermissions: "No extra permissions",
-    public: "Public",
-    organization: "Organization",
-    private: "Private",
-  };
+  return getLocaleByLang(lang).Skill.Package.Labels;
 }
 
 function getSkillRuntimeText(
@@ -359,8 +329,8 @@ export function SkillConfig(props: {
     skillProviderModels.length === 0
       ? Locale.SearchChat.Page.Loading
       : selectedCandidateModels.length === 0
-        ? Locale.Mask.Config.CandidateModels.SummaryNone
-        : Locale.Mask.Config.CandidateModels.SummarySelected(
+        ? Locale.Skill.Config.CandidateModels.SummaryNone
+        : Locale.Skill.Config.CandidateModels.SummarySelected(
             selectedCandidateModels.length,
           );
   const candidateModelSelectorItems = useMemo(
@@ -380,12 +350,12 @@ export function SkillConfig(props: {
   );
   const builtInToolSummary =
     selectedBuiltInTools.length === 0
-      ? Locale.Mask.Config.Tools.SummaryNone
-      : Locale.Mask.Config.Tools.SummarySelected(selectedBuiltInTools.length);
+      ? Locale.Skill.Config.Tools.SummaryNone
+      : Locale.Skill.Config.Tools.SummarySelected(selectedBuiltInTools.length);
   const toolServerSummary =
     selectedToolServers.length === 0
-      ? Locale.Mask.Config.Tools.SummaryNone
-      : Locale.Mask.Config.Tools.SummarySelected(selectedToolServers.length);
+      ? Locale.Skill.Config.Tools.SummaryNone
+      : Locale.Skill.Config.Tools.SummarySelected(selectedToolServers.length);
   const builtInToolSelectorItems = BUILT_IN_SKILL_TOOL_ITEMS.map((item) => ({
     title: item.name,
     subTitle: item.description,
@@ -440,9 +410,7 @@ export function SkillConfig(props: {
       {props.readonly ? (
         <List>
           <ListItem
-            title={
-              skill.lang === "cn" ? "技能包配置" : "Skill Package Configuration"
-            }
+            title={getLocaleByLang(skill.lang).Skill.Package.Title}
             vertical
           >
             <SkillPackageSummary skill={skill} />
@@ -486,7 +454,7 @@ export function SkillConfig(props: {
       )}
 
       <List>
-        <ListItem title={Locale.Mask.Config.Avatar}>
+        <ListItem title={Locale.Skill.Config.Avatar}>
           <Popover
             content={
               <AvatarPicker
@@ -501,7 +469,7 @@ export function SkillConfig(props: {
           >
             <div
               tabIndex={0}
-              aria-label={Locale.Mask.Config.Avatar}
+              aria-label={Locale.Skill.Config.Avatar}
               onClick={() => setShowPicker(true)}
               style={{ cursor: "pointer" }}
             >
@@ -512,9 +480,9 @@ export function SkillConfig(props: {
             </div>
           </Popover>
         </ListItem>
-        <ListItem title={Locale.Mask.Config.Name}>
+        <ListItem title={Locale.Skill.Config.Name}>
           <input
-            aria-label={Locale.Mask.Config.Name}
+            aria-label={Locale.Skill.Config.Name}
             type="text"
             value={skill.name}
             onInput={(e) =>
@@ -525,11 +493,11 @@ export function SkillConfig(props: {
           ></input>
         </ListItem>
         <ListItem
-          title={Locale.Mask.Config.CandidateModels.Title}
-          subTitle={Locale.Mask.Config.CandidateModels.SubTitle}
+          title={Locale.Skill.Config.CandidateModels.Title}
+          subTitle={Locale.Skill.Config.CandidateModels.SubTitle}
         >
           <input
-            aria-label={Locale.Mask.Config.CandidateModels.Title}
+            aria-label={Locale.Skill.Config.CandidateModels.Title}
             type="text"
             readOnly
             value={candidateModelSummary}
@@ -537,11 +505,11 @@ export function SkillConfig(props: {
           ></input>
         </ListItem>
         <ListItem
-          title={Locale.Mask.Config.Tools.BuiltIn.Title}
-          subTitle={Locale.Mask.Config.Tools.BuiltIn.SubTitle}
+          title={Locale.Skill.Config.Tools.BuiltIn.Title}
+          subTitle={Locale.Skill.Config.Tools.BuiltIn.SubTitle}
         >
           <input
-            aria-label={Locale.Mask.Config.Tools.BuiltIn.Title}
+            aria-label={Locale.Skill.Config.Tools.BuiltIn.Title}
             type="text"
             readOnly
             value={builtInToolSummary}
@@ -549,11 +517,11 @@ export function SkillConfig(props: {
           ></input>
         </ListItem>
         <ListItem
-          title={Locale.Mask.Config.Tools.ToolServers.Title}
-          subTitle={Locale.Mask.Config.Tools.ToolServers.SubTitle}
+          title={Locale.Skill.Config.Tools.ToolServers.Title}
+          subTitle={Locale.Skill.Config.Tools.ToolServers.SubTitle}
         >
           <input
-            aria-label={Locale.Mask.Config.Tools.ToolServers.Title}
+            aria-label={Locale.Skill.Config.Tools.ToolServers.Title}
             type="text"
             readOnly
             value={toolServerSummary}
@@ -561,11 +529,11 @@ export function SkillConfig(props: {
           ></input>
         </ListItem>
         <ListItem
-          title={Locale.Mask.Config.Tools.NativeToolBridge.Title}
-          subTitle={Locale.Mask.Config.Tools.NativeToolBridge.SubTitle}
+          title={Locale.Skill.Config.Tools.NativeToolBridge.Title}
+          subTitle={Locale.Skill.Config.Tools.NativeToolBridge.SubTitle}
         >
           <input
-            aria-label={Locale.Mask.Config.Tools.NativeToolBridge.Title}
+            aria-label={Locale.Skill.Config.Tools.NativeToolBridge.Title}
             type="checkbox"
             checked={allowNativeToolBridge}
             onChange={(e) => {
@@ -579,11 +547,11 @@ export function SkillConfig(props: {
           ></input>
         </ListItem>
         <ListItem
-          title={Locale.Mask.Config.HideContext.Title}
-          subTitle={Locale.Mask.Config.HideContext.SubTitle}
+          title={Locale.Skill.Config.HideContext.Title}
+          subTitle={Locale.Skill.Config.HideContext.SubTitle}
         >
           <input
-            aria-label={Locale.Mask.Config.HideContext.Title}
+            aria-label={Locale.Skill.Config.HideContext.Title}
             type="checkbox"
             checked={skill.hideContext}
             onChange={(e) => {
@@ -596,11 +564,11 @@ export function SkillConfig(props: {
 
         {globalConfig.enableArtifacts && (
           <ListItem
-            title={Locale.Mask.Config.Artifacts.Title}
-            subTitle={Locale.Mask.Config.Artifacts.SubTitle}
+            title={Locale.Skill.Config.Artifacts.Title}
+            subTitle={Locale.Skill.Config.Artifacts.SubTitle}
           >
             <input
-              aria-label={Locale.Mask.Config.Artifacts.Title}
+              aria-label={Locale.Skill.Config.Artifacts.Title}
               type="checkbox"
               checked={skill.enableArtifacts !== false}
               onChange={(e) => {
@@ -613,11 +581,11 @@ export function SkillConfig(props: {
         )}
         {globalConfig.enableCodeFold && (
           <ListItem
-            title={Locale.Mask.Config.CodeFold.Title}
-            subTitle={Locale.Mask.Config.CodeFold.SubTitle}
+            title={Locale.Skill.Config.CodeFold.Title}
+            subTitle={Locale.Skill.Config.CodeFold.SubTitle}
           >
             <input
-              aria-label={Locale.Mask.Config.CodeFold.Title}
+              aria-label={Locale.Skill.Config.CodeFold.Title}
               type="checkbox"
               checked={skill.enableCodeFold !== false}
               onChange={(e) => {
@@ -631,13 +599,13 @@ export function SkillConfig(props: {
 
         {!props.shouldSyncFromGlobal ? (
           <ListItem
-            title={Locale.Mask.Config.Share.Title}
-            subTitle={Locale.Mask.Config.Share.SubTitle}
+            title={Locale.Skill.Config.Share.Title}
+            subTitle={Locale.Skill.Config.Share.SubTitle}
           >
             <IconButton
-              aria={Locale.Mask.Config.Share.Title}
+              aria={Locale.Skill.Config.Share.Title}
               icon={<CopyIcon />}
-              text={Locale.Mask.Config.Share.Action}
+              text={Locale.Skill.Config.Share.Action}
               onClick={copySkillLink}
             />
           </ListItem>
@@ -645,18 +613,18 @@ export function SkillConfig(props: {
 
         {props.shouldSyncFromGlobal ? (
           <ListItem
-            title={Locale.Mask.Config.Sync.Title}
-            subTitle={Locale.Mask.Config.Sync.SubTitle}
+            title={Locale.Skill.Config.Sync.Title}
+            subTitle={Locale.Skill.Config.Sync.SubTitle}
           >
             <input
-              aria-label={Locale.Mask.Config.Sync.Title}
+              aria-label={Locale.Skill.Config.Sync.Title}
               type="checkbox"
               checked={skill.syncGlobalConfig !== false}
               onChange={async (e) => {
                 const checked = e.currentTarget.checked;
                 if (
                   checked &&
-                  (await showConfirm(Locale.Mask.Config.Sync.Confirm))
+                  (await showConfirm(Locale.Skill.Config.Sync.Confirm))
                 ) {
                   props.updateSkill((skill) => {
                     skill.syncGlobalConfig = checked;
@@ -1084,7 +1052,7 @@ export function SkillPage() {
                   </div>
                 )}
                 <div className={clsx(styles["mask-info"], "one-line")}>
-                  {`${Locale.Mask.Item.Info(m.context.length)} / ${
+                  {`${Locale.Skill.Item.Info(m.context.length)} / ${
                     ALL_LANG_OPTIONS[m.lang]
                   } / ${m.modelConfig.model}`}
                 </div>
@@ -1102,28 +1070,28 @@ export function SkillPage() {
             <div className={styles["mask-actions"]}>
               <IconButton
                 icon={<AddIcon />}
-                text={Locale.Mask.Item.Chat}
+                text={Locale.Skill.Item.Chat}
                 onClick={() => startSkill(m)}
               />
               {m.builtin ? (
                 <IconButton
                   icon={<EyeIcon />}
-                  text={Locale.Mask.Item.View}
+                  text={Locale.Skill.Item.View}
                   onClick={() => setEditingSkillId(m.id)}
                 />
               ) : (
                 <IconButton
                   icon={<EditIcon />}
-                  text={Locale.Mask.Item.Edit}
+                  text={Locale.Skill.Item.Edit}
                   onClick={() => setEditingSkillId(m.id)}
                 />
               )}
               {!m.builtin && (
                 <IconButton
                   icon={<DeleteIcon />}
-                  text={Locale.Mask.Item.Delete}
+                  text={Locale.Skill.Item.Delete}
                   onClick={async () => {
-                    if (await showConfirm(Locale.Mask.Item.DeleteConfirm)) {
+                    if (await showConfirm(Locale.Skill.Item.DeleteConfirm)) {
                       skillStore.delete(m.id);
                     }
                   }}
@@ -1142,10 +1110,10 @@ export function SkillPage() {
         <div className="window-header">
           <div className="window-header-title">
             <div className="window-header-main-title">
-              {Locale.Mask.Page.Title}
+              {Locale.Skill.Page.Title}
             </div>
             <div className="window-header-submai-title">
-              {Locale.Mask.Page.SubTitle(allSkills.length)}
+              {Locale.Skill.Page.SubTitle(allSkills.length)}
             </div>
           </div>
 
@@ -1181,7 +1149,7 @@ export function SkillPage() {
             <input
               type="text"
               className={styles["search-bar"]}
-              placeholder={Locale.Mask.Page.Search}
+              placeholder={Locale.Skill.Page.Search}
               autoFocus
               onInput={(e) => setSearchText(e.currentTarget.value)}
             />
@@ -1210,7 +1178,7 @@ export function SkillPage() {
             <IconButton
               className={styles["mask-create"]}
               icon={<AddIcon />}
-              text={Locale.Mask.Page.Create}
+              text={Locale.Skill.Page.Create}
               bordered
               onClick={() => {
                 const createdSkill = skillStore.create();
@@ -1228,7 +1196,7 @@ export function SkillPage() {
                 )}
                 onClick={() => setSelectedCategory("")}
               >
-                {Locale.Mask.Page.AllCategories}
+                {Locale.Skill.Page.AllCategories}
               </button>
               {categories.map((category) => (
                 <button
@@ -1247,31 +1215,33 @@ export function SkillPage() {
           )}
 
           {skills.length === 0 ? (
-            <div className={styles["mask-empty"]}>{Locale.Mask.Page.Empty}</div>
+            <div className={styles["mask-empty"]}>
+              {Locale.Skill.Page.Empty}
+            </div>
           ) : (
             <div className={styles["mask-sections"]}>
               <section className={styles["mask-section"]}>
                 <div className={styles["mask-section-header"]}>
                   <div className={styles["mask-section-title"]}>
-                    {Locale.Mask.Page.BuiltinSection}
+                    {Locale.Skill.Page.BuiltinSection}
                   </div>
                   <div className={styles["mask-section-desc"]}>
-                    {Locale.Mask.Page.BuiltinSectionDesc}
+                    {Locale.Skill.Page.BuiltinSectionDesc}
                   </div>
                 </div>
-                {renderSkillGrid(builtinSkills, Locale.Mask.Page.BuiltinEmpty)}
+                {renderSkillGrid(builtinSkills, Locale.Skill.Page.BuiltinEmpty)}
               </section>
 
               <section className={styles["mask-section"]}>
                 <div className={styles["mask-section-header"]}>
                   <div className={styles["mask-section-title"]}>
-                    {Locale.Mask.Page.LocalSection}
+                    {Locale.Skill.Page.LocalSection}
                   </div>
                   <div className={styles["mask-section-desc"]}>
-                    {Locale.Mask.Page.LocalSectionDesc}
+                    {Locale.Skill.Page.LocalSectionDesc}
                   </div>
                 </div>
-                {renderSkillGrid(localSkills, Locale.Mask.Page.LocalEmpty)}
+                {renderSkillGrid(localSkills, Locale.Skill.Page.LocalEmpty)}
               </section>
             </div>
           )}
@@ -1281,12 +1251,12 @@ export function SkillPage() {
       {editingSkill && (
         <div className="modal-mask">
           <Modal
-            title={Locale.Mask.EditModal.Title(editingSkill?.builtin)}
+            title={Locale.Skill.EditModal.Title(editingSkill?.builtin)}
             onClose={closeSkillModal}
             actions={[
               <IconButton
                 icon={<DownloadIcon />}
-                text={Locale.Mask.EditModal.Download}
+                text={Locale.Skill.EditModal.Download}
                 key="export"
                 bordered
                 onClick={() =>
@@ -1300,7 +1270,7 @@ export function SkillPage() {
                 key="copy"
                 icon={<CopyIcon />}
                 bordered
-                text={Locale.Mask.EditModal.Clone}
+                text={Locale.Skill.EditModal.Clone}
                 onClick={() => {
                   navigate(Path.Skills);
                   skillStore.create(editingSkill);

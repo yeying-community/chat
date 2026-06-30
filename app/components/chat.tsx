@@ -128,12 +128,13 @@ import { ChatCommandPrefix, useChatCommand, useCommand } from "../command";
 import { prettyObject } from "../utils/format";
 import { ExportMessageModal } from "./exporter";
 import { getClientConfig } from "../config/client";
-import { useSessionModels } from "../utils/hooks";
+import { useRouterTokenStatus, useSessionModels } from "../utils/hooks";
 import {
   ClientApi,
   MultimodalContent,
   normalizeSupportedEndpoints,
   selectPreferredRequestEndpoint,
+  supportsTextEndpoint,
 } from "../client/api";
 import { createTTSPlayer } from "../utils/audio";
 import { MsEdgeTTS, OUTPUT_FORMAT } from "../utils/ms_edge_tts";
@@ -559,8 +560,20 @@ export function ChatActions(props: {
     () => normalizeModelCandidates(sessionSkill.candidateModels),
     [sessionSkill.candidateModels],
   );
+  const allAvailableModels = useSessionModels();
   const sessionModels = useSessionModels(sessionCandidateModels);
   const hasCandidateModelRestriction = sessionCandidateModels.length > 0;
+  const textAvailableModels = useMemo(
+    () =>
+      allAvailableModels.filter((model) => {
+        const tags = Array.isArray(model.tags) ? model.tags : [];
+        if (tags.length > 0) return tags.includes("text");
+        const endpoints = model.supportedEndpoints ?? [];
+        if (endpoints.length > 0) return supportsTextEndpoint(endpoints);
+        return true;
+      }),
+    [allAvailableModels],
+  );
   const models = useMemo(() => {
     const defaultModel = sessionModels.find((m) => m.isDefault);
 
@@ -1112,8 +1125,20 @@ function ChatView() {
     () => normalizeModelCandidates(sessionSkill.candidateModels),
     [sessionSkill.candidateModels],
   );
+  const allAvailableModels = useSessionModels();
   const sessionModels = useSessionModels(sessionCandidateModels);
   const hasCandidateModelRestriction = sessionCandidateModels.length > 0;
+  const textAvailableModels = useMemo(
+    () =>
+      allAvailableModels.filter((model) => {
+        const tags = Array.isArray(model.tags) ? model.tags : [];
+        if (tags.length > 0) return tags.includes("text");
+        const endpoints = model.supportedEndpoints ?? [];
+        if (endpoints.length > 0) return supportsTextEndpoint(endpoints);
+        return true;
+      }),
+    [allAvailableModels],
+  );
 
   const [showExport, setShowExport] = useState(false);
 
@@ -1204,6 +1229,76 @@ function ChatView() {
 
   // only search prompts when user input is short
   const SEARCH_TEXT_LIMIT = 30;
+  const buildRouterRedirectTarget = (
+    action: "token" | "select" | "recharge" | "renew" | "disabled",
+  ) =>
+    `${Path.Router}?redirect=${encodeURIComponent(Path.Chat)}&action=${action}`;
+  const hasRouterToken = useAccessStore(
+    (state) => state.selectedRouterToken.trim().length > 0,
+  );
+  const hasRouterApiKey = useAccessStore(
+    (state) => state.openaiApiKey.trim().length > 0,
+  );
+  const routerTokenStatus = useRouterTokenStatus();
+  const promptRouterSetup = (
+    content: string,
+    action: "token" | "select" | "recharge" | "renew" | "disabled" = "token",
+    actionText = Locale.Chat.RouterPrompt.Action,
+  ) => {
+    showToast(
+      content,
+      {
+        text: actionText,
+        onClick: () => navigate(buildRouterRedirectTarget(action)),
+      },
+      5000,
+    );
+  };
+  const getUnavailableModelReason = (): {
+    message: string;
+    action: "token" | "select" | "recharge" | "renew" | "disabled";
+  } => {
+    if (!hasRouterToken && !hasRouterApiKey) {
+      return {
+        message: Locale.Chat.RouterPrompt.MissingToken,
+        action: "select",
+      };
+    }
+
+    if (routerTokenStatus.disabled) {
+      return {
+        message: Locale.Chat.RouterPrompt.DisabledToken,
+        action: "disabled",
+      };
+    }
+
+    if (routerTokenStatus.expired) {
+      return {
+        message: Locale.Chat.RouterPrompt.ExpiredToken,
+        action: "renew",
+      };
+    }
+
+    if (routerTokenStatus.depleted) {
+      return {
+        message: Locale.Chat.RouterPrompt.DepletedToken,
+        action: "recharge",
+      };
+    }
+
+    if (textAvailableModels.length === 0) {
+      return {
+        message: Locale.Chat.RouterPrompt.NoTextModels,
+        action: "token",
+      };
+    }
+
+    return {
+      message: Locale.Chat.RouterPrompt.NoSkillModels,
+      action: "token",
+    };
+  };
+
   const onInput = (text: string) => {
     setUserInput(text);
     const n = text.trim().length;
@@ -1233,9 +1328,8 @@ function ChatView() {
     }
 
     if (hasCandidateModelRestriction && sessionModels.length === 0) {
-      showToast(
-        "该技能当前没有任何可用模型，请检查 router 分组配置或调整技能候选模型",
-      );
+      const reason = getUnavailableModelReason();
+      promptRouterSetup(reason.message, reason.action);
       return;
     }
 
@@ -1247,7 +1341,10 @@ function ChatView() {
     );
 
     if (hasCandidateModelRestriction && !hasCurrentModel) {
-      showToast("技能默认模型当前不可用，请先选择一个可用模型");
+      promptRouterSetup(
+        Locale.Chat.RouterPrompt.DefaultModelUnavailable,
+        "token",
+      );
       return;
     }
 

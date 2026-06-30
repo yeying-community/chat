@@ -26,7 +26,7 @@ import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { safeLocalStorage } from "../utils";
-import { useSessionModels } from "../utils/hooks";
+import { useRouterTokenStatus, useSessionModels } from "../utils/hooks";
 import { getModelProvider, normalizeProviderName } from "../utils/model";
 import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
@@ -331,6 +331,37 @@ export function NewChat() {
   );
 
   const navigate = useNavigate();
+  const hasRouterToken = accessStore.selectedRouterToken.trim().length > 0;
+  const hasRouterApiKey = accessStore.openaiApiKey.trim().length > 0;
+  const hasTextModels = textAvailableModels.length > 0;
+  const routerTokenStatus = useRouterTokenStatus();
+  const routerAction =
+    !hasRouterToken && !hasRouterApiKey
+      ? "select"
+      : routerTokenStatus.disabled
+        ? "disabled"
+        : routerTokenStatus.expired
+          ? "renew"
+          : routerTokenStatus.depleted
+            ? "recharge"
+            : "token";
+  const routerRedirectTarget = `${Path.Router}?redirect=${encodeURIComponent(
+    Path.NewChat,
+  )}&action=${routerAction}`;
+  const routerGuidanceTitle =
+    !hasRouterToken && !hasRouterApiKey
+      ? Locale.NewChat.Router.SetupTitle
+      : Locale.NewChat.Router.NoModelTitle;
+  const routerGuidanceDescription =
+    !hasRouterToken && !hasRouterApiKey
+      ? Locale.NewChat.Router.SetupDesc
+      : routerTokenStatus.disabled
+        ? Locale.NewChat.Router.DisabledDesc
+        : routerTokenStatus.expired
+          ? Locale.NewChat.Router.ExpiredDesc
+          : routerTokenStatus.depleted
+            ? Locale.NewChat.Router.DepletedDesc
+            : Locale.NewChat.Router.NoModelDesc;
 
   const fallbackModelValue = useMemo(() => {
     const preferredModel = config.modelConfig.model;
@@ -413,8 +444,13 @@ export function NewChat() {
     navigate(Path.Chat);
   };
 
-  const startDraftChat = () =>
+  const startDraftChat = () => {
+    if (!hasTextModels) {
+      navigate(routerRedirectTarget);
+      return;
+    }
     startChat(defaultChatSkill, draft, activeModelValue);
+  };
   const hideOrphanSkill = (skill: Skill) => {
     const key = getSkillEntryKey(skill);
     if (!key) return;
@@ -476,6 +512,28 @@ export function NewChat() {
       </div>
       <div className={styles["title"]}>{Locale.Home.NewChat}</div>
 
+      {!hasTextModels && (
+        <div className={styles["router-guidance"]}>
+          <div className={styles["router-guidance-texts"]}>
+            <div className={styles["router-guidance-title"]}>
+              {routerGuidanceTitle}
+            </div>
+            <div className={styles["router-guidance-desc"]}>
+              {routerGuidanceDescription}
+            </div>
+          </div>
+          <div className={styles["router-guidance-actions"]}>
+            <button
+              type="button"
+              className={styles["router-guidance-primary"]}
+              onClick={() => navigate(routerRedirectTarget)}
+            >
+              {Locale.NewChat.Router.OpenRouter}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={styles["launch-panel"]}>
         <textarea
           className={styles["launch-input"]}
@@ -496,6 +554,7 @@ export function NewChat() {
             <select
               value={activeModelValue}
               onChange={(event) => setSelectedModelValue(event.target.value)}
+              disabled={!hasTextModels}
             >
               {textAvailableModels.map((model) => (
                 <option

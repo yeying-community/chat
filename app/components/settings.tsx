@@ -552,11 +552,11 @@ export function Settings() {
             </ListItem>
 
             <ListItem
-              title={Locale.Mask.Config.Artifacts.Title}
-              subTitle={Locale.Mask.Config.Artifacts.SubTitle}
+              title={Locale.Skill.Config.Artifacts.Title}
+              subTitle={Locale.Skill.Config.Artifacts.SubTitle}
             >
               <input
-                aria-label={Locale.Mask.Config.Artifacts.Title}
+                aria-label={Locale.Skill.Config.Artifacts.Title}
                 type="checkbox"
                 checked={config.enableArtifacts}
                 onChange={(e) =>
@@ -568,11 +568,11 @@ export function Settings() {
               ></input>
             </ListItem>
             <ListItem
-              title={Locale.Mask.Config.CodeFold.Title}
-              subTitle={Locale.Mask.Config.CodeFold.SubTitle}
+              title={Locale.Skill.Config.CodeFold.Title}
+              subTitle={Locale.Skill.Config.CodeFold.SubTitle}
             >
               <input
-                aria-label={Locale.Mask.Config.CodeFold.Title}
+                aria-label={Locale.Skill.Config.CodeFold.Title}
                 type="checkbox"
                 checked={config.enableCodeFold}
                 data-testid="enable-code-fold-checkbox"

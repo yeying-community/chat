@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import styles from "./router-page.module.scss";
 
@@ -26,18 +26,25 @@ import {
 } from "../client/api";
 import { isReasoningCapableModel } from "../client/reasoning";
 import { Path, ServiceProvider } from "../constant";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   RouterApi,
   type RouterPublicToken,
   type RouterTokenStatus,
 } from "../client/platforms/router";
 import { buildTokenScopedRouterModelCatalog } from "./router-model-catalog";
+import { getLang } from "../locales";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
   getClientConfig()?.routerBackendUrl || "https://llm.yeying.pub/";
 const ROUTER_BASE_URL_NORMALIZED = normalizeUrl(ROUTER_BASE_URL);
+const ROUTER_PORTAL_URL =
+  getClientConfig()?.routerPortalUrl || "https://router.yeying.pub";
+const ROUTER_PORTAL_TOKEN_URL =
+  getClientConfig()?.routerPortalTokenUrl || ROUTER_PORTAL_URL;
+const ROUTER_PORTAL_RECHARGE_URL =
+  getClientConfig()?.routerPortalRechargeUrl || ROUTER_PORTAL_TOKEN_URL;
 
 type ModelFilter = "all" | "text" | "image" | "reasoning";
 
@@ -104,19 +111,23 @@ function maskRouterTokenKey(value?: string) {
 
 function capabilityBadges(model: LLMModel) {
   const badges: string[] = [];
-  if (isTextModel(model)) badges.push("文本");
+  if (isTextModel(model)) badges.push(Locale.Router.Models.Capabilities.Text);
   if (supportsImageGenerationEndpoint(model.supportedEndpoints))
-    badges.push("生图");
-  if (supportsImageEditEndpoint(model.supportedEndpoints)) badges.push("编辑");
-  if (isReasoningModel(model)) badges.push("深度思考");
+    badges.push(Locale.Router.Models.Capabilities.Image);
+  if (supportsImageEditEndpoint(model.supportedEndpoints))
+    badges.push(Locale.Router.Models.Capabilities.Edit);
+  if (isReasoningModel(model))
+    badges.push(Locale.Router.Models.Capabilities.Reasoning);
   return badges;
 }
 
 function formatRouterDate(value?: number) {
-  if (!value || value <= 0) return "未设置";
+  if (!value || value <= 0) return Locale.Router.Status.NotSet;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "未设置";
-  return date.toLocaleString("zh-CN", { hour12: false });
+  if (Number.isNaN(date.getTime())) return Locale.Router.Status.NotSet;
+  return date.toLocaleString(getLang() === "cn" ? "zh-CN" : "en-US", {
+    hour12: false,
+  });
 }
 
 function isRouterTokenSelectable(token: RouterPublicToken) {
@@ -143,6 +154,8 @@ function isRouterTokenSelectable(token: RouterPublicToken) {
 
 export function RouterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const configPanelRef = useRef<HTMLElement | null>(null);
   const mergeModels = useAppConfig((state) => state.mergeModels);
   const accessStore = useAccessStore();
   const updateStore = useUpdateStore();
@@ -226,6 +239,17 @@ export function RouterPage() {
     availableTokens.find(
       (token) => (token.key || "").trim() === selectedRouterToken,
     ) || defaultToken;
+  const redirectTarget = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const raw = (params.get("redirect") || Path.NewChat).trim();
+    if (!raw.startsWith("/")) return Path.NewChat;
+    return raw === Path.Router ? Path.NewChat : raw;
+  }, [location.search]);
+  const routerAction = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("action") || "").trim().toLowerCase();
+  }, [location.search]);
+  const canReturnToChat = tokenConfigured || tokenModels.length > 0;
 
   const updateRouterAccess = (updater: (state: typeof accessStore) => void) => {
     accessStore.update((state) => {
@@ -235,15 +259,18 @@ export function RouterPage() {
     });
   };
 
-  async function checkUsage(force = false) {
-    if (!showUsage) return;
-    setLoadingUsage(true);
-    try {
-      await updateStore.updateUsage(force);
-    } finally {
-      setLoadingUsage(false);
-    }
-  }
+  const checkUsage = useCallback(
+    async (force = false) => {
+      if (!showUsage) return;
+      setLoadingUsage(true);
+      try {
+        await updateStore.updateUsage(force);
+      } finally {
+        setLoadingUsage(false);
+      }
+    },
+    [showUsage, updateStore],
+  );
 
   async function loadTokenStatus() {
     setLoadingStatus(true);
@@ -255,6 +282,74 @@ export function RouterPage() {
       setLoadingStatus(false);
     }
   }
+
+  const routerActionContent = useMemo(() => {
+    switch (routerAction) {
+      case "select":
+        return {
+          title: Locale.Router.Banner.SelectTitle,
+          description: Locale.Router.Banner.SelectDesc,
+          primaryText: Locale.Router.Banner.SelectPrimary,
+          primaryAction: () => window.open(ROUTER_PORTAL_TOKEN_URL, "_blank"),
+          secondaryText: Locale.Router.Banner.SelectSecondary,
+          secondaryAction: () => navigate(redirectTarget),
+        };
+      case "recharge":
+        return {
+          title: Locale.Router.Banner.RechargeTitle,
+          description: Locale.Router.Banner.RechargeDesc,
+          primaryText: Locale.Router.Banner.RechargePrimary,
+          primaryAction: () =>
+            window.open(ROUTER_PORTAL_RECHARGE_URL, "_blank"),
+          secondaryText: Locale.Router.Banner.RechargeSecondary,
+          secondaryAction: () => {
+            void loadTokenStatus();
+            void checkUsage(true);
+          },
+        };
+      case "renew":
+        return {
+          title: Locale.Router.Banner.RenewTitle,
+          description: Locale.Router.Banner.RenewDesc,
+          primaryText: Locale.Router.Banner.RenewPrimary,
+          primaryAction: () =>
+            window.open(ROUTER_PORTAL_RECHARGE_URL, "_blank"),
+          secondaryText: Locale.Router.Banner.RenewSecondary,
+          secondaryAction: () => {
+            void loadTokenStatus();
+            void checkUsage(true);
+          },
+        };
+      case "disabled":
+        return {
+          title: Locale.Router.Banner.DisabledTitle,
+          description: Locale.Router.Banner.DisabledDesc,
+          primaryText: Locale.Router.Banner.DisabledPrimary,
+          primaryAction: () => {
+            configPanelRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          },
+          secondaryText: Locale.Router.Banner.DisabledSecondary,
+          secondaryAction: () => navigate(redirectTarget),
+        };
+      case "token":
+        return {
+          title: Locale.Router.Banner.TokenTitle,
+          description: Locale.Router.Banner.TokenDesc,
+          primaryText: Locale.Router.Banner.TokenPrimary,
+          primaryAction: () => {
+            void loadTokenStatus();
+            void checkUsage(true);
+          },
+          secondaryText: Locale.Router.Banner.TokenSecondary,
+          secondaryAction: () => navigate(redirectTarget),
+        };
+      default:
+        return null;
+    }
+  }, [checkUsage, navigate, redirectTarget, routerAction]);
 
   const reloadModels = useCallback(async () => {
     setLoadingModels(true);
@@ -309,6 +404,22 @@ export function RouterPage() {
     void reloadModels();
   }, [reloadModels, selectedRouterToken]);
 
+  useEffect(() => {
+    if (routerAction !== "token") return;
+    const panel = configPanelRef.current;
+    if (!panel) return;
+    panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    panel.classList.add(styles["panel-focus"]);
+    const timer = window.setTimeout(() => {
+      panel.classList.remove(styles["panel-focus"]);
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timer);
+      panel.classList.remove(styles["panel-focus"]);
+    };
+  }, [routerAction]);
+
   return (
     <ErrorBoundary>
       <div className={styles["router-page"]}>
@@ -325,10 +436,21 @@ export function RouterPage() {
             <div className="window-action-button">
               <IconButton
                 icon={<ResetIcon />}
-                text="刷新模型"
+                text={Locale.Router.RefreshModels}
                 bordered
                 onClick={() => void reloadModels()}
                 disabled={loadingModels}
+              />
+            </div>
+            <div className="window-action-button">
+              <IconButton
+                text={
+                  canReturnToChat
+                    ? Locale.Router.ReturnToChat
+                    : Locale.Router.ReturnToNewChat
+                }
+                bordered
+                onClick={() => navigate(redirectTarget)}
               />
             </div>
             <div className="window-action-button">
@@ -343,12 +465,43 @@ export function RouterPage() {
         </div>
 
         <div className={styles["router-content"]}>
+          {routerActionContent && (
+            <section className={styles["action-banner"]}>
+              <div className={styles["action-banner-copy"]}>
+                <div className={styles["action-banner-title"]}>
+                  {routerActionContent.title}
+                </div>
+                <div className={styles["action-banner-desc"]}>
+                  {routerActionContent.description}
+                </div>
+              </div>
+              <div className={styles["action-banner-actions"]}>
+                <button
+                  type="button"
+                  className={styles["action-banner-primary"]}
+                  onClick={routerActionContent.primaryAction}
+                >
+                  {routerActionContent.primaryText}
+                </button>
+                <button
+                  type="button"
+                  className={styles["action-banner-secondary"]}
+                  onClick={routerActionContent.secondaryAction}
+                >
+                  {routerActionContent.secondaryText}
+                </button>
+              </div>
+            </section>
+          )}
+
           <section className={styles.panel}>
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>Router 状态</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Status.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  当前令牌状态和账户使用情况。
+                  {Locale.Router.Status.SubTitle}
                 </div>
               </div>
               <div className={styles["panel-actions"]}>
@@ -360,20 +513,28 @@ export function RouterPage() {
                         : styles["status-off"]
                     }
                   >
-                    模型令牌 {tokenConfigured ? "已选择" : "未选择"}
+                    {tokenConfigured
+                      ? Locale.Router.Status.TokenReady
+                      : Locale.Router.Status.TokenMissing}
                   </span>
                   <span
                     className={
                       showUsage ? styles["status-on"] : styles["status-off"]
                     }
                   >
-                    余额查询 {showUsage ? "可用" : "未就绪"}
+                    {showUsage
+                      ? Locale.Router.Status.UsageReady
+                      : Locale.Router.Status.UsagePending}
                   </span>
                 </div>
                 <div className={styles["action-pair"]}>
                   <IconButton
                     icon={<ResetIcon />}
-                    text={loadingStatus ? "检查中" : "重新检查"}
+                    text={
+                      loadingStatus
+                        ? Locale.Router.Status.Checking
+                        : Locale.Router.Banner.TokenPrimary
+                    }
                     bordered
                     onClick={() => {
                       void loadTokenStatus();
@@ -389,45 +550,45 @@ export function RouterPage() {
               <div className={styles["status-main"]}>
                 <dl className={styles["info-list"]}>
                   <div className={styles["info-item"]}>
-                    <dt>当前令牌</dt>
+                    <dt>{Locale.Router.Status.TokenName}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : tokenStatus?.token_name ||
                           selectedToken?.name ||
-                          "未选择"}
+                          Locale.Router.Status.NotSelected}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>可用额度</dt>
+                    <dt>{Locale.Router.Status.AvailableQuota}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : tokenStatus?.unlimited_quota
-                          ? "无限"
+                          ? Locale.Router.Status.Unlimited
                           : (tokenStatus?.total_available ??
                             tokenStatus?.remaining_amount ??
-                            "未获取")}
+                            Locale.Router.Status.Unavailable)}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>已使用</dt>
+                    <dt>{Locale.Router.Status.UsedQuota}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : (tokenStatus?.total_used ??
                           tokenStatus?.used_amount ??
-                          "未获取")}
+                          Locale.Router.Status.Unavailable)}
                     </dd>
                   </div>
 
                   <div className={styles["info-item"]}>
-                    <dt>过期时间</dt>
+                    <dt>{Locale.Router.Status.ExpiresAt}</dt>
                     <dd>
                       {loadingStatus
-                        ? "检查中"
+                        ? Locale.Router.Status.Checking
                         : formatRouterDate(tokenStatus?.expires_at)}
                     </dd>
                   </div>
@@ -450,19 +611,27 @@ export function RouterPage() {
             </div>
           </section>
 
-          <section className={styles.panel}>
+          <section
+            ref={configPanelRef}
+            className={styles.panel}
+            data-router-section="token"
+          >
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>Router 配置</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Config.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  接入地址和默认模型令牌。
+                  {Locale.Router.Config.SubTitle}
                 </div>
               </div>
             </div>
 
             <div className={styles.form}>
               <label className={styles.field}>
-                <span className={styles["field-label"]}>接口地址</span>
+                <span className={styles["field-label"]}>
+                  {Locale.Router.Config.Endpoint}
+                </span>
                 <input
                   type="text"
                   value={endpointValue}
@@ -474,12 +643,16 @@ export function RouterPage() {
                   }
                 />
                 <span className={styles["field-hint"]}>
-                  默认地址：{ROUTER_BASE_URL_NORMALIZED}
+                  {Locale.Router.Config.EndpointHint(
+                    ROUTER_BASE_URL_NORMALIZED,
+                  )}
                 </span>
               </label>
 
               <label className={styles.field}>
-                <span className={styles["field-label"]}>令牌</span>
+                <span className={styles["field-label"]}>
+                  {Locale.Router.Config.Token}
+                </span>
                 <select
                   value={selectedRouterToken}
                   onChange={(e) =>
@@ -491,7 +664,8 @@ export function RouterPage() {
                 >
                   {availableTokens.length > 0 ? (
                     availableTokens.map((token) => {
-                      const label = token.name || "未命名";
+                      const label =
+                        token.name || Locale.Router.Config.UnnamedToken;
                       return (
                         <option
                           key={token.id || token.key}
@@ -506,12 +680,14 @@ export function RouterPage() {
                     })
                   ) : (
                     <option value="">
-                      {loadingTokens ? "令牌加载中" : "未找到可用令牌"}
+                      {loadingTokens
+                        ? Locale.Router.Config.TokensLoading
+                        : Locale.Router.Config.NoTokens}
                     </option>
                   )}
                 </select>
                 <span className={styles["field-hint"]}>
-                  文本、图片、语音和模型列表都会优先使用这里选择的令牌。
+                  {Locale.Router.Config.TokenHint}
                 </span>
               </label>
             </div>
@@ -520,9 +696,11 @@ export function RouterPage() {
           <section className={styles.panel}>
             <div className={styles["panel-header"]}>
               <div>
-                <div className={styles["panel-title"]}>支持模型</div>
+                <div className={styles["panel-title"]}>
+                  {Locale.Router.Models.Title}
+                </div>
                 <div className={styles["panel-subtitle"]}>
-                  当前令牌可用的模型。
+                  {Locale.Router.Models.SubTitle}
                 </div>
               </div>
             </div>
@@ -531,15 +709,15 @@ export function RouterPage() {
               <input
                 className={styles.search}
                 value={searchText}
-                placeholder="搜索模型名、供应商、端点"
+                placeholder={Locale.Router.Models.SearchPlaceholder}
                 onChange={(e) => setSearchText(e.currentTarget.value)}
               />
               <div className={styles.filters}>
                 {[
-                  ["all", "全部"],
-                  ["text", "文本"],
-                  ["image", "图片"],
-                  ["reasoning", "深度思考"],
+                  ["all", Locale.Router.Models.Filters.all],
+                  ["text", Locale.Router.Models.Filters.text],
+                  ["image", Locale.Router.Models.Filters.image],
+                  ["reasoning", Locale.Router.Models.Filters.reasoning],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -560,10 +738,10 @@ export function RouterPage() {
                 <table className={styles["model-table"]}>
                   <thead>
                     <tr>
-                      <th>模型</th>
-                      <th>供应商</th>
-                      <th>能力</th>
-                      <th>端点</th>
+                      <th>{Locale.Router.Models.Headers.Model}</th>
+                      <th>{Locale.Router.Models.Headers.Provider}</th>
+                      <th>{Locale.Router.Models.Headers.Capabilities}</th>
+                      <th>{Locale.Router.Models.Headers.Endpoints}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -601,7 +779,9 @@ export function RouterPage() {
                                   </span>
                                 ))
                               ) : (
-                                <span className={styles.chip}>通用</span>
+                                <span className={styles.chip}>
+                                  {Locale.Router.Models.Capabilities.General}
+                                </span>
                               )}
                             </div>
                           </td>
@@ -618,7 +798,7 @@ export function RouterPage() {
                                 ))
                               ) : (
                                 <span className={styles["summary-empty"]}>
-                                  未声明端点
+                                  {Locale.Router.Models.EmptyEndpoint}
                                 </span>
                               )}
                             </div>
@@ -632,10 +812,10 @@ export function RouterPage() {
             ) : (
               <div className={styles.empty}>
                 {loadingModels
-                  ? "模型加载中"
+                  ? Locale.Router.Models.Loading
                   : selectedRouterToken
-                    ? "当前令牌没有返回可用模型"
-                    : "请选择令牌后加载模型"}
+                    ? Locale.Router.Models.EmptyWithToken
+                    : Locale.Router.Models.EmptyWithoutToken}
               </div>
             )}
           </section>

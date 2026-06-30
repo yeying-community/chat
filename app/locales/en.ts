@@ -108,6 +108,23 @@ const en: LocaleType = {
       showShortcutKey: "Show Shortcuts",
       clearContext: "Clear Context",
     },
+    RouterPrompt: {
+      Action: "Open Router",
+      MissingToken:
+        "There is no available token yet. Go to Router to choose or top up a token before starting the conversation.",
+      DisabledToken:
+        "The current token has been disabled. Go to Router and choose another available token.",
+      ExpiredToken:
+        "The current token has expired. Go to Router to switch or top up before continuing.",
+      DepletedToken:
+        "The current token has insufficient balance. Go to Router to top it up before continuing.",
+      NoTextModels:
+        "The current token did not return any available text models. Go to Router to check balance, model access, or choose another token.",
+      NoSkillModels:
+        "This skill does not currently match any available model. Go to Router to check the skill's candidate models and token coverage.",
+      DefaultModelUnavailable:
+        "The skill's default model is currently unavailable. Switch to a model supported by the current token, or adjust token settings in Router.",
+    },
   },
   Export: {
     Title: "Export Messages",
@@ -846,8 +863,28 @@ const en: LocaleType = {
   Wallet: {
     CollectWallet: "collect wallet",
   },
-  Mask: {
+  Skill: {
     Name: "Skills",
+    Package: {
+      Title: "Skill Package Configuration",
+      Labels: {
+        runtime: "Runtime",
+        model: "Model",
+        permissions: "Permissions",
+        tools: "Tools",
+        visibility: "Visibility",
+        version: "Version",
+        chat: "Session",
+        sd: "Image Creation",
+        external: "External",
+        globalModel: "Use global model",
+        none: "None",
+        noExtraPermissions: "No extra permissions",
+        public: "Public",
+        organization: "Organization",
+        private: "Private",
+      },
+    },
     Page: {
       Title: "Skills",
       SubTitle: (count: number) => `${count} skills`,
@@ -948,6 +985,111 @@ const en: LocaleType = {
     ExploreSkills: "Discover",
     NotShow: "Never Show Again",
     ConfirmNoShow: "Confirm to disable？You can enable it in settings later.",
+    Router: {
+      SetupTitle: "Set up an available token before starting",
+      NoModelTitle: "No text models are currently available",
+      SetupDesc:
+        "Go to Router to select or top up a token, then return to Chat to start immediately.",
+      DisabledDesc:
+        "The current token has been disabled. Go to Router and choose another available token.",
+      ExpiredDesc:
+        "The current token has expired. Go to Router to switch or top up before continuing.",
+      DepletedDesc:
+        "The current token has insufficient balance. Go to Router to top it up before continuing.",
+      NoModelDesc:
+        "The current token did not return any available text models. Go to Router to check balance, model access, or choose another token.",
+      OpenRouter: "Open Router",
+    },
+  },
+
+  Router: {
+    RefreshModels: "Refresh Models",
+    ReturnToChat: "Go to Chat",
+    ReturnToNewChat: "Go to New Session",
+    Banner: {
+      SelectTitle: "Choose an available token first",
+      SelectDesc:
+        "After choosing a token, Chat will immediately use it to load text, image, and realtime voice models.",
+      SelectPrimary: "Open Token Center",
+      SelectSecondary: "Return to Chat",
+      RechargeTitle: "The current token has insufficient balance",
+      RechargeDesc:
+        "Go to the Router portal to top up or switch tokens, then return to Chat to continue.",
+      RechargePrimary: "Top Up",
+      RechargeSecondary: "Check Again",
+      RenewTitle: "The current token has expired",
+      RenewDesc:
+        "Renew or switch to a new available token in the Router portal, then return to Chat to continue.",
+      RenewPrimary: "Open Portal",
+      RenewSecondary: "Check Again",
+      DisabledTitle: "The current token is unavailable",
+      DisabledDesc:
+        "This token has been disabled or is no longer valid. Choose another available token before returning to Chat.",
+      DisabledPrimary: "Choose Another Token",
+      DisabledSecondary: "Return to Chat",
+      TokenTitle: "Finish Router setup to get started",
+      TokenDesc:
+        "Choose an available token first. If models or quota changed just now, you can run a fresh check.",
+      TokenPrimary: "Check Again",
+      TokenSecondary: "Return to Chat",
+    },
+    Status: {
+      Title: "Router Status",
+      SubTitle: "Current token status and account usage.",
+      TokenReady: "Model Token Selected",
+      TokenMissing: "Model Token Missing",
+      UsageReady: "Usage Check Ready",
+      UsagePending: "Usage Check Not Ready",
+      Checking: "Checking",
+      TokenName: "Current Token",
+      AvailableQuota: "Available Balance",
+      UsedQuota: "Used",
+      ExpiresAt: "Expires At",
+      NotSelected: "Not Selected",
+      Unlimited: "Unlimited",
+      Unavailable: "Unavailable",
+      NotSet: "Not Set",
+    },
+    Config: {
+      Title: "Router Config",
+      SubTitle: "Endpoint and default model token.",
+      Endpoint: "Endpoint URL",
+      EndpointHint: (url: string) => `Default URL: ${url}`,
+      Token: "Token",
+      UnnamedToken: "Untitled",
+      TokensLoading: "Loading tokens",
+      NoTokens: "No available tokens found",
+      TokenHint:
+        "Text, image, voice, and model list requests will prefer the token selected here.",
+    },
+    Models: {
+      Title: "Supported Models",
+      SubTitle: "Models available for the current token.",
+      SearchPlaceholder: "Search model name, provider, or endpoint",
+      Filters: {
+        all: "All",
+        text: "Text",
+        image: "Image",
+        reasoning: "Reasoning",
+      },
+      Headers: {
+        Model: "Model",
+        Provider: "Provider",
+        Capabilities: "Capabilities",
+        Endpoints: "Endpoints",
+      },
+      Capabilities: {
+        Text: "Text",
+        Image: "Image",
+        Edit: "Edit",
+        Reasoning: "Reasoning",
+        General: "General",
+      },
+      EmptyEndpoint: "No endpoints declared",
+      Loading: "Loading models",
+      EmptyWithToken: "The current token did not return any available models",
+      EmptyWithoutToken: "Choose a token to load models",
+    },
   },
 
   UI: {
