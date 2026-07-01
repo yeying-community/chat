@@ -965,6 +965,7 @@ const cn = {
     More: "全部",
     EmptySkills: "暂无可用技能",
     ExploreSkills: "去发现",
+    ModelPlaceholder: "请选择模型",
     Router: {
       SetupTitle: "先开通可用令牌，再开始对话",
       NoModelTitle: "当前还没有可用文本模型",

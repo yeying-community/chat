@@ -224,6 +224,12 @@
     transform: translateY(-1px);
   }
 
+  .send-action:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
   .featured-masks {
     width: min(720px, calc(100% - 40px));
     min-width: 0;

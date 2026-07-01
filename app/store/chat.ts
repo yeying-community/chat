@@ -63,6 +63,7 @@ import {
 } from "../utils/plain-chat";
 
 const localStorage = safeLocalStorage();
+const LAST_SUCCESSFUL_TEXT_MODEL_KEY = "lastSuccessfulTextModel";
 
 export type ChatMessageTool = {
   id: string;
@@ -798,6 +799,15 @@ export const useChatStore = createPersistStore(
             if (message !== undefined && message !== null) {
               botMessage.content = normalizeMessageContent(message);
               botMessage.date = new Date().toLocaleString();
+              const persistedProviderName =
+                session.skill.modelConfig.providerName ||
+                modelConfig.providerName;
+              if (modelConfig.model && persistedProviderName) {
+                localStorage.setItem(
+                  LAST_SUCCESSFUL_TEXT_MODEL_KEY,
+                  `${modelConfig.model}@${persistedProviderName}`,
+                );
+              }
               get().onNewMessage(botMessage, session);
             }
             botMessage.updatedAt = Date.now();

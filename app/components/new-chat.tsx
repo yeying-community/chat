@@ -92,6 +92,7 @@ function SkillItem(props: {
 
 const localStorage = safeLocalStorage();
 const HIDDEN_ORPHAN_SKILL_KEYS = "hidden-orphan-skill-keys";
+const LAST_SUCCESSFUL_MODEL_KEY = "lastSuccessfulTextModel";
 
 function getSkillEntryKey(skill: Skill) {
   if (skill.packageId) return `package:${skill.packageId}`;
@@ -122,7 +123,9 @@ export function NewChat() {
     (state) => state.builtinOverrides,
   );
   const [draft, setDraft] = useState("");
-  const [selectedModelValue, setSelectedModelValue] = useState("");
+  const [selectedModelValue, setSelectedModelValue] = useState(() => {
+    return (localStorage.getItem(LAST_SUCCESSFUL_MODEL_KEY) || "").trim();
+  });
   const [toolConfig, setToolConfig] = useState<ToolConfigData>();
   const [toolStatuses, setToolStatuses] = useState<
     Record<string, ServerStatusResponse> | undefined
@@ -333,51 +336,13 @@ export function NewChat() {
   const navigate = useNavigate();
   const hasTextModels = textAvailableModels.length > 0;
 
-  const fallbackModelValue = useMemo(() => {
-    const preferredModel = config.modelConfig.model;
-    const preferredProviderName =
-      normalizeProviderName(config.modelConfig.providerName) ??
-      ServiceProvider.OpenAI;
-    const matchedModel = textAvailableModels.find(
-      (model) =>
-        model.name === preferredModel &&
-        model.provider?.providerName === preferredProviderName,
-    );
-    const fallbackModel =
-      matchedModel ??
-      textAvailableModels.find((model) => model.isDefault) ??
-      textAvailableModels[0];
-
-    if (fallbackModel) {
-      return `${fallbackModel.name}@${fallbackModel.provider?.providerName}`;
-    }
-
-    return `${preferredModel}@${preferredProviderName}`;
-  }, [
-    textAvailableModels,
-    config.modelConfig.model,
-    config.modelConfig.providerName,
-  ]);
-
   const activeModelValue = useMemo(() => {
     const modelStillAvailable = textAvailableModels.some(
       (model) =>
         `${model.name}@${model.provider?.providerName}` === selectedModelValue,
     );
-    return modelStillAvailable ? selectedModelValue : fallbackModelValue;
-  }, [textAvailableModels, fallbackModelValue, selectedModelValue]);
-
-  const currentModelLabel = useMemo(() => {
-    const currentModel = textAvailableModels.find(
-      (model) =>
-        `${model.name}@${model.provider?.providerName}` === activeModelValue,
-    );
-    if (currentModel) {
-      return currentModel.displayName ?? currentModel.name;
-    }
-    const [modelName] = getModelProvider(activeModelValue);
-    return modelName || config.modelConfig.model;
-  }, [activeModelValue, textAvailableModels, config.modelConfig.model]);
+    return modelStillAvailable ? selectedModelValue : "";
+  }, [textAvailableModels, selectedModelValue]);
 
   const startChat = (skill?: Skill, initialInput = "", modelValue?: string) => {
     if (chatStore.newSession(skill) === false) {
@@ -417,6 +382,9 @@ export function NewChat() {
   const startDraftChat = () => {
     if (!hasTextModels) {
       navigate(`${Path.Setup}?redirect=${encodeURIComponent(Path.NewChat)}`);
+      return;
+    }
+    if (!activeModelValue) {
       return;
     }
     startChat(defaultChatSkill, draft, activeModelValue);
@@ -503,6 +471,7 @@ export function NewChat() {
               onChange={(event) => setSelectedModelValue(event.target.value)}
               disabled={!hasTextModels}
             >
+              <option value="">{Locale.NewChat.ModelPlaceholder}</option>
               {textAvailableModels.map((model) => (
                 <option
                   key={`${model.name}@${model.provider?.providerName}`}
@@ -515,17 +484,13 @@ export function NewChat() {
                   }`}
                 </option>
               ))}
-              {textAvailableModels.length === 0 && (
-                <option value={activeModelValue || config.modelConfig.model}>
-                  {currentModelLabel}
-                </option>
-              )}
             </select>
           </label>
           <button
             className={styles["send-action"]}
             onClick={startDraftChat}
             type="button"
+            disabled={!hasTextModels || !activeModelValue}
           >
             {defaultChatSkill?.name || Locale.NewChat.BlankTitle}
             <SendWhiteIcon />

@@ -983,6 +983,7 @@ const en: LocaleType = {
     More: "All",
     EmptySkills: "No available skills",
     ExploreSkills: "Discover",
+    ModelPlaceholder: "Choose a model",
     NotShow: "Never Show Again",
     ConfirmNoShow: "Confirm to disable？You can enable it in settings later.",
     Router: {
