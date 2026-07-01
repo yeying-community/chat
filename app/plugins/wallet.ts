@@ -8,7 +8,7 @@ import {
 import {
   focusPendingApproval,
   getProvider,
-  requestAccounts,
+  resolveWalletAccount,
   getChainId as getChainIdFromSdk,
   getBalance as getBalanceFromSdk,
   watchProvider,
@@ -20,6 +20,7 @@ import {
   clearUcanSession,
   type Eip1193Provider,
   type UcanRootProof,
+  type WalletAccountResolution as SdkWalletAccountResolution,
 } from "@yeying-community/web3-bs";
 import {
   UCAN_SESSION_ID,
@@ -87,38 +88,9 @@ export type WalletLoginAccountResolution =
       expectedAccount: string | null;
       accounts: string[];
     }
-  | {
-      status: "wallet";
+  | (SdkWalletAccountResolution & {
       provider: Eip1193Provider;
-      account: string;
-      walletAccount: string;
-      expectedAccount: null;
-      accounts: string[];
-    }
-  | {
-      status: "matched";
-      provider: Eip1193Provider;
-      account: string;
-      walletAccount: string;
-      expectedAccount: string;
-      accounts: string[];
-    }
-  | {
-      status: "mismatch";
-      provider: Eip1193Provider;
-      account: null;
-      walletAccount: string;
-      expectedAccount: string;
-      accounts: string[];
-    }
-  | {
-      status: "unavailable";
-      provider: Eip1193Provider;
-      account: null;
-      walletAccount: null;
-      expectedAccount: string | null;
-      accounts: string[];
-    };
+    });
 
 function getUcanIssuer(address: string) {
   return `did:pkh:eth:${address.toLowerCase()}`;
@@ -127,16 +99,6 @@ function getUcanIssuer(address: string) {
 function normalizeAccount(account?: string | null) {
   const normalized = (account || "").trim();
   return normalized || null;
-}
-
-function isSameAccount(left?: string | null, right?: string | null) {
-  const normalizedLeft = normalizeAccount(left);
-  const normalizedRight = normalizeAccount(right);
-  return Boolean(
-    normalizedLeft &&
-    normalizedRight &&
-    normalizedLeft.toLowerCase() === normalizedRight.toLowerCase(),
-  );
 }
 
 export function isUcanMetaAuthorized(): boolean {
@@ -418,51 +380,15 @@ export async function resolveWalletLoginAccount(
       accounts: [],
     };
   }
-
-  const accounts = await requestAccounts({ provider, dedupe: true });
-  const walletAccount = normalizeAccount(accounts[0]);
-  const expectedAccount = normalizeAccount(preferredAccount);
-
-  if (!walletAccount) {
-    return {
-      status: "unavailable",
-      provider,
-      account: null,
-      walletAccount: null,
-      expectedAccount,
-      accounts,
-    };
-  }
-
-  if (!expectedAccount) {
-    return {
-      status: "wallet",
-      provider,
-      account: walletAccount,
-      walletAccount,
-      expectedAccount: null,
-      accounts,
-    };
-  }
-
-  if (isSameAccount(expectedAccount, walletAccount)) {
-    return {
-      status: "matched",
-      provider,
-      account: walletAccount,
-      walletAccount,
-      expectedAccount,
-      accounts,
-    };
-  }
+  const resolution = await resolveWalletAccount({
+    provider,
+    expectedAccount: normalizeAccount(preferredAccount),
+    autoConnect: true,
+  });
 
   return {
-    status: "mismatch",
     provider,
-    account: null,
-    walletAccount,
-    expectedAccount,
-    accounts,
+    ...resolution,
   };
 }
 
@@ -481,7 +407,7 @@ export async function connectWallet(preferredAccount?: string) {
         return;
       }
       if (resolution.status === "mismatch") {
-        notifyError("请在钱包中切换到选中的账户");
+        notifyInfo("检测到账户不一致，请前往登录页选择登录地址");
         return;
       }
       const currentAccount = resolution.account;

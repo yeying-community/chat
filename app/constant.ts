@@ -54,6 +54,7 @@ export const UPLOAD_URL = `${CACHE_URL_PREFIX}/upload`;
 export enum Path {
   Home = "/",
   Chat = "/chat",
+  Setup = "/setup",
   Settings = "/settings",
   Router = "/router",
   Storage = "/storage",

@@ -965,6 +965,7 @@ const cn = {
     More: "全部",
     EmptySkills: "暂无可用技能",
     ExploreSkills: "去发现",
+    ModelPlaceholder: "请选择模型",
     Router: {
       SetupTitle: "先开通可用令牌，再开始对话",
       NoModelTitle: "当前还没有可用文本模型",
@@ -976,6 +977,12 @@ const cn = {
         "当前令牌还没有返回可用文本模型，请前往 Router 检查令牌额度、模型权限或重新选择令牌。",
       OpenRouter: "前往 Router",
     },
+  },
+  Setup: {
+    Title: "模型配置",
+    SubTitle: "当前工作区还不能开始对话，请先完成 Router 或模型访问配置。",
+    Purchase: "购买",
+    OpenCommunityRouter: "设置 Router",
   },
 
   Router: {
@@ -1176,7 +1183,7 @@ const cn = {
     Title: "AI 绘图",
     SubTitle: (count: number) => `共 ${count} 条绘画`,
     NoModelsText: "当前没有可用的图片模型，",
-    NoModelsAction: "点击购买。",
+    NoModelsAction: "购买",
     EndpointLabel: "端点",
     SourceLabel: "来源",
     Actions: {

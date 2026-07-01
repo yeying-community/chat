@@ -983,6 +983,7 @@ const en: LocaleType = {
     More: "All",
     EmptySkills: "No available skills",
     ExploreSkills: "Discover",
+    ModelPlaceholder: "Choose a model",
     NotShow: "Never Show Again",
     ConfirmNoShow: "Confirm to disable？You can enable it in settings later.",
     Router: {
@@ -1000,6 +1001,13 @@ const en: LocaleType = {
         "The current token did not return any available text models. Go to Router to check balance, model access, or choose another token.",
       OpenRouter: "Open Router",
     },
+  },
+  Setup: {
+    Title: "Model Setup",
+    SubTitle:
+      "This workspace is not ready for chatting yet. Finish Router or model access setup first.",
+    Purchase: "Buy",
+    OpenCommunityRouter: "Set Up Router",
   },
 
   Router: {
@@ -1205,7 +1213,7 @@ const en: LocaleType = {
     Title: "AI Images",
     SubTitle: (count: number) => `${count} images`,
     NoModelsText: "No image models are currently available, ",
-    NoModelsAction: "click to buy.",
+    NoModelsAction: "buy",
     EndpointLabel: "Endpoint",
     SourceLabel: "Source",
     Actions: {

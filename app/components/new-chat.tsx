@@ -26,7 +26,7 @@ import { BUILTIN_SKILL_STORE } from "../skills";
 import clsx from "clsx";
 import { useEffect, useMemo, useState } from "react";
 import { safeLocalStorage } from "../utils";
-import { useRouterTokenStatus, useSessionModels } from "../utils/hooks";
+import { useSessionModels } from "../utils/hooks";
 import { getModelProvider, normalizeProviderName } from "../utils/model";
 import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
@@ -92,6 +92,7 @@ function SkillItem(props: {
 
 const localStorage = safeLocalStorage();
 const HIDDEN_ORPHAN_SKILL_KEYS = "hidden-orphan-skill-keys";
+const LAST_SUCCESSFUL_MODEL_KEY = "lastSuccessfulTextModel";
 
 function getSkillEntryKey(skill: Skill) {
   if (skill.packageId) return `package:${skill.packageId}`;
@@ -122,7 +123,9 @@ export function NewChat() {
     (state) => state.builtinOverrides,
   );
   const [draft, setDraft] = useState("");
-  const [selectedModelValue, setSelectedModelValue] = useState("");
+  const [selectedModelValue, setSelectedModelValue] = useState(() => {
+    return (localStorage.getItem(LAST_SUCCESSFUL_MODEL_KEY) || "").trim();
+  });
   const [toolConfig, setToolConfig] = useState<ToolConfigData>();
   const [toolStatuses, setToolStatuses] = useState<
     Record<string, ServerStatusResponse> | undefined
@@ -331,83 +334,15 @@ export function NewChat() {
   );
 
   const navigate = useNavigate();
-  const hasRouterToken = accessStore.selectedRouterToken.trim().length > 0;
-  const hasRouterApiKey = accessStore.openaiApiKey.trim().length > 0;
   const hasTextModels = textAvailableModels.length > 0;
-  const routerTokenStatus = useRouterTokenStatus();
-  const routerAction =
-    !hasRouterToken && !hasRouterApiKey
-      ? "select"
-      : routerTokenStatus.disabled
-        ? "disabled"
-        : routerTokenStatus.expired
-          ? "renew"
-          : routerTokenStatus.depleted
-            ? "recharge"
-            : "token";
-  const routerRedirectTarget = `${Path.Router}?redirect=${encodeURIComponent(
-    Path.NewChat,
-  )}&action=${routerAction}`;
-  const routerGuidanceTitle =
-    !hasRouterToken && !hasRouterApiKey
-      ? Locale.NewChat.Router.SetupTitle
-      : Locale.NewChat.Router.NoModelTitle;
-  const routerGuidanceDescription =
-    !hasRouterToken && !hasRouterApiKey
-      ? Locale.NewChat.Router.SetupDesc
-      : routerTokenStatus.disabled
-        ? Locale.NewChat.Router.DisabledDesc
-        : routerTokenStatus.expired
-          ? Locale.NewChat.Router.ExpiredDesc
-          : routerTokenStatus.depleted
-            ? Locale.NewChat.Router.DepletedDesc
-            : Locale.NewChat.Router.NoModelDesc;
-
-  const fallbackModelValue = useMemo(() => {
-    const preferredModel = config.modelConfig.model;
-    const preferredProviderName =
-      normalizeProviderName(config.modelConfig.providerName) ??
-      ServiceProvider.OpenAI;
-    const matchedModel = textAvailableModels.find(
-      (model) =>
-        model.name === preferredModel &&
-        model.provider?.providerName === preferredProviderName,
-    );
-    const fallbackModel =
-      matchedModel ??
-      textAvailableModels.find((model) => model.isDefault) ??
-      textAvailableModels[0];
-
-    if (fallbackModel) {
-      return `${fallbackModel.name}@${fallbackModel.provider?.providerName}`;
-    }
-
-    return `${preferredModel}@${preferredProviderName}`;
-  }, [
-    textAvailableModels,
-    config.modelConfig.model,
-    config.modelConfig.providerName,
-  ]);
 
   const activeModelValue = useMemo(() => {
     const modelStillAvailable = textAvailableModels.some(
       (model) =>
         `${model.name}@${model.provider?.providerName}` === selectedModelValue,
     );
-    return modelStillAvailable ? selectedModelValue : fallbackModelValue;
-  }, [textAvailableModels, fallbackModelValue, selectedModelValue]);
-
-  const currentModelLabel = useMemo(() => {
-    const currentModel = textAvailableModels.find(
-      (model) =>
-        `${model.name}@${model.provider?.providerName}` === activeModelValue,
-    );
-    if (currentModel) {
-      return currentModel.displayName ?? currentModel.name;
-    }
-    const [modelName] = getModelProvider(activeModelValue);
-    return modelName || config.modelConfig.model;
-  }, [activeModelValue, textAvailableModels, config.modelConfig.model]);
+    return modelStillAvailable ? selectedModelValue : "";
+  }, [textAvailableModels, selectedModelValue]);
 
   const startChat = (skill?: Skill, initialInput = "", modelValue?: string) => {
     if (chatStore.newSession(skill) === false) {
@@ -446,7 +381,10 @@ export function NewChat() {
 
   const startDraftChat = () => {
     if (!hasTextModels) {
-      navigate(routerRedirectTarget);
+      navigate(`${Path.Setup}?redirect=${encodeURIComponent(Path.NewChat)}`);
+      return;
+    }
+    if (!activeModelValue) {
       return;
     }
     startChat(defaultChatSkill, draft, activeModelValue);
@@ -511,29 +449,6 @@ export function NewChat() {
         ></IconButton>
       </div>
       <div className={styles["title"]}>{Locale.Home.NewChat}</div>
-
-      {!hasTextModels && (
-        <div className={styles["router-guidance"]}>
-          <div className={styles["router-guidance-texts"]}>
-            <div className={styles["router-guidance-title"]}>
-              {routerGuidanceTitle}
-            </div>
-            <div className={styles["router-guidance-desc"]}>
-              {routerGuidanceDescription}
-            </div>
-          </div>
-          <div className={styles["router-guidance-actions"]}>
-            <button
-              type="button"
-              className={styles["router-guidance-primary"]}
-              onClick={() => navigate(routerRedirectTarget)}
-            >
-              {Locale.NewChat.Router.OpenRouter}
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className={styles["launch-panel"]}>
         <textarea
           className={styles["launch-input"]}
@@ -556,6 +471,7 @@ export function NewChat() {
               onChange={(event) => setSelectedModelValue(event.target.value)}
               disabled={!hasTextModels}
             >
+              <option value="">{Locale.NewChat.ModelPlaceholder}</option>
               {textAvailableModels.map((model) => (
                 <option
                   key={`${model.name}@${model.provider?.providerName}`}
@@ -568,17 +484,13 @@ export function NewChat() {
                   }`}
                 </option>
               ))}
-              {textAvailableModels.length === 0 && (
-                <option value={activeModelValue || config.modelConfig.model}>
-                  {currentModelLabel}
-                </option>
-              )}
             </select>
           </label>
           <button
             className={styles["send-action"]}
             onClick={startDraftChat}
             type="button"
+            disabled={!hasTextModels || !activeModelValue}
           >
             {defaultChatSkill?.name || Locale.NewChat.BlankTitle}
             <SendWhiteIcon />
