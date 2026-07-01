@@ -977,6 +977,16 @@ const cn = {
       OpenRouter: "前往 Router",
     },
   },
+  Setup: {
+    Title: "模型配置",
+    SubTitle: "当前工作区还不能开始对话，请先完成 Router 或模型访问配置。",
+    SectionTitle: "聊天能力",
+    SectionDesc: "检测到可用文本模型后，你就可以开始新建会话或继续已有对话。",
+    OpenSettings: "打开设置",
+    Continue: "前往新建会话",
+    ReadyTitle: "已检测到可用文本模型",
+    ReadyDesc: "当前工作区已经具备聊天能力，可以继续创建新会话。",
+  },
 
   Router: {
     RefreshModels: "刷新模型",

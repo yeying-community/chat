@@ -1001,6 +1001,19 @@ const en: LocaleType = {
       OpenRouter: "Open Router",
     },
   },
+  Setup: {
+    Title: "Model Setup",
+    SubTitle:
+      "This workspace is not ready for chatting yet. Finish Router or model access setup first.",
+    SectionTitle: "Chat readiness",
+    SectionDesc:
+      "Once an available text model is detected, you can start a new session or continue existing conversations.",
+    OpenSettings: "Open Settings",
+    Continue: "Go to New Session",
+    ReadyTitle: "A text model is now available",
+    ReadyDesc:
+      "This workspace is ready for chatting now. You can continue by creating a new session.",
+  },
 
   Router: {
     RefreshModels: "Refresh Models",

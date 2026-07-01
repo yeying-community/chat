@@ -3,7 +3,13 @@
 require("../polyfill");
 import "../utils/account-workspace";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import styles from "./home.module.scss";
 
 import BotIcon from "../icons/bot.svg";
@@ -30,6 +36,7 @@ import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { getRouterClientApi } from "../client/api";
+import { supportsTextEndpoint } from "../client/api";
 import { useAccessStore, useSkillProviderModelsStore } from "../store";
 import clsx from "clsx";
 import { initializeToolSystem, isToolRuntimeEnabled } from "../tools/actions";
@@ -46,6 +53,12 @@ import {
 import { useToastStore } from "../store/toast";
 import { useAutoSync } from "../hooks/useAutoSync";
 import { notifyErrorWithOptions } from "../plugins/show_window";
+import {
+  getAccountWorkspaceStatus,
+  subscribeAccountWorkspaceStatus,
+} from "../utils/account-workspace";
+import { useSessionModels } from "../utils/hooks";
+import { useChatStore } from "../store/chat";
 
 const loadFunc = async () => {
   try {
@@ -119,6 +132,12 @@ const Chat = dynamic(async () => (await import("./chat")).Chat, {
 const NewChat = dynamic(async () => (await import("./new-chat")).NewChat, {
   loading: () => <Loading noLogo />,
 });
+const SetupPage = dynamic(
+  async () => (await import("./setup-page")).SetupPage,
+  {
+    loading: () => <Loading noLogo />,
+  },
+);
 
 const SkillPage = dynamic(
   async () => (await import("./skill-editor")).SkillPage,
@@ -155,6 +174,24 @@ const DiscoveryPage = dynamic(
     loading: () => <Loading noLogo />,
   },
 );
+
+let authenticatedBootstrapModelsReady = false;
+const authenticatedBootstrapListeners = new Set<() => void>();
+
+function setAuthenticatedBootstrapModelsReady(nextReady: boolean) {
+  if (authenticatedBootstrapModelsReady === nextReady) return;
+  authenticatedBootstrapModelsReady = nextReady;
+  authenticatedBootstrapListeners.forEach((listener) => listener());
+}
+
+function subscribeAuthenticatedBootstrapModelsReady(listener: () => void) {
+  authenticatedBootstrapListeners.add(listener);
+  return () => authenticatedBootstrapListeners.delete(listener);
+}
+
+function getAuthenticatedBootstrapModelsReady() {
+  return authenticatedBootstrapModelsReady;
+}
 
 export function useSwitchTheme() {
   const config = useAppConfig();
@@ -230,16 +267,42 @@ export function WindowContent(props: { children: React.ReactNode }) {
 
 function Screen() {
   const config = useAppConfig();
+  const availableModels = useSessionModels();
+  const sessions = useChatStore((state) => state.sessions);
   const location = useLocation();
   const navigate = useNavigate();
   const { authorized: isAuthorized, checking: isCheckingAuth } =
     useUcanAuthState();
+  const workspaceStatus = useSyncExternalStore(
+    subscribeAccountWorkspaceStatus,
+    getAccountWorkspaceStatus,
+    getAccountWorkspaceStatus,
+  );
   const isArtifact = location.pathname.includes(Path.Artifacts);
   const isHome = location.pathname === Path.Home;
   const isAuth = location.pathname === Path.Auth;
   const isSd = location.pathname === Path.Sd;
   const isSdNew = location.pathname === Path.SdNew;
   const isMobileScreen = useMobileScreen();
+  const modelsReady = useAuthenticatedBootstrap(
+    isAuthorized && workspaceStatus === "ready",
+  );
+  const hasTextModels = useMemo(
+    () =>
+      availableModels.some((model) => {
+        if (!model.available) return false;
+        const tags = Array.isArray(model.tags) ? model.tags : [];
+        if (tags.length > 0) return tags.includes("text");
+        const endpoints = model.supportedEndpoints ?? [];
+        if (endpoints.length > 0) return supportsTextEndpoint(endpoints);
+        return true;
+      }),
+    [availableModels],
+  );
+  const hasConversationSessions = useMemo(
+    () => sessions.some((session) => session.messages.length > 0),
+    [sessions],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -273,6 +336,42 @@ function Screen() {
     location.pathname,
     location.search,
     navigate,
+  ]);
+
+  useEffect(() => {
+    if (!isAuthorized || isCheckingAuth) return;
+    if (workspaceStatus !== "ready" || !modelsReady) return;
+
+    const redirectToSetup = () => {
+      const redirect = encodeURIComponent(location.pathname + location.search);
+      navigate(`${Path.Setup}?redirect=${redirect}`, { replace: true });
+    };
+
+    if (
+      !hasTextModels &&
+      [Path.Home, Path.Chat, Path.NewChat].includes(location.pathname as Path)
+    ) {
+      redirectToSetup();
+      return;
+    }
+
+    if (
+      hasTextModels &&
+      location.pathname === Path.Home &&
+      !hasConversationSessions
+    ) {
+      navigate(Path.NewChat, { replace: true });
+    }
+  }, [
+    hasConversationSessions,
+    hasTextModels,
+    isAuthorized,
+    isCheckingAuth,
+    location.pathname,
+    location.search,
+    modelsReady,
+    navigate,
+    workspaceStatus,
   ]);
 
   useEffect(() => {
@@ -311,6 +410,9 @@ function Screen() {
   if (isCheckingAuth) {
     return <Loading noLogo />;
   }
+  if (isAuthorized && (workspaceStatus !== "ready" || !modelsReady)) {
+    return <Loading noLogo />;
+  }
   const renderContent = () => {
     if (isAuth) return <AuthPage />;
     if (!isAuthorized) return <AuthPage />;
@@ -318,7 +420,6 @@ function Screen() {
     if (isSdNew) return <Navigate to={Path.Sd} replace />;
     return (
       <>
-        {isAuthorized ? <AuthenticatedBootstrap /> : null}
         <SideBar
           className={clsx({
             [styles["sidebar-show"]]: isHome,
@@ -329,6 +430,7 @@ function Screen() {
             <Routes>
               <Route path={Path.Home} element={<Chat />} />
               <Route path={Path.NewChat} element={<NewChat />} />
+              <Route path={Path.Setup} element={<SetupPage />} />
               <Route path={Path.Skills} element={<SkillPage />} />
               <Route path={Path.Masks} element={<SkillPage />} />
               <Route path={Path.Plugins} element={<PluginPage />} />
@@ -355,43 +457,6 @@ function Screen() {
       {renderContent()}
     </div>
   );
-}
-
-export function useLoadData() {
-  const mergeModels = useAppConfig((state) => state.mergeModels);
-  const setSkillProviderModels = useSkillProviderModelsStore(
-    (state) => state.setModels,
-  );
-  const loadModels = useCallback(async () => {
-    const api = getRouterClientApi();
-    const [models, providerModels] = await Promise.all([
-      api.llm.models(),
-      api.llm.providerModels?.() ?? Promise.resolve([]),
-    ]);
-    mergeModels(models);
-    setSkillProviderModels(providerModels);
-  }, [mergeModels, setSkillProviderModels]);
-
-  useEffect(() => {
-    loadModels().catch((error) => {
-      console.warn("[Models] initial load failed", error);
-    });
-  }, [loadModels]);
-
-  useEffect(() => {
-    const onAuthChange = () => {
-      isValidUcanAuthorization()
-        .then((valid) => {
-          if (!valid) return;
-          return loadModels();
-        })
-        .catch((error) => {
-          console.warn("[Models] reload after auth failed", error);
-        });
-    };
-    window.addEventListener(UCAN_AUTH_EVENT, onAuthChange);
-    return () => window.removeEventListener(UCAN_AUTH_EVENT, onAuthChange);
-  }, [loadModels]);
 }
 
 function useUcanAuthState() {
@@ -439,11 +504,63 @@ function useUcanAuthState() {
   return state;
 }
 
-function AuthenticatedBootstrap() {
-  useLoadData();
+function useAuthenticatedBootstrap(enabled: boolean) {
+  const mergeModels = useAppConfig((state) => state.mergeModels);
+  const setSkillProviderModels = useSkillProviderModelsStore(
+    (state) => state.setModels,
+  );
+  const modelsReady = useSyncExternalStore(
+    subscribeAuthenticatedBootstrapModelsReady,
+    getAuthenticatedBootstrapModelsReady,
+    getAuthenticatedBootstrapModelsReady,
+  );
+
   useAutoSync();
 
+  const loadModels = useCallback(async () => {
+    const api = getRouterClientApi();
+    const [models, providerModels] = await Promise.all([
+      api.llm.models(),
+      api.llm.providerModels?.() ?? Promise.resolve([]),
+    ]);
+    mergeModels(models);
+    setSkillProviderModels(providerModels);
+  }, [mergeModels, setSkillProviderModels]);
+
   useEffect(() => {
+    if (!enabled) {
+      setAuthenticatedBootstrapModelsReady(false);
+      return;
+    }
+    let cancelled = false;
+    setAuthenticatedBootstrapModelsReady(false);
+    loadModels()
+      .catch((error) => {
+        console.warn("[Models] initial load failed", error);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthenticatedBootstrapModelsReady(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, loadModels]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onAuthChange = () => {
+      loadModels().catch((error) => {
+        console.warn("[Models] reload after auth failed", error);
+      });
+    };
+    window.addEventListener(UCAN_AUTH_EVENT, onAuthChange);
+    return () => window.removeEventListener(UCAN_AUTH_EVENT, onAuthChange);
+  }, [enabled, loadModels]);
+
+  useEffect(() => {
+    if (!enabled) return;
     useAccessStore.getState().fetch();
 
     const initToolRuntime = async () => {
@@ -457,9 +574,9 @@ function AuthenticatedBootstrap() {
       }
     };
     initToolRuntime();
-  }, []);
+  }, [enabled]);
 
-  return null;
+  return modelsReady;
 }
 
 export function Home() {
