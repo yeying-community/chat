@@ -148,7 +148,7 @@ import {
 } from "../utils/model";
 import {
   disablePlainChatReasoning,
-  isPlainChatSkill,
+  isPlainChatLikeSkill,
 } from "../utils/plain-chat";
 import { RealtimeChat } from "@/app/components/realtime-chat";
 import clsx from "clsx";
@@ -1445,7 +1445,7 @@ function ChatView() {
       // auto sync mask config from global config
       const shouldSyncFromGlobal = sessionSkill.syncGlobalConfig !== false;
       if (shouldSyncFromGlobal) {
-        sessionSkill.modelConfig = isPlainChatSkill(sessionSkill)
+        sessionSkill.modelConfig = isPlainChatLikeSkill(sessionSkill)
           ? disablePlainChatReasoning(config.modelConfig)
           : { ...config.modelConfig };
       }
