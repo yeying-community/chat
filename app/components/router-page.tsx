@@ -29,6 +29,7 @@ import { Path, ServiceProvider } from "../constant";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   RouterApi,
+  isRouterPublicTokenSelectable,
   type RouterPublicToken,
   type RouterTokenStatus,
 } from "../client/platforms/router";
@@ -135,28 +136,6 @@ function formatRouterDate(value?: number) {
   });
 }
 
-function isRouterTokenSelectable(token: RouterPublicToken) {
-  const status = token.status;
-  const statusValue =
-    typeof status === "string" ? status.trim().toLowerCase() : status;
-  const statusOk =
-    statusValue === undefined ||
-    statusValue === null ||
-    statusValue === "" ||
-    statusValue === 1 ||
-    statusValue === "1" ||
-    statusValue === "enabled" ||
-    statusValue === "active";
-
-  if (!statusOk) return false;
-
-  if (token.unlimited_quota === true) return true;
-
-  const remaining = token.remaining_amount ?? token.remain_quota;
-  if (remaining === undefined || remaining === null) return true;
-  return Number(remaining) > 0;
-}
-
 export function RouterPage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -257,7 +236,8 @@ export function RouterPage() {
     subscription: updateStore.subscription,
   };
   const availableTokens = useMemo(
-    () => tokens.filter((token) => token && isRouterTokenSelectable(token)),
+    () =>
+      tokens.filter((token) => token && isRouterPublicTokenSelectable(token)),
     [tokens],
   );
   const defaultToken = availableTokens[0];
