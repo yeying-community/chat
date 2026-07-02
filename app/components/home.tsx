@@ -47,6 +47,7 @@ import { initializeToolSystem, isToolRuntimeEnabled } from "../tools/actions";
 import {
   UCAN_AUTH_EVENT,
   initWalletListeners,
+  isUcanAuthTransitioning,
   isValidUcanAuthorization,
   waitForWallet,
 } from "../plugins/wallet";
@@ -477,6 +478,14 @@ function useUcanAuthState() {
     let refreshToken = 0;
     const refresh = async () => {
       const token = ++refreshToken;
+      if (isUcanAuthTransitioning()) {
+        if (cancelled || token !== refreshToken) return;
+        setState((current) => ({
+          authorized: current.authorized,
+          checking: true,
+        }));
+        return;
+      }
       const authorized = await isValidUcanAuthorization();
       if (cancelled || token !== refreshToken) return;
       setState({
