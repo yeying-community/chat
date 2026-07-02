@@ -1116,6 +1116,7 @@ const en: LocaleType = {
       },
       Capabilities: {
         Text: "Text",
+        Vision: "Vision",
         Image: "Image",
         Edit: "Edit",
         Reasoning: "Reasoning",

@@ -25,7 +25,7 @@ import {
   getMessageTextContent,
   getMessageTextContentWithoutThinking,
   getTimeoutMSByModel,
-  isVisionModel,
+  isVisionCapableModel,
 } from "@/app/utils";
 import { fetch } from "@/app/utils/stream";
 import { applyQwenReasoning } from "../reasoning";
@@ -104,7 +104,7 @@ export class QwenApi implements LLMApi {
       },
     };
 
-    const visionModel = isVisionModel(options.config.model);
+    const visionModel = isVisionCapableModel(options.config);
 
     const messages: ChatOptions["messages"] = [];
     for (const v of options.messages) {

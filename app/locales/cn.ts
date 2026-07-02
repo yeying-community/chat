@@ -1085,6 +1085,7 @@ const cn = {
       },
       Capabilities: {
         Text: "文本",
+        Vision: "识图",
         Image: "生图",
         Edit: "编辑",
         Reasoning: "深度思考",

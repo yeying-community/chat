@@ -71,7 +71,7 @@ import {
   getMessageTextContent,
   isDalle3,
   isGptImageModel,
-  isVisionModel,
+  isVisionCapableModel,
   safeLocalStorage,
   getModelSizes,
   supportsCustomSize,
@@ -589,6 +589,17 @@ export function ChatActions(props: {
       return sessionModels;
     }
   }, [sessionModels]);
+  const currentRuntimeModel = useMemo(
+    () =>
+      models.find(
+        (m) =>
+          m.name === currentModel &&
+          m.provider?.providerName === currentProviderName,
+      ),
+    [currentModel, currentProviderName, models],
+  );
+  const currentModelTags =
+    sessionSkill.modelConfig.tags ?? currentRuntimeModel?.tags;
   const currentModelName = useMemo(() => {
     if (models.length === 0) {
       return hasCandidateModelRestriction
@@ -654,7 +665,9 @@ export function ChatActions(props: {
   const isMobileScreen = useMobileScreen();
 
   useEffect(() => {
-    const show = toolbar.imageUpload && isVisionModel(currentModel);
+    const show =
+      toolbar.imageUpload &&
+      isVisionCapableModel({ model: currentModel, tags: currentModelTags });
     setShowUploadImage(show);
     if (!show) {
       setAttachContents([]);
@@ -699,6 +712,7 @@ export function ChatActions(props: {
     chatStore,
     currentProviderName,
     currentModel,
+    currentModelTags,
     models,
     session,
     setAttachContents,
@@ -807,11 +821,26 @@ export function ChatActions(props: {
             onSelection={(s) => {
               if (s.length === 0) return;
               const [model, providerName] = getModelProvider(s[0]);
+              const selectedModel = models.find(
+                (m) =>
+                  m.name == model && m?.provider?.providerName == providerName,
+              );
               chatStore.updateTargetSession(session, (session) => {
                 const sessionSkill = session.skill;
+                const supportedEndpoints = normalizeSupportedEndpoints(
+                  selectedModel?.supportedEndpoints,
+                );
                 sessionSkill.modelConfig.model = model as ModelType;
                 sessionSkill.modelConfig.providerName =
                   providerName as ServiceProvider;
+                sessionSkill.modelConfig.supportedEndpoints =
+                  supportedEndpoints;
+                sessionSkill.modelConfig.endpointPath =
+                  selectPreferredRequestEndpoint(supportedEndpoints, {
+                    modelName: model,
+                  });
+                sessionSkill.modelConfig.ownedBy = selectedModel?.ownedBy;
+                sessionSkill.modelConfig.tags = selectedModel?.tags;
                 sessionSkill.modelConfig.quality = isGptImageModel(model)
                   ? "auto"
                   : isDalle3(model)
@@ -820,11 +849,6 @@ export function ChatActions(props: {
                 sessionSkill.syncGlobalConfig = false;
               });
               if (providerName == ServiceProvider.Volcengine) {
-                const selectedModel = models.find(
-                  (m) =>
-                    m.name == model &&
-                    m?.provider?.providerName == providerName,
-                );
                 showToast(selectedModel?.displayName ?? "");
               } else {
                 showToast(model);
@@ -1770,8 +1794,13 @@ function ChatView() {
 
   const handlePaste = useCallback(
     async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const currentModel = chatStore.currentSession().skill.modelConfig.model;
-      if (!isVisionModel(currentModel)) {
+      const currentModelConfig = chatStore.currentSession().skill.modelConfig;
+      if (
+        !isVisionCapableModel({
+          model: currentModelConfig.model,
+          tags: currentModelConfig.tags,
+        })
+      ) {
         return;
       }
       const items = (event.clipboardData || window.clipboardData).items;

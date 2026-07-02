@@ -40,6 +40,7 @@ import {
   getAccountWorkspaceStatus,
   subscribeAccountWorkspaceStatus,
 } from "../utils/account-workspace";
+import { isVisionCapableModel } from "../utils";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
@@ -62,6 +63,7 @@ function isImageModel(model: LLMModel) {
   const tags = getModelTags(model);
   const modelType = model.modelType?.trim().toLowerCase();
   return (
+    isVisionCapableModel({ model: model.name, tags: model.tags }) ||
     tags.includes("image") ||
     modelType === "image" ||
     supportsImageGenerationEndpoint(model.supportedEndpoints) ||
@@ -118,6 +120,8 @@ function maskRouterTokenKey(value?: string) {
 function capabilityBadges(model: LLMModel) {
   const badges: string[] = [];
   if (isTextModel(model)) badges.push(Locale.Router.Models.Capabilities.Text);
+  if (isVisionCapableModel({ model: model.name, tags: model.tags }))
+    badges.push(Locale.Router.Models.Capabilities.Vision);
   if (supportsImageGenerationEndpoint(model.supportedEndpoints))
     badges.push(Locale.Router.Models.Capabilities.Image);
   if (supportsImageEditEndpoint(model.supportedEndpoints))
