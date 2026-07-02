@@ -21,7 +21,7 @@ import {
 } from "@/app/store/native-tools";
 import { getClientConfig } from "@/app/config/client";
 import { ANTHROPIC_BASE_URL } from "@/app/constant";
-import { getMessageTextContent, isVisionModel } from "@/app/utils";
+import { getMessageTextContent, isVisionCapableModel } from "@/app/utils";
 import { preProcessImageContent, stream } from "@/app/utils/chat";
 import { cloudflareAIGatewayUrl } from "@/app/utils/cloudflare";
 import { RequestPayload } from "./openai";
@@ -218,7 +218,7 @@ export class ClaudeApi implements LLMApi {
     return res?.content?.[0]?.text;
   }
   async chat(options: ChatOptions): Promise<void> {
-    const visionModel = isVisionModel(options.config.model);
+    const visionModel = isVisionCapableModel(options.config);
 
     const accessStore = useAccessStore.getState();
 

@@ -28,6 +28,7 @@ import { useEffect, useMemo, useState } from "react";
 import { safeLocalStorage } from "../utils";
 import { useSessionModels } from "../utils/hooks";
 import { getModelProvider, normalizeProviderName } from "../utils/model";
+import { isGeneralChatSkill } from "../utils/plain-chat";
 import { ServiceProvider } from "../constant";
 import { useAccessStore } from "../store/access";
 import {
@@ -100,15 +101,6 @@ function getSkillEntryKey(skill: Skill) {
     return `skill:${skill.lang}:${skill.createdAt}:${skill.name}`;
   }
   return skill.id || skill.name;
-}
-
-function isGeneralChatSkill(skill: Skill) {
-  return (
-    skill.name === "通用问答" ||
-    skill.name === "Direct Chat" ||
-    skill.createdAt === 1700000001001 ||
-    skill.createdAt === 1700000002001
-  );
 }
 
 export function NewChat() {

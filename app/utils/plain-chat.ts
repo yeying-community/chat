@@ -24,6 +24,19 @@ export function isPlainChatSkill(skill: Skill) {
   );
 }
 
+export function isGeneralChatSkill(skill: Skill) {
+  return (
+    skill.name === "通用问答" ||
+    skill.name === "Direct Chat" ||
+    skill.createdAt === 1700000001001 ||
+    skill.createdAt === 1700000002001
+  );
+}
+
+export function isPlainChatLikeSkill(skill: Skill) {
+  return isPlainChatSkill(skill) || isGeneralChatSkill(skill);
+}
+
 export const LEGACY_PLAIN_CHAT_SKILL_NAMES = new Set([
   "新的聊天",
   "New Conversation",

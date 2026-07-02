@@ -59,6 +59,7 @@ import { isValidUcanAuthorization } from "../plugins/wallet";
 import { shouldUseNativeToolBridge } from "./native-tools";
 import {
   disablePlainChatReasoning,
+  isPlainChatLikeSkill,
   isPlainChatSkill,
 } from "../utils/plain-chat";
 
@@ -686,11 +687,11 @@ export const useChatStore = createPersistStore(
           return;
         }
         const session = get().currentSession();
-        const modelConfig = isPlainChatSkill(session.skill)
+        const modelConfig = isPlainChatLikeSkill(session.skill)
           ? disablePlainChatReasoning(session.skill.modelConfig)
           : session.skill.modelConfig;
         if (
-          isPlainChatSkill(session.skill) &&
+          isPlainChatLikeSkill(session.skill) &&
           session.skill.modelConfig.reasoningMode !== modelConfig.reasoningMode
         ) {
           get().updateTargetSession(session, (session) => {

@@ -48,9 +48,25 @@ const providerOptions = {
 export const UCAN_AUTH_EVENT = "ucan-auth-change";
 export const UCAN_AUTH_ERROR_EVENT = "ucan-auth-error";
 
+let authTransitionDepth = 0;
+
 function emitAuthChange() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(UCAN_AUTH_EVENT));
+}
+
+function beginAuthTransition() {
+  authTransitionDepth += 1;
+  emitAuthChange();
+}
+
+function endAuthTransition() {
+  authTransitionDepth = Math.max(0, authTransitionDepth - 1);
+  emitAuthChange();
+}
+
+export function isUcanAuthTransitioning() {
+  return authTransitionDepth > 0;
 }
 
 export async function invalidateUcanAuthorization(reason?: string) {
@@ -289,15 +305,33 @@ function bindWalletListeners(provider: Eip1193Provider) {
 
     const nextAccount = accounts[0];
     if (nextAccount !== lastObservedAccount) {
+      const previousAccount = lastObservedAccount;
       lastObservedAccount = nextAccount;
       localStorage.setItem("currentAccount", nextAccount);
-      await clearUcanSession(UCAN_SESSION_ID);
-      clearWalletAuthState();
-      emitAuthChange();
-      await loginWithUcan(provider, nextAccount, {
-        silent: true,
-        reload: false,
-      });
+      beginAuthTransition();
+      try {
+        await clearUcanSession(UCAN_SESSION_ID);
+        clearWalletAuthState();
+        await loginWithUcan(provider, nextAccount, {
+          silent: true,
+          reload: false,
+        });
+        const reauthorized = await isValidUcanAuthorization();
+        if (!reauthorized) {
+          throw new Error("silent reauth did not restore UCAN authorization");
+        }
+      } catch (error) {
+        console.warn("[Wallet] silent reauth after account change failed", {
+          previousAccount,
+          nextAccount,
+          error,
+        });
+        clearWalletAuthState({ clearAccount: true });
+        lastObservedAccount = "";
+        emitAuthChange();
+      } finally {
+        endAuthTransition();
+      }
     }
   };
 

@@ -38,11 +38,16 @@ import { getClientConfig } from "../config/client";
 import { getRouterClientApi } from "../client/api";
 import { supportsTextEndpoint } from "../client/api";
 import { useAccessStore, useSkillProviderModelsStore } from "../store";
+import {
+  RouterApi,
+  isRouterPublicTokenSelectable,
+} from "../client/platforms/router";
 import clsx from "clsx";
 import { initializeToolSystem, isToolRuntimeEnabled } from "../tools/actions";
 import {
   UCAN_AUTH_EVENT,
   initWalletListeners,
+  isUcanAuthTransitioning,
   isValidUcanAuthorization,
   waitForWallet,
 } from "../plugins/wallet";
@@ -473,6 +478,14 @@ function useUcanAuthState() {
     let refreshToken = 0;
     const refresh = async () => {
       const token = ++refreshToken;
+      if (isUcanAuthTransitioning()) {
+        if (cancelled || token !== refreshToken) return;
+        setState((current) => ({
+          authorized: current.authorized,
+          checking: true,
+        }));
+        return;
+      }
       const authorized = await isValidUcanAuthorization();
       if (cancelled || token !== refreshToken) return;
       setState({
@@ -506,6 +519,11 @@ function useUcanAuthState() {
 
 function useAuthenticatedBootstrap(enabled: boolean) {
   const mergeModels = useAppConfig((state) => state.mergeModels);
+  const selectedRouterToken = useAccessStore((state) =>
+    state.selectedRouterToken.trim(),
+  );
+  const routerApiKey = useAccessStore((state) => state.openaiApiKey.trim());
+  const routerBaseUrl = useAccessStore((state) => state.openaiUrl.trim());
   const setSkillProviderModels = useSkillProviderModelsStore(
     (state) => state.setModels,
   );
@@ -517,7 +535,28 @@ function useAuthenticatedBootstrap(enabled: boolean) {
 
   useAutoSync();
 
+  const ensureRouterToken = useCallback(async () => {
+    const accessStore = useAccessStore.getState();
+    if (
+      accessStore.selectedRouterToken.trim() ||
+      accessStore.openaiApiKey.trim()
+    ) {
+      return;
+    }
+
+    const tokens = await new RouterApi().publicTokens();
+    const token = tokens.find(isRouterPublicTokenSelectable)?.key?.trim();
+    if (!token) return;
+
+    accessStore.update((state) => {
+      if (!state.selectedRouterToken.trim()) {
+        state.selectedRouterToken = token;
+      }
+    });
+  }, []);
+
   const loadModels = useCallback(async () => {
+    await ensureRouterToken();
     const api = getRouterClientApi();
     const [models, providerModels] = await Promise.all([
       api.llm.models(),
@@ -525,7 +564,7 @@ function useAuthenticatedBootstrap(enabled: boolean) {
     ]);
     mergeModels(models);
     setSkillProviderModels(providerModels);
-  }, [mergeModels, setSkillProviderModels]);
+  }, [ensureRouterToken, mergeModels, setSkillProviderModels]);
 
   useEffect(() => {
     if (!enabled) {
@@ -546,7 +585,7 @@ function useAuthenticatedBootstrap(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, loadModels]);
+  }, [enabled, loadModels, routerApiKey, routerBaseUrl, selectedRouterToken]);
 
   useEffect(() => {
     if (!enabled) return;
