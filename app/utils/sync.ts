@@ -46,6 +46,38 @@ function getMessageUpdatedAt(message: { updatedAt?: number; date?: string }) {
   return 0;
 }
 
+function isDefaultPlaceholderSession(session: ChatSession) {
+  const skill = session.skill;
+  return (
+    session.messages.length === 0 &&
+    session.topic === "通用问答" &&
+    session.type === "chat" &&
+    !session.memoryPrompt &&
+    !session.clearContextIndex &&
+    skill?.name === "通用问答" &&
+    !skill.builtin &&
+    !skill.packageId &&
+    !skill.description &&
+    !skill.category &&
+    !skill.starters?.length &&
+    !skill.context?.length &&
+    !skill.plugin?.length &&
+    !skill.tools?.builtInTools?.length &&
+    !skill.tools?.toolServers?.length &&
+    !skill.tools?.apiTools?.length &&
+    !skill.launch
+  );
+}
+
+function dropDefaultPlaceholderSessionsWhenPossible(sessions: ChatSession[]) {
+  const nonPlaceholderSessions = sessions.filter(
+    (session) => !isDefaultPlaceholderSession(session),
+  );
+  return nonPlaceholderSessions.length > 0
+    ? nonPlaceholderSessions
+    : sessions.slice(0, 1);
+}
+
 function mergeDeletedSessions(
   localDeleted: Record<string, number> | undefined,
   remoteDeleted: Record<string, number> | undefined,
@@ -272,7 +304,9 @@ const MergeStates: StateMerger = {
       }
     });
 
-    localState.sessions = localState.sessions.filter(shouldKeepSession);
+    localState.sessions = dropDefaultPlaceholderSessionsWhenPossible(
+      localState.sessions.filter(shouldKeepSession),
+    );
 
     // sort local sessions with date field in desc order
     localState.sessions.sort(
@@ -356,6 +390,9 @@ export function getLocalAppStateForSync() {
         return updatedAt > deletedAt;
       }),
     }));
+  chatState.sessions = dropDefaultPlaceholderSessionsWhenPossible(
+    chatState.sessions,
+  );
 
   return {
     ...appState,
