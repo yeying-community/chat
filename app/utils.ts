@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { showToast } from "./components/ui-lib";
 import Locale from "./locales";
-import { MultimodalContent, RequestMessage } from "./client/api";
+import { LLMConfig, MultimodalContent, RequestMessage } from "./client/api";
 import {
   REQUEST_TIMEOUT_MS,
   REQUEST_TIMEOUT_MS_FOR_THINKING,
@@ -365,6 +365,16 @@ export function isVisionModel(model: string) {
     !EXCLUDE_VISION_MODEL_REGEXES.some((regex) => regex.test(model)) &&
     VISION_MODEL_REGEXES.some((regex) => regex.test(model))
   );
+}
+
+export function isVisionCapableModel(
+  config: Pick<LLMConfig, "model" | "tags">,
+) {
+  const tags = Array.isArray(config.tags)
+    ? config.tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (tags.includes("vision")) return true;
+  return isVisionModel(config.model);
 }
 
 export function isDalle3(model: string) {

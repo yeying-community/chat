@@ -42,6 +42,7 @@ import {
   getBuiltinSkillPackageId,
   getSkillApiTools,
   getSkillBuiltInTools,
+  getSkillSessionToolbar,
   getSkillToolServers,
   isBuiltinSkillOverride,
   mergeVisibleSkills,
@@ -51,7 +52,8 @@ import { usePluginStore } from "../store/plugin";
 import { IconButton } from "./button";
 import { ErrorBoundary } from "./error";
 import { List, ListItem, Modal, showToast } from "./ui-lib";
-import { SkillConfig } from "./skill-editor";
+import { ModelConfigList } from "./model-config";
+import { RealtimeConfigList } from "./realtime-chat/realtime-config";
 import AddIcon from "../icons/add.svg";
 import BrainIcon from "../icons/brain.svg";
 import CloseIcon from "../icons/close.svg";
@@ -67,6 +69,13 @@ import { useSdStore } from "../store/sd";
 import { useSyncStore } from "../store/sync";
 import { fetchQuota, WebDAVQuota } from "../plugins/webdav";
 import { formatBytes } from "../utils/format";
+import { resolveImageModels } from "./sd/image-registry";
+import {
+  createDefaultRealtimeConfig,
+  type RealtimeConfig,
+} from "../store/realtime";
+import { useAllModels } from "../utils/hooks";
+import { filterModelsByCandidates } from "../utils/model";
 import {
   getSkillRuntimeIssueSummary,
   getSkillRuntimeStatusOrder,
@@ -127,6 +136,7 @@ const OFFICIAL_MARKETPLACE_SKILL_PACKAGE_IDS = new Set([
   "web-research",
   "reading-summary",
 ]);
+const HIDDEN_DISCOVERY_TOOL_SERVER_IDS = new Set(["everything"]);
 
 function getInitialType(search: string): CapabilityType {
   const type = new URLSearchParams(search).get("type");
@@ -185,6 +195,214 @@ function isSensitiveToolConfigField(
 
 function isOfficialMarketplaceSkillPackage(skillPackage: SkillPackage) {
   return OFFICIAL_MARKETPLACE_SKILL_PACKAGE_IDS.has(skillPackage.id);
+}
+
+function DiscoverySkillSetup(props: {
+  skill: Skill;
+  runtimeResult?: SkillRuntimeResult;
+  updateSkill: (updater: (skill: Skill) => void) => void;
+}) {
+  const skill = props.skill;
+  const toolbar = getSkillSessionToolbar(skill);
+  const isRealtimeSkill = Boolean(toolbar.realtime && skill.realtimeConfig);
+  const isImageSkill = skill.launch?.type === "sd";
+  const runtimeIssues = props.runtimeResult?.issues ?? [];
+  const allModels = useAllModels();
+  const skillModelOptions = useMemo(
+    () => filterModelsByCandidates(allModels, skill.candidateModels),
+    [allModels, skill.candidateModels],
+  );
+  const imageModels = useMemo(
+    () =>
+      resolveImageModels(
+        allModels.filter((model) => model.available),
+        "generation",
+      ),
+    [allModels],
+  );
+  const selectedImageModel = useMemo(
+    () =>
+      imageModels.find((model) => model.value === skill.modelConfig.model) ??
+      imageModels[0],
+    [imageModels, skill.modelConfig.model],
+  );
+  const imageParamSchemas = useMemo(
+    () =>
+      selectedImageModel
+        ?.params({
+          ...skill.modelConfig,
+          model: selectedImageModel.value,
+        })
+        .filter((param) => param.value !== "prompt") ?? [],
+    [selectedImageModel, skill.modelConfig],
+  );
+
+  const updateModelConfig = (
+    updater: (config: Skill["modelConfig"]) => void,
+  ) => {
+    const config = { ...skill.modelConfig };
+    updater(config);
+    props.updateSkill((nextSkill) => {
+      nextSkill.modelConfig = config;
+      nextSkill.syncGlobalConfig = false;
+    });
+  };
+
+  const updateRealtimeConfig = (updater: (config: RealtimeConfig) => void) => {
+    const config = createDefaultRealtimeConfig(skill.realtimeConfig);
+    updater(config);
+    props.updateSkill((nextSkill) => {
+      nextSkill.realtimeConfig = config;
+    });
+  };
+
+  const updateImageConfig = (
+    updater: (config: Record<string, any>) => void,
+  ) => {
+    const config = { ...skill.modelConfig } as Record<string, any>;
+    updater(config);
+    props.updateSkill((nextSkill) => {
+      nextSkill.modelConfig = config as Skill["modelConfig"];
+      nextSkill.syncGlobalConfig = false;
+    });
+  };
+
+  return (
+    <div className={styles["skill-setup"]}>
+      <div className={styles["skill-setup-summary"]}>
+        <div className={styles["skill-setup-title"]}>{skill.name}</div>
+        <div className={styles["skill-setup-desc"]}>
+          {skill.description || Locale.Discovery.DefaultSkillDesc}
+        </div>
+        {!!skill.starters?.length && (
+          <div className={styles["skill-setup-starters"]}>
+            {skill.starters.slice(0, 3).map((starter) => (
+              <span key={starter}>{starter}</span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {runtimeIssues.length > 0 && (
+        <div className={styles["skill-setup-issues"]}>
+          <strong>{Locale.Discovery.SkillSetup.RuntimeIssues}</strong>
+          {runtimeIssues.map((issue) => (
+            <span key={`${issue.type}:${issue.message}`}>{issue.message}</span>
+          ))}
+        </div>
+      )}
+
+      {isRealtimeSkill ? (
+        <>
+          <div className={styles["skill-setup-hint"]}>
+            {Locale.Discovery.SkillSetup.RealtimeHint}
+          </div>
+          <List>
+            <RealtimeConfigList
+              realtimeConfig={createDefaultRealtimeConfig(skill.realtimeConfig)}
+              updateConfig={updateRealtimeConfig}
+            />
+          </List>
+        </>
+      ) : isImageSkill ? (
+        <>
+          <div className={styles["skill-setup-hint"]}>
+            {Locale.Discovery.SkillSetup.ImageHint}
+          </div>
+          <List>
+            <ListItem title={Locale.SdPanel.ModelSelectorTitle}>
+              <select
+                value={selectedImageModel?.value ?? ""}
+                disabled={imageModels.length === 0}
+                onChange={(event) => {
+                  const nextModel = imageModels.find(
+                    (model) => model.value === event.currentTarget.value,
+                  );
+                  if (!nextModel) return;
+                  updateImageConfig((config) => {
+                    config.model = nextModel.value;
+                    config.providerName = nextModel.providerName;
+                  });
+                }}
+              >
+                {imageModels.length === 0 ? (
+                  <option value="">{Locale.Discovery.NoImageModels}</option>
+                ) : null}
+                {imageModels.map((model) => (
+                  <option value={model.value} key={model.value}>
+                    {model.name}
+                    {model.providerName ? ` (${model.providerName})` : ""}
+                  </option>
+                ))}
+              </select>
+            </ListItem>
+            {imageParamSchemas.map((param) => (
+              <ListItem
+                title={param.name}
+                subTitle={param.sub}
+                key={param.value}
+              >
+                {param.type === "select" ? (
+                  <select
+                    value={
+                      (skill.modelConfig as Record<string, any>)[param.value] ??
+                      param.default ??
+                      ""
+                    }
+                    onChange={(event) =>
+                      updateImageConfig((config) => {
+                        config[param.value] = event.currentTarget.value;
+                      })
+                    }
+                  >
+                    {(param.options ?? []).map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={param.type === "number" ? "number" : "text"}
+                    min={param.min}
+                    max={param.max}
+                    value={
+                      (skill.modelConfig as Record<string, any>)[param.value] ??
+                      param.default ??
+                      ""
+                    }
+                    placeholder={param.placeholder}
+                    onChange={(event) =>
+                      updateImageConfig((config) => {
+                        config[param.value] =
+                          param.type === "number"
+                            ? event.currentTarget.valueAsNumber
+                            : event.currentTarget.value;
+                      })
+                    }
+                  />
+                )}
+              </ListItem>
+            ))}
+          </List>
+        </>
+      ) : (
+        <>
+          <div className={styles["skill-setup-hint"]}>
+            {Locale.Discovery.SkillSetup.ModelHint}
+          </div>
+          <List>
+            <ModelConfigList
+              modelConfig={{ ...skill.modelConfig }}
+              updateConfig={updateModelConfig}
+              modelOptions={skillModelOptions}
+              strictModelSelection
+            />
+          </List>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function DiscoveryPage() {
@@ -369,6 +587,10 @@ export function DiscoveryPage() {
   const capabilities = useMemo<Capability[]>(() => {
     const installedPluginIds = plugins.map((plugin) => plugin.id);
     const installedToolServerIds = Object.keys(toolConfig?.toolServers ?? {});
+    const availableImageModels = resolveImageModels(
+      models.filter((model) => model.available),
+      "generation",
+    );
     const toolPresetServers = mergeToolPresetServers(
       officialToolPresetServers,
       communityToolServers,
@@ -399,6 +621,19 @@ export function DiscoveryPage() {
           installedToolServerIds,
           toolStatuses,
         });
+        const isImageSkill = skill.launch?.type === "sd";
+        const effectiveRuntime: SkillRuntimeResult =
+          isImageSkill && availableImageModels.length === 0
+            ? {
+                status: "unavailable",
+                issues: [
+                  {
+                    type: "model",
+                    message: Locale.Discovery.NoImageModels,
+                  },
+                ],
+              }
+            : runtime;
         const runtimeSummary = getSkillRuntimeIssueSummary(runtime);
         return {
           id: `skill:${skill.id}`,
@@ -413,12 +648,14 @@ export function DiscoveryPage() {
             skillToolCount
               ? Locale.Discovery.SkillTools(skillToolCount)
               : undefined,
-            runtimeSummary || undefined,
+            getSkillRuntimeIssueSummary(effectiveRuntime) ||
+              runtimeSummary ||
+              undefined,
           ].filter(Boolean) as string[],
           status:
-            runtime.status === "ready"
+            effectiveRuntime.status === "ready"
               ? Locale.Discovery.Status.Available
-              : runtime.status === "unavailable"
+              : effectiveRuntime.status === "unavailable"
                 ? Locale.Discovery.Status.Unavailable
                 : Locale.Discovery.Status.Configurable,
           pricing: "free" as const,
@@ -430,8 +667,8 @@ export function DiscoveryPage() {
           path: Path.Skills,
           installed: true,
           skill: runtimeSkill,
-          runtimeStatus: runtime.status,
-          runtimeResult: runtime,
+          runtimeStatus: effectiveRuntime.status,
+          runtimeResult: effectiveRuntime,
         };
       })
       .sort((a, b) => {
@@ -522,40 +759,42 @@ export function DiscoveryPage() {
     const officialToolIds = new Set(
       officialToolPresetServers.map((server) => server.id),
     );
-    const toolItems: Capability[] = toolPresetServers.map((server) => {
-      const serverConfig = toolConfig?.toolServers[server.id];
-      const serverStatus = toolStatuses?.[server.id]?.status;
-      const installed = Boolean(serverConfig);
-      const status =
-        serverStatus === "active"
-          ? Locale.Discovery.Status.Enabled
-          : serverStatus === "error"
-            ? Locale.Discovery.Status.Error
-            : serverStatus === "paused"
-              ? Locale.Discovery.Status.Paused
-              : installed
-                ? Locale.Discovery.Status.Installed
-                : Locale.Discovery.Status.Configurable;
+    const toolItems: Capability[] = toolPresetServers
+      .filter((server) => !HIDDEN_DISCOVERY_TOOL_SERVER_IDS.has(server.id))
+      .map((server) => {
+        const serverConfig = toolConfig?.toolServers[server.id];
+        const serverStatus = toolStatuses?.[server.id]?.status;
+        const installed = Boolean(serverConfig);
+        const status =
+          serverStatus === "active"
+            ? Locale.Discovery.Status.Enabled
+            : serverStatus === "error"
+              ? Locale.Discovery.Status.Error
+              : serverStatus === "paused"
+                ? Locale.Discovery.Status.Paused
+                : installed
+                  ? Locale.Discovery.Status.Installed
+                  : Locale.Discovery.Status.Configurable;
 
-      return {
-        id: `tool:${server.id}`,
-        type: "tool",
-        title: server.name,
-        description: server.description,
-        highlights: server.tags
-          .slice(0, 3)
-          .map((tag) => getMarketplaceTagLabel(tag, currentLang)),
-        status,
-        pricing: "free",
-        runtime: toolRuntime,
-        source: officialToolIds.has(server.id)
-          ? Locale.Discovery.Source.Official
-          : Locale.Discovery.Source.Community,
-        path: Path.ToolMarket,
-        installed,
-        presetServer: server,
-      };
-    });
+        return {
+          id: `tool:${server.id}`,
+          type: "tool",
+          title: server.name,
+          description: server.description,
+          highlights: server.tags
+            .slice(0, 3)
+            .map((tag) => getMarketplaceTagLabel(tag, currentLang)),
+          status,
+          pricing: "free",
+          runtime: toolRuntime,
+          source: officialToolIds.has(server.id)
+            ? Locale.Discovery.Source.Official
+            : Locale.Discovery.Source.Community,
+          path: Path.ToolMarket,
+          installed,
+          presetServer: server,
+        };
+      });
 
     const toolCapabilityItems: Capability[] = [...toolItems];
 
@@ -589,11 +828,9 @@ export function DiscoveryPage() {
         type: "storage",
         title: Locale.Discovery.CloudStorageTitle,
         description: Locale.Discovery.CloudStorageDesc,
-        highlights: [
-          Locale.Discovery.StorageAppSync,
-          Locale.Discovery.StorageFutureTool,
-          storageQuotaText,
-        ].filter(Boolean) as string[],
+        highlights: [Locale.Discovery.StorageAppSync, storageQuotaText].filter(
+          Boolean,
+        ) as string[],
         status: !storageConfigured
           ? Locale.Discovery.Status.Configurable
           : storageQuotaStatus === "error"
@@ -634,6 +871,19 @@ export function DiscoveryPage() {
     storageQuota,
     storageQuotaStatus,
   ]);
+
+  const editingSkillRuntimeResult = useMemo(
+    () =>
+      editingSkill
+        ? capabilities.find(
+            (item) =>
+              item.type === "skill" &&
+              item.skill &&
+              String(item.skill.id) === String(editingSkill.id),
+          )?.runtimeResult
+        : undefined,
+    [capabilities, editingSkill],
+  );
 
   const marketplaceSkillTitles = useMemo(
     () =>
@@ -676,7 +926,7 @@ export function DiscoveryPage() {
 
   const startSkill = (skill: Skill) => {
     if (skill.launch?.type === "sd") {
-      sdStore.startBlankCreation();
+      sdStore.startBlankCreation("", skill);
       navigate(Path.Sd);
       return;
     }
@@ -1033,7 +1283,7 @@ export function DiscoveryPage() {
     if (item.type === "skill") {
       return item.runtimeStatus === "ready"
         ? Locale.Discovery.Use
-        : Locale.Discovery.Configure;
+        : Locale.Discovery.ConfigureAndEnable;
     }
     if (item.type === "tool") {
       if (!item.installed && item.presetServer?.configurable) {
@@ -1186,7 +1436,7 @@ export function DiscoveryPage() {
                       handleCapabilityAction(item);
                     }}
                   />
-                  {item.type === "skill" && (
+                  {item.type === "skill" && item.runtimeStatus === "ready" && (
                     <IconButton
                       icon={<EditIcon />}
                       text={Locale.Discovery.Configure}
@@ -1259,15 +1509,15 @@ export function DiscoveryPage() {
         {editingSkill && (
           <div className="modal-mask">
             <Modal
-              title={Locale.Skill.EditModal.Title(editingSkill.builtin)}
+              title={Locale.Discovery.SkillSetup.Title}
               onClose={() => setEditingSkillId(undefined)}
             >
-              <SkillConfig
+              <DiscoverySkillSetup
                 skill={editingSkill}
+                runtimeResult={editingSkillRuntimeResult}
                 updateSkill={(updater) =>
                   skillStore.updateSkill(editingSkill.id, updater)
                 }
-                readonly={editingSkill.builtin}
               />
             </Modal>
           </div>

@@ -111,6 +111,28 @@ type RouterTokenStatusResponse = {
 
 const ROUTER_HOST = "llm.yeying.pub";
 
+export function isRouterPublicTokenSelectable(token: RouterPublicToken) {
+  const status = token.status;
+  const statusValue =
+    typeof status === "string" ? status.trim().toLowerCase() : status;
+  const statusOk =
+    statusValue === undefined ||
+    statusValue === null ||
+    statusValue === "" ||
+    statusValue === 1 ||
+    statusValue === "1" ||
+    statusValue === "enabled" ||
+    statusValue === "active";
+
+  if (!statusOk) return false;
+
+  if (token.unlimited_quota === true) return true;
+
+  const remaining = token.remaining_amount ?? token.remain_quota;
+  if (remaining === undefined || remaining === null) return true;
+  return Number(remaining) > 0;
+}
+
 const getRouterBackendHost = () => {
   try {
     const url = getClientConfig()?.routerBackendUrl;

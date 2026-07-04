@@ -26,6 +26,29 @@ const cn = {
     Input: "输入或选择区块链地址",
     Confirm: "登录",
     Later: "稍后再说",
+    Processing: "处理中...",
+    EmptyHistory: "暂无历史地址",
+    ClearSelection: "清空当前选择",
+    ExpandAccountList: "展开地址列表",
+    MissingAccount: "请先输入或选择区块链地址",
+    MissingWalletAccount: "未获取到账户",
+    LoginCancelled: "已取消登录",
+    SwitchToAppAccount: "请先在钱包中切换到应用地址，然后重新点击登录",
+    WalletLoginFailed: (error: string) => `钱包登录失败: ${error}`,
+    MissingRouterAudience:
+      "无法解析 Router audience，请检查 ROUTER_BACKEND_URL",
+    CentralLoginSuccess: "中心化 UCAN 登录成功",
+    CentralExchangeFailed: (error: string) => `中心化授权码兑换失败: ${error}`,
+    CentralRequestCreated: "已创建中心化授权请求，跳转认证页",
+    CentralRequestFailed: (error: string) => `创建中心化授权请求失败: ${error}`,
+    WalletMismatch: {
+      Title: "账户不一致",
+      Description: "应用地址和钱包地址不一致，请选择登录方式。",
+      App: "应用",
+      Wallet: "钱包",
+      Switch: "去钱包切换",
+      UseWallet: "使用钱包当前地址",
+    },
     TopTips:
       "🥳 Chat AI 首发，立刻解锁 qwen3.7-plus、deepseek-v4-pro、gpt-5.5、claude-4.8等最新大模型",
   },
@@ -748,6 +771,16 @@ const cn = {
     ToolUserProvided: "用户自带工具配置",
     ToolUserConfigHint:
       "工具支持 cloud / native 两种运行方式。Web 版普通用户通常直接使用云端能力；桌面版或自托管环境可在本地安装、配置和管理。当前这个配置面板写入的是本地工具运行配置，请只在可信环境中使用。",
+    SkillSetup: {
+      Title: "技能配置",
+      RuntimeIssues: "需要处理",
+      RealtimeHint:
+        "实时聊天使用语音会话配置；启用后会在会话页展示实时语音入口。",
+      ModelHint:
+        "这个技能只需要确认对话模型。提示词、开场白和工具绑定由技能预设提供。",
+      ImageHint:
+        "图片技能使用 Router 中可用的图片模型；这里可先设置模型和基础生成参数。",
+    },
     OpenToolManager: "打开工具管理",
     Manage: "管理",
     Configure: "配置",
@@ -768,10 +801,9 @@ const cn = {
     RouterProviderTitle: "社区 Router",
     RouterProviderDesc: "默认模型服务商，统一接入社区可用模型。",
     CloudStorageTitle: "云端存储",
-    CloudStorageDesc:
-      "管理聊天、技能等本地数据的云端同步；后续可作为工具文件能力提供给模型。",
+    CloudStorageDesc: "管理聊天、技能等本地数据的云端同步和空间使用情况。",
     StorageAppSync: "应用同步",
-    StorageFutureTool: "后续工具文件能力",
+    NoImageModels: "当前没有可用图片模型",
     StorageQuotaUsage: (used: string, quota: string) =>
       `已用 ${used} / ${quota}`,
     StorageQuotaUnlimited: (used: string) => `已用 ${used} / 无限空间`,
@@ -1062,6 +1094,7 @@ const cn = {
       },
       Capabilities: {
         Text: "文本",
+        Vision: "识图",
         Image: "生图",
         Edit: "编辑",
         Reasoning: "深度思考",

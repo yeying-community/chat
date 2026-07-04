@@ -29,11 +29,18 @@ import { Path, ServiceProvider } from "../constant";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   RouterApi,
+  isRouterPublicTokenSelectable,
   type RouterPublicToken,
   type RouterTokenStatus,
 } from "../client/platforms/router";
 import { buildTokenScopedRouterModelCatalog } from "./router-model-catalog";
 import { getLang } from "../locales";
+import {
+  getAccountWorkspaceOwner,
+  getAccountWorkspaceStatus,
+  subscribeAccountWorkspaceStatus,
+} from "../utils/account-workspace";
+import { isVisionCapableModel } from "../utils";
 
 const normalizeUrl = (value: string) => value.replace(/\/+$/, "");
 const ROUTER_BASE_URL =
@@ -56,6 +63,7 @@ function isImageModel(model: LLMModel) {
   const tags = getModelTags(model);
   const modelType = model.modelType?.trim().toLowerCase();
   return (
+    isVisionCapableModel({ model: model.name, tags: model.tags }) ||
     tags.includes("image") ||
     modelType === "image" ||
     supportsImageGenerationEndpoint(model.supportedEndpoints) ||
@@ -112,6 +120,8 @@ function maskRouterTokenKey(value?: string) {
 function capabilityBadges(model: LLMModel) {
   const badges: string[] = [];
   if (isTextModel(model)) badges.push(Locale.Router.Models.Capabilities.Text);
+  if (isVisionCapableModel({ model: model.name, tags: model.tags }))
+    badges.push(Locale.Router.Models.Capabilities.Vision);
   if (supportsImageGenerationEndpoint(model.supportedEndpoints))
     badges.push(Locale.Router.Models.Capabilities.Image);
   if (supportsImageEditEndpoint(model.supportedEndpoints))
@@ -128,28 +138,6 @@ function formatRouterDate(value?: number) {
   return date.toLocaleString(getLang() === "cn" ? "zh-CN" : "en-US", {
     hour12: false,
   });
-}
-
-function isRouterTokenSelectable(token: RouterPublicToken) {
-  const status = token.status;
-  const statusValue =
-    typeof status === "string" ? status.trim().toLowerCase() : status;
-  const statusOk =
-    statusValue === undefined ||
-    statusValue === null ||
-    statusValue === "" ||
-    statusValue === 1 ||
-    statusValue === "1" ||
-    statusValue === "enabled" ||
-    statusValue === "active";
-
-  if (!statusOk) return false;
-
-  if (token.unlimited_quota === true) return true;
-
-  const remaining = token.remaining_amount ?? token.remain_quota;
-  if (remaining === undefined || remaining === null) return true;
-  return Number(remaining) > 0;
 }
 
 export function RouterPage() {
@@ -174,6 +162,23 @@ export function RouterPage() {
   const [tokenStatus, setTokenStatus] = useState<RouterTokenStatus | null>(
     null,
   );
+  const [workspaceOwner, setWorkspaceOwner] = useState(() =>
+    getAccountWorkspaceOwner(),
+  );
+  const [workspaceStatus, setWorkspaceStatus] = useState(() =>
+    getAccountWorkspaceStatus(),
+  );
+  const workspaceReady = workspaceStatus === "ready";
+
+  useEffect(() => {
+    const unsubscribe = subscribeAccountWorkspaceStatus(() => {
+      setWorkspaceOwner(getAccountWorkspaceOwner());
+      setWorkspaceStatus(getAccountWorkspaceStatus());
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   const catalogModels = useMemo(() => {
     const map = new Map<string, LLMModel>();
@@ -223,6 +228,10 @@ export function RouterPage() {
 
   const endpointValue = accessStore.openaiUrl || ROUTER_BASE_URL_NORMALIZED;
   const selectedRouterToken = accessStore.selectedRouterToken?.trim() || "";
+  const tokenFromQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("token") || "").trim();
+  }, [location.search]);
   const tokenConfigured = selectedRouterToken.length > 0;
   const routerApiKeyConfigured = accessStore.openaiApiKey.trim().length > 0;
   const showUsage = tokenConfigured || routerApiKeyConfigured;
@@ -231,7 +240,8 @@ export function RouterPage() {
     subscription: updateStore.subscription,
   };
   const availableTokens = useMemo(
-    () => tokens.filter((token) => token && isRouterTokenSelectable(token)),
+    () =>
+      tokens.filter((token) => token && isRouterPublicTokenSelectable(token)),
     [tokens],
   );
   const defaultToken = availableTokens[0];
@@ -351,7 +361,15 @@ export function RouterPage() {
     }
   }, [checkUsage, navigate, redirectTarget, routerAction]);
 
+  const resetRouterRuntimeState = useCallback(() => {
+    setTokens([]);
+    setTokenModels([]);
+    setProviderModels([]);
+    setTokenStatus(null);
+  }, [setProviderModels]);
+
   const reloadModels = useCallback(async () => {
+    if (!workspaceReady) return;
     setLoadingModels(true);
     setTokenModels([]);
     try {
@@ -366,9 +384,10 @@ export function RouterPage() {
     } finally {
       setLoadingModels(false);
     }
-  }, [mergeModels, setProviderModels]);
+  }, [mergeModels, setProviderModels, workspaceReady]);
 
-  async function loadTokens() {
+  const loadTokens = useCallback(async () => {
+    if (!workspaceReady) return;
     setLoadingTokens(true);
     try {
       const api = new RouterApi();
@@ -377,32 +396,71 @@ export function RouterPage() {
     } finally {
       setLoadingTokens(false);
     }
-  }
+  }, [workspaceReady]);
 
   useEffect(() => {
+    resetRouterRuntimeState();
+  }, [resetRouterRuntimeState, workspaceOwner]);
+
+  useEffect(() => {
+    if (!workspaceReady) return;
     void loadTokens();
-  }, []);
+  }, [loadTokens, workspaceOwner, workspaceReady]);
 
   useEffect(() => {
+    if (!workspaceReady) return;
     if (loadingTokens) return;
+    if (tokenFromQuery) {
+      if (selectedRouterToken !== tokenFromQuery) {
+        accessStore.update((state) => {
+          state.selectedRouterToken = tokenFromQuery;
+        });
+      }
+      const params = new URLSearchParams(location.search);
+      params.delete("token");
+      const nextSearch = params.toString();
+      navigate(`${Path.Router}${nextSearch ? `?${nextSearch}` : ""}`, {
+        replace: true,
+      });
+      return;
+    }
+
     const nextToken = selectedToken?.key?.trim() || "";
+    if (!nextToken) return;
     if (selectedRouterToken === nextToken) return;
     accessStore.update((state) => {
       state.selectedRouterToken = nextToken;
     });
-  }, [accessStore, loadingTokens, selectedRouterToken, selectedToken]);
+  }, [
+    accessStore,
+    loadingTokens,
+    location.search,
+    navigate,
+    selectedRouterToken,
+    selectedToken,
+    tokenFromQuery,
+    workspaceReady,
+  ]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      setTokenStatus(null);
+      return;
+    }
     void loadTokenStatus();
-  }, [selectedRouterToken]);
+  }, [selectedRouterToken, workspaceOwner, workspaceReady]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      setTokenModels([]);
+      return;
+    }
     if (!selectedRouterToken) {
       setTokenModels([]);
       return;
     }
     void reloadModels();
-  }, [reloadModels, selectedRouterToken]);
+  }, [reloadModels, selectedRouterToken, workspaceOwner, workspaceReady]);
 
   useEffect(() => {
     if (routerAction !== "token") return;

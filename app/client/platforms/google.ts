@@ -21,7 +21,7 @@ import { GEMINI_BASE_URL } from "@/app/constant";
 import {
   getMessageTextContent,
   getMessageImages,
-  isVisionModel,
+  isVisionCapableModel,
   getTimeoutMSByModel,
 } from "@/app/utils";
 import { preProcessImageContent } from "@/app/utils/chat";
@@ -100,7 +100,7 @@ export class GeminiProApi implements LLMApi {
     }
     const messages = _messages.map((v) => {
       let parts: any[] = [{ text: getMessageTextContent(v) }];
-      if (isVisionModel(options.config.model)) {
+      if (isVisionCapableModel(options.config)) {
         const images = getMessageImages(v);
         if (images.length > 0) {
           multimodal = true;

@@ -27,8 +27,36 @@ const en: LocaleType = {
     Input: "Enter or select blockchain address",
     Confirm: "Sign In",
     Later: "Later",
+    Processing: "Processing...",
+    EmptyHistory: "No recent addresses",
+    ClearSelection: "Clear current selection",
+    ExpandAccountList: "Expand address list",
+    MissingAccount: "Enter or select a blockchain address first",
+    MissingWalletAccount: "No wallet account found",
+    LoginCancelled: "Sign-in cancelled",
+    SwitchToAppAccount:
+      "Switch to the app address in your wallet, then sign in again",
+    WalletLoginFailed: (error: string) => `Wallet sign-in failed: ${error}`,
+    MissingRouterAudience:
+      "Cannot resolve Router audience. Check ROUTER_BACKEND_URL",
+    CentralLoginSuccess: "Centralized UCAN sign-in succeeded",
+    CentralExchangeFailed: (error: string) =>
+      `Failed to exchange centralized authorization code: ${error}`,
+    CentralRequestCreated:
+      "Centralized authorization request created. Redirecting...",
+    CentralRequestFailed: (error: string) =>
+      `Failed to create centralized authorization request: ${error}`,
+    WalletMismatch: {
+      Title: "Account mismatch",
+      Description:
+        "The app address and wallet address do not match. Choose how to sign in.",
+      App: "App",
+      Wallet: "Wallet",
+      Switch: "Switch in wallet",
+      UseWallet: "Use wallet address",
+    },
     TopTips:
-      "🥳 Chat AI launch promotion: Instantly unlock the latest models like OpenAI o1, GPT-4o, Claude-3.5!",
+      "🥳 Chat AI launch promotion: Instantly unlock the latest models like qwen3.7-plus, deepseek-v4-pro, gpt-5.5, claude-4.8!",
   },
   ChatItem: {
     ChatItemCount: (count: number) => `${count} messages`,
@@ -762,6 +790,16 @@ const en: LocaleType = {
     ToolUserProvided: "User-provided tool config",
     ToolUserConfigHint:
       "Tools support both cloud and native runtimes. Web users typically use cloud-hosted tools out of the box; desktop or self-hosted environments can install, configure, and manage tools locally. This panel writes local tool runtime config, so only use it in a trusted environment.",
+    SkillSetup: {
+      Title: "Skill Configuration",
+      RuntimeIssues: "Needs attention",
+      RealtimeHint:
+        "Realtime Chat uses voice session settings. Once enabled, the realtime voice entry appears in the chat view.",
+      ModelHint:
+        "This skill only needs a conversation model check. Prompts, starters, and tool bindings come from the skill preset.",
+      ImageHint:
+        "Image skills use available Router image models. Configure the model and basic generation parameters here.",
+    },
     OpenToolManager: "Open Tool Manager",
     Manage: "Manage",
     Configure: "Configure",
@@ -784,9 +822,9 @@ const en: LocaleType = {
       "Default model service for accessing community-available models.",
     CloudStorageTitle: "Cloud Storage",
     CloudStorageDesc:
-      "Manage cloud sync for chats, skills, and local app data. It can later expose file access to models through tools.",
+      "Manage cloud sync and quota usage for chats, skills, and local app data.",
     StorageAppSync: "App sync",
-    StorageFutureTool: "Future tool file capability",
+    NoImageModels: "No image models available",
     StorageQuotaUsage: (used: string, quota: string) =>
       `${used} / ${quota} used`,
     StorageQuotaUnlimited: (used: string) => `${used} used / unlimited`,
@@ -1088,6 +1126,7 @@ const en: LocaleType = {
       },
       Capabilities: {
         Text: "Text",
+        Vision: "Vision",
         Image: "Image",
         Edit: "Edit",
         Reasoning: "Reasoning",

@@ -52,7 +52,7 @@ import Locale from "../../locales";
 import { getClientConfig } from "@/app/config/client";
 import {
   getMessageTextContent,
-  isVisionModel,
+  isVisionCapableModel,
   isDalle3 as _isDalle3,
   isGptImageModel,
   getTimeoutMSByModel,
@@ -1014,7 +1014,7 @@ export class ChatGPTApi implements LLMApi {
         }
         requestPayload = imagePayload;
       } else {
-        const visionModel = isVisionModel(options.config.model);
+        const visionModel = isVisionCapableModel(options.config);
         const messages: Array<{ role: string; content: any }> = [];
         for (const v of options.messages) {
           const content = visionModel

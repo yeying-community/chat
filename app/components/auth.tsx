@@ -122,12 +122,12 @@ function renderWalletMismatchPrompt(
 ) {
   return (
     <div>
-      <div>应用地址和钱包地址不一致，请选择登录方式。</div>
+      <div>{Locale.Auth.WalletMismatch.Description}</div>
       <div style={{ marginTop: 12 }}>
-        应用：<code>{expectedAccount}</code>
+        {Locale.Auth.WalletMismatch.App}: <code>{expectedAccount}</code>
       </div>
       <div style={{ marginTop: 8 }}>
-        钱包：<code>{walletAccount}</code>
+        {Locale.Auth.WalletMismatch.Wallet}: <code>{walletAccount}</code>
       </div>
     </div>
   );
@@ -145,7 +145,7 @@ function showWalletMismatchDecision(
       resolve(decision);
     };
     const closeModal = showModal({
-      title: "账户不一致",
+      title: Locale.Auth.WalletMismatch.Title,
       actions: [
         <IconButton
           key="cancel"
@@ -159,7 +159,7 @@ function showWalletMismatchDecision(
         />,
         <IconButton
           key="switch"
-          text="去钱包切换"
+          text={Locale.Auth.WalletMismatch.Switch}
           onClick={() => {
             finish("switch");
             void closeModal();
@@ -169,7 +169,7 @@ function showWalletMismatchDecision(
         />,
         <IconButton
           key="wallet"
-          text="使用钱包当前地址"
+          text={Locale.Auth.WalletMismatch.UseWallet}
           type="primary"
           onClick={() => {
             finish("wallet");
@@ -268,12 +268,12 @@ export function AuthPage() {
           redirectUri,
         });
         applyCentralAuthorizeExchange(result, { emit: false });
-        notifySuccess("中心化 UCAN 登录成功");
+        notifySuccess(Locale.Auth.CentralLoginSuccess);
         const target = encodeURIComponent(redirectPath);
         navigate(`${Path.Auth}?redirect=${target}`, { replace: true });
         window.dispatchEvent(new Event(UCAN_AUTH_EVENT));
       } catch (error) {
-        const message = `中心化授权码兑换失败: ${error}`;
+        const message = Locale.Auth.CentralExchangeFailed(String(error));
         notifyError(message);
       } finally {
         setCentralLoading(false);
@@ -286,12 +286,12 @@ export function AuthPage() {
   const handleCentralAuthorizeLogin = async (addressHint?: string) => {
     const address = normalizeAccount(addressHint || selectedWalletAccount);
     if (!address) {
-      notifyInfo("请先输入或选择区块链地址");
+      notifyInfo(Locale.Auth.MissingAccount);
       return;
     }
     const routerAudience = getRouterAudience();
     if (!routerAudience) {
-      notifyError("无法解析 Router audience，请检查 ROUTER_BACKEND_URL");
+      notifyError(Locale.Auth.MissingRouterAudience);
       return;
     }
     const redirectUri = getCentralRedirectUri();
@@ -308,10 +308,10 @@ export function AuthPage() {
       });
       setUcanAuthMode(UCAN_AUTH_MODE_CENTRAL, { emit: false });
       storage.setItem("currentAccount", address);
-      notifySuccess("已创建中心化授权请求，跳转认证页");
+      notifySuccess(Locale.Auth.CentralRequestCreated);
       window.location.href = request.verifyUrl;
     } catch (error) {
-      notifyError(`创建中心化授权请求失败: ${error}`);
+      notifyError(Locale.Auth.CentralRequestFailed(String(error)));
     } finally {
       setCentralLoading(false);
     }
@@ -341,7 +341,7 @@ export function AuthPage() {
       }
 
       if (resolution.status === "unavailable") {
-        notifyError("未获取到账户");
+        notifyError(Locale.Auth.MissingWalletAccount);
         return;
       }
 
@@ -353,12 +353,12 @@ export function AuthPage() {
 
         if (decision === "switch") {
           setSelectedWalletAccount(resolution.expectedAccount);
-          notifyInfo("请先在钱包中切换到应用地址，然后重新点击登录");
+          notifyInfo(Locale.Auth.SwitchToAppAccount);
           return;
         }
 
         if (decision !== "wallet") {
-          notifyInfo("已取消登录");
+          notifyInfo(Locale.Auth.LoginCancelled);
           return;
         }
         setSelectedWalletAccount(resolution.walletAccount);
@@ -381,7 +381,7 @@ export function AuthPage() {
       return;
     } catch (error) {
       if (forceMode === "wallet") {
-        notifyError(`钱包登录失败: ${error}`);
+        notifyError(Locale.Auth.WalletLoginFailed(String(error)));
         return;
       }
       // wallet not available, fallback to centralized UCAN service
@@ -463,8 +463,8 @@ export function AuthPage() {
               setIsWalletHistoryOpen(true);
             }}
             data-empty={hasSelectedWalletAccount ? "false" : "true"}
-            aria-label="输入或选择区块链地址"
-            placeholder="输入或选择区块链地址"
+            aria-label={Locale.Auth.Input}
+            placeholder={Locale.Auth.Input}
             autoComplete="off"
             spellCheck={false}
             title={hasSelectedWalletAccount ? selectedWalletAccount : ""}
@@ -475,8 +475,8 @@ export function AuthPage() {
               className={styles["auth-wallet-clear"]}
               onMouseDown={(event) => event.preventDefault()}
               onClick={handleWalletAccountClear}
-              title="清空当前选择"
-              aria-label="清空当前选择"
+              title={Locale.Auth.ClearSelection}
+              aria-label={Locale.Auth.ClearSelection}
             >
               <ClearIcon />
             </button>
@@ -502,7 +502,7 @@ export function AuthPage() {
                 ))
               ) : (
                 <div className={styles["auth-wallet-history-empty"]}>
-                  暂无历史地址
+                  {Locale.Auth.EmptyHistory}
                 </div>
               )}
             </div>
@@ -511,8 +511,8 @@ export function AuthPage() {
             type="button"
             className={styles["auth-wallet-arrow-button"]}
             onClick={handleWalletHistoryToggle}
-            aria-label="展开地址列表"
-            title="展开地址列表"
+            aria-label={Locale.Auth.ExpandAccountList}
+            title={Locale.Auth.ExpandAccountList}
           >
             <span
               className={styles["auth-wallet-select-arrow"]}
@@ -521,7 +521,7 @@ export function AuthPage() {
           </button>
         </div>
         <IconButton
-          text={centralLoading ? "处理中..." : "登录"}
+          text={centralLoading ? Locale.Auth.Processing : Locale.Auth.Confirm}
           type="primary"
           className={styles["auth-wallet-connect"]}
           onClick={handlePrimaryLogin}
