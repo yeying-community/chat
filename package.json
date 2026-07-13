@@ -52,7 +52,7 @@
     "markdown-to-txt": "^2.0.1",
     "mermaid": "^11.16.0",
     "nanoid": "^5.1.11",
-    "next": "^16.2.9",
+    "next": "^16.2.10",
     "openapi-client-axios": "^7.9.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.7",
