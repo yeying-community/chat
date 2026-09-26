@@ -155,18 +155,18 @@ npm run app:dev
 
 桌面端本地包不是一套新的后端。它是一个静态 Tauri 前端，登录、模型调用和云端同步仍然依赖外部服务：
 
-| 服务                | 本地常用地址            | 作用                                                    |
-| ------------------- | ----------------------- | ------------------------------------------------------- |
-| Node / central UCAN | `http://localhost:8100` | 处理中心化登录、Passkey 授权、授权回调和 UCAN 换发      |
-| Router              | `http://127.0.0.1:3011` | 校验 Router audience/capability，并转发大模型调用       |
-| Warehouse           | `http://127.0.0.1:6065` | 校验 WebDAV audience/capability，保存同步快照和媒体文件 |
+| 服务                | 本地常用地址              | 作用                                                    |
+| ------------------- | ------------------------- | ------------------------------------------------------- |
+| Node / central UCAN | `http://localhost:8100`   | 处理中心化登录、Passkey 授权、授权回调和 UCAN 换发      |
+| Router              | `http://localhost:3011`   | 校验 Router audience/capability，并转发大模型调用       |
+| Warehouse           | `http://localhost:6065`   | 校验 WebDAV audience/capability，保存同步快照和媒体文件 |
 | Chat Desktop        | `https://tauri.localhost` | 承载前端 UI；不是 API 服务                              |
 
 本地桌面包推荐从 `.env.build.template` 创建 `.env.build`，使用桌面专用配置：
 
 ```dotenv
-ROUTER_BACKEND_URL=http://127.0.0.1:3011
-WEBDAV_BACKEND_BASE_URL=http://127.0.0.1:6065
+ROUTER_BACKEND_URL=http://localhost:3011
+WEBDAV_BACKEND_BASE_URL=http://localhost:6065
 WEBDAV_BACKEND_PREFIX=/dav
 CHAT_APPLICATION_UID=<Node 中 Chat 应用的 applications.uid>
 CENTRAL_UCAN_AUTH_BASE_URL=http://localhost:8100
@@ -176,11 +176,13 @@ CENTRAL_UCAN_REDIRECT_URI=chat://localhost/central-ucan-callback.html
 注意：
 
 - 桌面包的前端公开配置会在 `npm run app:build` 时写入 `out/`，再进入 `.app`
-- 修改 `.env.build` 后，已经打出的 `Chat.app` 不会自动读取新值，需要重新执行 `npm run app:build`
-- 桌面构建时配置优先级为：命令行/CI 环境变量、`.env.build`
+- 当前版本没有应用内服务地址覆盖设置。修改 `.env.build` 后，已经打出的 `Chat.app` 不会自动读取新值，需要重新执行 `npm run app:build`
+- 桌面构建时配置优先级为：命令行/CI 环境变量 > `.env.build` > 代码默认值；`.env` 即使被 Next 构建日志列出也不会参与桌面配置
 - `CENTRAL_UCAN_REDIRECT_URI` 必须和 Node 中 Chat 应用配置的某一项 `redirectUris` 完全一致；桌面包固定使用 `chat://localhost/central-ucan-callback.html`
-- 桌面本地包的回调地址是 `chat://localhost/central-ucan-callback.html`，不是 `http://127.0.0.1:8100`
+- 桌面本地包的回调地址是 `chat://localhost/central-ucan-callback.html`，不是 `http://localhost:8100`
 - `CHAT_APPLICATION_UID` 是 Node 应用中心 Chat 应用的 `applications.uid`；它同时决定登录 appId、`app:all:<uid>` capability 和 Warehouse `/apps/<uid>` 目录
+
+桌面端运行配置的目标是由 Chat 设置页覆盖 Router、Warehouse/WebDAV 和 Node 身份服务地址，并将覆盖值保存在当前操作系统用户的 Chat 配置中。用户不应被要求编辑 `.env`、`.env.build` 或安装目录文件。`CHAT_APPLICATION_UID` 和 `CENTRAL_UCAN_REDIRECT_URI` 是固定应用身份/协议，不属于可编辑服务地址。设置页功能尚未实现前，继续按上面的 `.env.build` 配置和重新打包流程操作。设计依据见[运行时配置与桌面服务设置方案](../30-architecture/运行时配置与桌面服务设置方案.md)。
 
 Warehouse 本地 CORS 至少应允许桌面 origin 和本地 Web origin：
 
@@ -190,14 +192,13 @@ cors:
   credentials: true
   allowed_origins:
     - "https://tauri.localhost"
-    - "http://127.0.0.1:3020"
     - "http://localhost:3020"
 ```
 
 改完 Warehouse 配置后需要重启 Warehouse。可以用下面命令检查桌面 origin 是否已允许：
 
 ```bash
-curl -i -sS -X OPTIONS 'http://127.0.0.1:6065/api/v1/public/webdav/quota' \
+curl -i -sS -X OPTIONS 'http://localhost:6065/api/v1/public/webdav/quota' \
   -H 'Origin: https://tauri.localhost' \
   -H 'Access-Control-Request-Method: GET' \
   -H 'Access-Control-Request-Headers: authorization,content-type'
@@ -609,7 +610,7 @@ macOS 主链已经具备 release 构建、updater manifest、DMG 签名、公证
 1. Warehouse 是否已经启动，并监听 `WEBDAV_BACKEND_BASE_URL`
 2. `.env` 中 `WEBDAV_BACKEND_BASE_URL` 和 `WEBDAV_BACKEND_PREFIX` 是否指向同一套 Warehouse
 3. Warehouse CORS 是否允许 `https://tauri.localhost`
-4. 修改 Chat `.env` 后是否重新执行 `npm run app:build`
+4. 当前版本是否在修改 Chat `.env.build` 后重新执行 `npm run app:build`（`.env` 不会被桌面构建读取）
 5. 修改 Warehouse 配置后是否重启 Warehouse
 
 如果 `curl` 直连 Warehouse 成功，但桌面应用里失败，重点看 CORS。桌面端 WebView 的页面 origin 是 `https://tauri.localhost`；这与用于登录回调的 `chat://localhost` 是两个不同的地址。

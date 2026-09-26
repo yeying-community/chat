@@ -18,12 +18,12 @@ Chat（UCAN 定制版）
 
 高频入口：
 
-- 用户使用手册：`docs/用户使用手册.md`
-- 常见问题：`docs/常见问题.md`
-- AI Native 能力分层架构：`docs/AI-Native能力分层架构.md`
-- 运行时配置与发包：`docs/运行时配置与发包.md`
-- Tauri 桌面端打包发布说明：`docs/Tauri桌面端迁移清单.md`
-- Skill / Tool 运行机制：`docs/Chat Skill与Tool运行机制.md`
+- 用户使用手册：[用户使用手册](docs/10-user/用户使用手册.md)
+- 常见问题：[常见问题](docs/10-user/常见问题.md)
+- AI Native 能力分层架构：[AI Native 能力分层架构](docs/20-product/AI-Native能力分层架构.md)
+- 运行时配置与发包：[运行时配置与发包](docs/50-operations/运行时配置与发包.md)
+- Tauri 桌面端打包发布说明：[Tauri 桌面端迁移清单](docs/50-operations/Tauri桌面端迁移清单.md)
+- Skill / Tool 运行机制：[Chat Skill 与 Tool 运行机制](docs/60-skills-marketplace/Chat%20Skill与Tool运行机制.md)
 
 # 环境要求
 
@@ -55,15 +55,17 @@ cp .env.build.template .env.build
 当前仓库把配置分成两类文件：
 
 - `.env.template` / `.env`
-  - 运行期配置
-  - 服务启动时读取
-  - 修改后通常需要重启服务，前端公开配置还需要刷新页面
+  - Web standalone 服务的运行期配置
+  - 不作为任何构建或发包命令的配置来源
+  - Web 服务启动后动态读取；公开配置下发给浏览器
+  - 修改后重启服务并刷新页面，不需要重新构建 Web 代码
 - `.env.build.template` / `.env.build`
-  - 构建期配置
-  - 用于控制构建细节，例如 `DISABLE_CHUNK`
+  - 所有构建期和发包期配置的唯一文件来源（命令行/CI 变量仍可覆盖）
+  - 桌面包出厂服务默认值也在这里，并会嵌入安装包
+  - 普通桌面用户的运行时服务地址目标是通过 Chat 设置页覆盖
   - 不再手工配置 `BUILD_MODE` / `BUILD_APP`
 
-更完整的配置说明见：`docs/运行时配置与发包.md`
+更完整的配置说明见：[运行时配置与发包](docs/50-operations/运行时配置与发包.md)
 
 # 生产部署
 
@@ -80,9 +82,12 @@ cp .env.build.template .env.build
    - `WEBDAV_BACKEND_BASE_URL`：WebDAV 后端基础地址（按需配置，不含路径）
    - `WEBDAV_BACKEND_PREFIX`：WebDAV 路径前缀（默认 `/dav`，可选修改）
    - 以及你实际使用的 provider 配置（如 OpenAI / Gemini / Anthropic / Volcengine 等）
-3. 如需调整构建细节变量，配置 `.env.build`：
+3. 如需调整构建或发包参数，配置 `.env.build`：
+   - `BUILD_VERSION`
    - `DISABLE_CHUNK`
    - Tauri 签名相关变量
+
+`.env` 不参与构建。Web 运行地址和服务端密钥只需在部署目录的 `.env` 中配置，重启 standalone 服务后生效。
 
 ## 推荐发包方式（standalone）
 
@@ -139,11 +144,11 @@ bash scripts/starter.sh start
 ```bash
 scripts/health-check.sh
 scripts/health-check.sh --level liveness
-scripts/health-check.sh --level all --base-url http://127.0.0.1:3020
+scripts/health-check.sh --level all --base-url http://localhost:3020
 scripts/health-check.sh --level readiness --format json
 ```
 
-默认无参数等同于 `--level readiness`，服务地址默认读取 `HEALTH_BASE_URL`，未设置时使用 `http://127.0.0.1:${PORT:-3020}`。
+默认无参数等同于 `--level readiness`，服务地址默认读取 `HEALTH_BASE_URL`，未设置时使用 `http://localhost:${PORT:-3020}`。
 
 - `liveness`：检查 `.chat.pid` / 本地监听进程，必要时回退到 HTTP 根路径。
 - `readiness`：在存活检查基础上检查 `GET /` 和 `GET /health/ready`。
@@ -181,21 +186,32 @@ bash scripts/package.sh app-release
 本地桌面包依赖 Node / Router / Warehouse 三个外部服务，不是离线后端。常用本地配置如下：
 
 ```dotenv
-ROUTER_BACKEND_URL=http://127.0.0.1:3011
-WEBDAV_BACKEND_BASE_URL=http://127.0.0.1:6065
+ROUTER_BACKEND_URL=http://localhost:3011
+WEBDAV_BACKEND_BASE_URL=http://localhost:6065
 WEBDAV_BACKEND_PREFIX=/dav
 CHAT_APPLICATION_UID=<Node 中 Chat 应用的 applications.uid>
-CENTRAL_UCAN_AUTH_BASE_URL=http://127.0.0.1:8100
+CENTRAL_UCAN_AUTH_BASE_URL=http://localhost:8100
 CENTRAL_UCAN_REDIRECT_URI=chat://localhost/central-ucan-callback.html
 ```
 
 Web 版登录入口优先使用钱包插件，未检测到钱包时回退到 Node 通行证授权；桌面版不尝试钱包插件，只在系统浏览器中使用 Node 通行证授权。桌面构建仍需配置上述 Node 认证参数，不能通过关闭某个登录模式来绕过。
 
-修改这些前端公开配置后，需要重新打包桌面应用：
+当前桌面包会把 `.env.build` 中的服务地址作为出厂默认值。桌面设置页覆盖能力尚未落地，因此当前版本修改包内默认地址仍需要重新打包；目标方案和状态见[运行时配置与桌面服务设置方案](docs/30-architecture/运行时配置与桌面服务设置方案.md)。
 
 ```bash
 npm run app:build
 open src-tauri/target/release/bundle/macos/Chat.app
+```
+
+桌面包本地服务默认值示例：
+
+```dotenv
+ROUTER_BACKEND_URL=http://localhost:3011
+WEBDAV_BACKEND_BASE_URL=http://localhost:6065
+WEBDAV_BACKEND_PREFIX=/dav
+CHAT_APPLICATION_UID=<Node 中 Chat 应用的 applications.uid>
+CENTRAL_UCAN_AUTH_BASE_URL=http://localhost:8100
+CENTRAL_UCAN_REDIRECT_URI=chat://localhost/central-ucan-callback.html
 ```
 
 本地验证顺序：
@@ -206,7 +222,7 @@ open src-tauri/target/release/bundle/macos/Chat.app
 
 如果云端存储正常但会话列表为空，优先检查 `CHAT_APPLICATION_UID` 是否和网页版相同，以及 Warehouse 中是否存在对应 `/apps/<uid>` 目录。如果桌面端 WebDAV 请求失败，优先确认 Warehouse CORS 是否允许 `https://tauri.localhost`。
 
-完整说明见：`docs/Tauri桌面端迁移清单.md`
+完整说明见：[Tauri 桌面端迁移清单](docs/50-operations/Tauri桌面端迁移清单.md)
 
 # 工具
 
@@ -222,8 +238,8 @@ standalone 如需启用工具能力：
 
 更完整的说明见：
 
-- `docs/Chat Skill与Tool运行机制.md`
-- `docs/工具启用机制与演进.md`
+- [Chat Skill 与 Tool 运行机制](docs/60-skills-marketplace/Chat%20Skill与Tool运行机制.md)
+- [工具启用机制与演进](docs/60-skills-marketplace/工具启用机制与演进.md)
 
 # 贡献指南
 
