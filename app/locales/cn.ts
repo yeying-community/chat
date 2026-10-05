@@ -239,6 +239,9 @@ const cn = {
       Address: {
         Title: "区块链地址",
       },
+      Identity: {
+        Title: "钱包身份",
+      },
       Logout: {
         Title: "退出登录",
         SubTitle: "断开当前钱包账号，并清除本地授权会话。",

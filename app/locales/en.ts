@@ -249,6 +249,9 @@ const en: LocaleType = {
       Address: {
         Title: "Blockchain Address",
       },
+      Identity: {
+        Title: "Wallet Identity",
+      },
       Logout: {
         Title: "Sign out",
         SubTitle:
