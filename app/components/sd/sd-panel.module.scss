@@ -50,6 +50,15 @@
   }
 }
 
+// 容器外使用的说明文字（.ctrl-param-item-sub-title 只在 .ctrl-param-item 内生效）
+.panel-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--black);
+  opacity: 0.65;
+}
+
 .ctrl-param-item-compact {
   padding: 2px 0;
 

@@ -494,7 +494,7 @@ function MaskPainter(props: {
           />
         </div>
       </div>
-      <div className={styles["ctrl-param-item-sub-title"]}>
+      <div className={styles["panel-hint"]}>
         {Locale.SdPanel.MaskDrawSubTitle}
       </div>
     </div>
@@ -1298,7 +1298,7 @@ export function SdPanel() {
               {Locale.SdPanel.MaskImage}
             </button>
           </div>
-          <div className={styles["ctrl-param-item-sub-title"]}>
+          <div className={styles["panel-hint"]}>
             {editMaskImage
               ? Locale.SdPanel.MaskOverlayHint
               : editSourceImage
