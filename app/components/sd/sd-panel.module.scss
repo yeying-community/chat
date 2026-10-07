@@ -390,6 +390,11 @@
   gap: 10px;
 }
 
+// 模型不支持遮罩时只剩源图一格
+.edit-assets-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .edit-asset {
   display: flex;
   flex-direction: column;

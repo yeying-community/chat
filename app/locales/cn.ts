@@ -1179,6 +1179,8 @@ const cn = {
     MaskOverlayHint: "高亮区域将被重新生成",
     ReplaceImage: "更换",
     NoMaskYet: "未设置遮罩，可能会编辑整张图片",
+    MaskUnsupportedHint:
+      "该模型为指令式编辑，不支持局部重绘；请在画面提示中用文字描述要修改的区域",
     DrawMask: "涂抹遮罩",
     ClearMask: "清空遮罩",
     SaveMask: "保存遮罩",

@@ -1018,6 +1018,7 @@ export function SdPanel() {
   const setEditMaskImage = sdStore.setEditMaskImage;
   const currentModel = sdStore.currentModel;
   const setCurrentModel = sdStore.setCurrentModel;
+  const supportsMask = currentModel?.supportsMask === true;
   const params = sdStore.currentParams;
   const setParams = sdStore.setCurrentParams;
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -1069,6 +1070,12 @@ export function SdPanel() {
       [field]: val,
     });
   };
+  // 切到不支持遮罩的模型时清掉遗留遮罩，避免被发送（router 侧也会 400 兜底）
+  React.useEffect(() => {
+    if (!supportsMask && editMaskImage) {
+      setEditMaskImage("", "");
+    }
+  }, [supportsMask, editMaskImage, setEditMaskImage]);
   const handleModelChange = (model: any) => {
     setCurrentModel(model);
     setParams(getModelParamBasicData(model.params({}), params));
@@ -1196,7 +1203,11 @@ export function SdPanel() {
             accept="image/*"
             onChange={(e) => handleUploadMask(e.target.files?.[0])}
           />
-          <div className={styles["edit-assets"]}>
+          <div
+            className={clsx(styles["edit-assets"], {
+              [styles["edit-assets-single"]]: !supportsMask,
+            })}
+          >
             <div className={styles["edit-asset"]}>
               {editSourceImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1233,77 +1244,83 @@ export function SdPanel() {
                 )}
               </div>
             </div>
-            <div className={styles["edit-asset"]}>
-              {editSourceImage && editMaskImage ? (
-                <MaskOverlayPreview
-                  source={editSourceImage}
-                  mask={editMaskImage}
-                  className={styles["edit-asset-thumb"]}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className={styles["edit-asset-placeholder"]}
-                  disabled={!editSourceImage}
-                  onClick={openMaskPainter}
-                >
-                  <EditIcon />
-                  <span>{Locale.SdPanel.DrawMask}</span>
-                </button>
-              )}
-              <div className={styles["edit-asset-meta"]}>
-                <span
-                  className={styles["edit-asset-name"]}
-                  title={editMaskName || undefined}
-                >
-                  {editMaskImage
-                    ? editMaskName || Locale.SdPanel.MaskRegion
-                    : Locale.SdPanel.MaskRegion}
-                </span>
-                {editMaskImage && (
+            {supportsMask && (
+              <div className={styles["edit-asset"]}>
+                {editSourceImage && editMaskImage ? (
+                  <MaskOverlayPreview
+                    source={editSourceImage}
+                    mask={editMaskImage}
+                    className={styles["edit-asset-thumb"]}
+                  />
+                ) : (
                   <button
                     type="button"
-                    className={clsx(
-                      styles["edit-asset-link"],
-                      styles["edit-asset-link-danger"],
-                    )}
-                    onClick={() => {
-                      setEditMaskImage("", "");
-                      if (maskFileInputRef.current) {
-                        maskFileInputRef.current.value = "";
-                      }
-                    }}
+                    className={styles["edit-asset-placeholder"]}
+                    disabled={!editSourceImage}
+                    onClick={openMaskPainter}
                   >
-                    {Locale.SdPanel.ClearMask}
+                    <EditIcon />
+                    <span>{Locale.SdPanel.DrawMask}</span>
                   </button>
                 )}
+                <div className={styles["edit-asset-meta"]}>
+                  <span
+                    className={styles["edit-asset-name"]}
+                    title={editMaskName || undefined}
+                  >
+                    {editMaskImage
+                      ? editMaskName || Locale.SdPanel.MaskRegion
+                      : Locale.SdPanel.MaskRegion}
+                  </span>
+                  {editMaskImage && (
+                    <button
+                      type="button"
+                      className={clsx(
+                        styles["edit-asset-link"],
+                        styles["edit-asset-link-danger"],
+                      )}
+                      onClick={() => {
+                        setEditMaskImage("", "");
+                        if (maskFileInputRef.current) {
+                          maskFileInputRef.current.value = "";
+                        }
+                      }}
+                    >
+                      {Locale.SdPanel.ClearMask}
+                    </button>
+                  )}
+                </div>
               </div>
+            )}
+          </div>
+          {supportsMask && (
+            <div className={styles["edit-asset-actions"]}>
+              <button
+                type="button"
+                className={styles["primary-inline-button"]}
+                disabled={!editSourceImage}
+                onClick={openMaskPainter}
+              >
+                {Locale.SdPanel.DrawMask}
+              </button>
+              <button
+                type="button"
+                className={styles["secondary-action-button"]}
+                disabled={!editSourceImage}
+                onClick={() => maskFileInputRef.current?.click()}
+              >
+                {Locale.SdPanel.MaskImage}
+              </button>
             </div>
-          </div>
-          <div className={styles["edit-asset-actions"]}>
-            <button
-              type="button"
-              className={styles["primary-inline-button"]}
-              disabled={!editSourceImage}
-              onClick={openMaskPainter}
-            >
-              {Locale.SdPanel.DrawMask}
-            </button>
-            <button
-              type="button"
-              className={styles["secondary-action-button"]}
-              disabled={!editSourceImage}
-              onClick={() => maskFileInputRef.current?.click()}
-            >
-              {Locale.SdPanel.MaskImage}
-            </button>
-          </div>
+          )}
           <div className={styles["panel-hint"]}>
-            {editMaskImage
-              ? Locale.SdPanel.MaskOverlayHint
-              : editSourceImage
-                ? Locale.SdPanel.NoMaskYet
-                : Locale.SdPanel.MaskImageSubTitle}
+            {!supportsMask
+              ? Locale.SdPanel.MaskUnsupportedHint
+              : editMaskImage
+                ? Locale.SdPanel.MaskOverlayHint
+                : editSourceImage
+                  ? Locale.SdPanel.NoMaskYet
+                  : Locale.SdPanel.MaskImageSubTitle}
           </div>
         </PanelSection>
       )}
