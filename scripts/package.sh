@@ -214,6 +214,7 @@ copy_standalone_artifacts() {
   local backup_conf_template="${ROOT_DIR}/scripts/backup.conf.template"
   local config_backup_script="${ROOT_DIR}/scripts/config_backup.sh"
   local copy_for_upgrade_script="${ROOT_DIR}/scripts/copy-for-upgrade.sh"
+  local upgrade_script="${ROOT_DIR}/scripts/upgrade.sh"
   local passphrase_file_template="${ROOT_DIR}/scripts/.passphrase-file.template"
 
   if [ ! -d "${standalone_dir}" ]; then
@@ -243,6 +244,11 @@ copy_standalone_artifacts() {
 
   if [ ! -f "${copy_for_upgrade_script}" ]; then
     echo "Error: ${copy_for_upgrade_script} not found." >&2
+    exit 1
+  fi
+
+  if [ ! -f "${upgrade_script}" ]; then
+    echo "Error: ${upgrade_script} not found." >&2
     exit 1
   fi
 
@@ -278,11 +284,13 @@ copy_standalone_artifacts() {
   cp "${backup_conf_template}" "${PACKAGE_DIR}/scripts/backup.conf.template"
   cp "${config_backup_script}" "${PACKAGE_DIR}/scripts/config_backup.sh"
   cp "${copy_for_upgrade_script}" "${PACKAGE_DIR}/scripts/copy-for-upgrade.sh"
+  cp "${upgrade_script}" "${PACKAGE_DIR}/scripts/upgrade.sh"
   cp "${passphrase_file_template}" "${PACKAGE_DIR}/scripts/.passphrase-file.template"
   chmod +x "${PACKAGE_DIR}/scripts/starter.sh"
   chmod +x "${PACKAGE_DIR}/scripts/health-check.sh"
   chmod +x "${PACKAGE_DIR}/scripts/config_backup.sh"
   chmod +x "${PACKAGE_DIR}/scripts/copy-for-upgrade.sh"
+  chmod +x "${PACKAGE_DIR}/scripts/upgrade.sh"
 }
 
 copy_export_artifacts() {
