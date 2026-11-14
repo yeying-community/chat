@@ -124,5 +124,6 @@
     "esbuild@0.28.1": true,
     "sharp@0.34.5": true,
     "unrs-resolver@1.11.1": true
-  }
+  },
+  "version": "0.0.97"
 }
