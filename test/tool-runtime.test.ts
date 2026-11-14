@@ -1,4 +1,5 @@
 import { filterToolPresetServersForRuntime } from "../app/tools/runtime";
+import type { PresetServer } from "../app/tools/types";
 import {
   getMissingToolConfigKeys,
   preserveEmptyToolSecrets,
@@ -7,7 +8,7 @@ import {
 
 describe("tool runtime marketplace boundaries", () => {
   it("filters desktop servers by runtime and platform", () => {
-    const servers = [
+    const servers: PresetServer[] = [
       {
         id: "all-platforms",
         name: "All",
