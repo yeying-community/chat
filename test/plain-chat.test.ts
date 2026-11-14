@@ -17,6 +17,11 @@ const modelConfig: ModelConfig = {
   frequency_penalty: 0,
   reasoningMode: "on",
   reasoningEffort: "high",
+  endpointPath: undefined,
+  supportedEndpoints: undefined,
+  ownedBy: undefined,
+  tags: undefined,
+  responsesMode: undefined,
   sendMemory: true,
   historyMessageCount: 4,
   compressMessageLengthThreshold: 1000,
@@ -26,6 +31,7 @@ const modelConfig: ModelConfig = {
   template: "{{input}}",
   size: "1024x1024",
   quality: "auto",
+  style: "vivid",
 };
 
 const plainSkill: Skill = {

@@ -6,6 +6,7 @@ AGENTS.md
 /CodexDev/
 # dependencies
 /node_modules
+package-lock.json
 /.pnp
 .pnp.js
 
@@ -65,5 +66,13 @@ build.mode
 # config backup local files
 scripts/backup.conf
 scripts/.passphrase-file
-.project-lifecycle.json
-.project-task.json
+
+# YeYing Project local task state
+/.project/
+
+# Legacy root-level state; migrate into .project/ when the task is closed.
+/.project-task
+/.project-*.json
+/.project-execution/
+/.project-execution-*/
+.playwright-cli

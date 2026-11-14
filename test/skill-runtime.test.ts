@@ -29,6 +29,11 @@ const modelConfig: ModelConfig = {
   frequency_penalty: 0,
   reasoningMode: "off",
   reasoningEffort: "medium",
+  endpointPath: undefined,
+  supportedEndpoints: undefined,
+  ownedBy: undefined,
+  tags: undefined,
+  responsesMode: undefined,
   sendMemory: true,
   historyMessageCount: 4,
   compressMessageLengthThreshold: 1000,
@@ -38,6 +43,7 @@ const modelConfig: ModelConfig = {
   template: "{{input}}",
   size: "1024x1024",
   quality: "auto",
+  style: "vivid",
 };
 
 const baseSkill: Skill = {
@@ -56,14 +62,24 @@ const baseSkill: Skill = {
   },
 };
 
-function resolve(overrides: Parameters<typeof resolveSkillRuntimeStatus>[0]) {
+function resolve(
+  overrides: Partial<Parameters<typeof resolveSkillRuntimeStatus>[0]> = {},
+) {
+  const {
+    skill = baseSkill,
+    models = [model],
+    globalModelConfig = modelConfig,
+    installedPluginIds = [],
+    installedToolServerIds = ["fetch"],
+    ...optionalOverrides
+  } = overrides;
   return resolveSkillRuntimeStatus({
-    skill: baseSkill,
-    models: [model],
-    globalModelConfig: modelConfig,
-    installedPluginIds: [],
-    installedToolServerIds: ["fetch"],
-    ...overrides,
+    skill,
+    models,
+    globalModelConfig,
+    installedPluginIds,
+    installedToolServerIds,
+    ...optionalOverrides,
   });
 }
 
